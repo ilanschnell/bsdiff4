@@ -17,10 +17,14 @@ class TestBSDiff4(unittest.TestCase):
         dst2 = bsdiff4.patch(src, patch)
         self.assertEqual(dst, dst2)
 
+    def test_zero(self):
+        self.round_trip('', '')
+
     def test_extra(self):
         src = gen_random_bytes(1000)
-        dst = src + 'extra'
+        dst = src + gen_random_bytes(10)
         self.round_trip(src, dst)
+        self.round_trip(dst, src)
 
     def test_random(self):
         self.round_trip(gen_random_bytes(2000), gen_random_bytes(2000))

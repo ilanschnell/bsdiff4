@@ -6,7 +6,7 @@
 
 #include <Python.h>
 
-#define MIN(x,y) (((x)<(y)) ? (x) : (y))
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 
 static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
@@ -218,7 +218,7 @@ static PyObject* Diff(PyObject* self, PyObject* args)
         PyMem_Free(I);
         return PyErr_NoMemory();
     }
-    qsufsort(I, V, origData, origDataLength);
+    qsufsort(I, V, (unsigned char *) origData, origDataLength);
     PyMem_Free(V);
 
     /* allocate memory for the diff and extra blocks */
@@ -248,7 +248,8 @@ static PyObject* Diff(PyObject* self, PyObject* args)
         oldscore = 0;
 
         for (scsc = scan += len; scan < newDataLength; scan++) {
-            len = search(I, origData, origDataLength, newData + scan,
+            len = search(I, (unsigned char *) origData, origDataLength,
+                         (unsigned char *) newData + scan,
                          newDataLength - scan, 0, origDataLength, &pos);
             for (; scsc < scan + len; scsc++)
                 if ((scsc + lastoffset < origDataLength) &&
@@ -356,7 +357,7 @@ static PyObject* Diff(PyObject* self, PyObject* args)
         return NULL;
     }
     PyTuple_SET_ITEM(results, 0, controlTuples);
-    temp = PyString_FromStringAndSize(db, dblen);
+    temp = PyString_FromStringAndSize((char *) db, dblen);
     PyMem_Free(db);
     if (!temp) {
         PyMem_Free(eb);
@@ -364,7 +365,7 @@ static PyObject* Diff(PyObject* self, PyObject* args)
         return NULL;
     }
     PyTuple_SET_ITEM(results, 1, temp);
-    temp = PyString_FromStringAndSize(eb, eblen);
+    temp = PyString_FromStringAndSize((char *) eb, eblen);
     PyMem_Free(eb);
     if (!temp) {
         Py_DECREF(results);

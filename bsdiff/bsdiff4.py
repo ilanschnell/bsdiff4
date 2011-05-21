@@ -9,7 +9,7 @@ else:
 import core
 
 
-def _encode_offt(x):
+def encode_offt(x):
     """Encode an off_t value as a string.
 
     This encodes a signed integer into 8 bytes.  I'd prefer some sort of
@@ -20,28 +20,28 @@ def _encode_offt(x):
         sign = 0x80
     else:
         sign = 0
-    bs = [0]*8
+    bs = [0] * 8
     bs[0] = x % 256
     for b in xrange(7):
         x = (x - bs[b]) / 256
         bs[b+1] = x % 256
     bs[7] |= sign
     if sys.version_info[0] < 3:
-        return "".join(map(chr, bs))
+        return ''.join(chr(b) for b in bs)
     else:
         return bytes(bs)
 
 
-def _decode_offt(bytes):
+def decode_offt(bytes):
     """Decode an off_t value from a string.
 
     This decodes a signed integer into 8 bytes.  I'd prefer some sort of
     signed vint representation, but it's the format used by bsdiff4....
     """
     if sys.version_info[0] < 3:
-        bytes = map(ord,bytes)
+        bytes = [ord(x) for x in bytes]
     x = bytes[7] & 0x7F
-    for b in xrange(6,-1,-1):
+    for b in xrange(6, -1, -1):
         x = x * 256 + bytes[b]
     if bytes[7] & 0x80:
         x = -x
@@ -56,18 +56,18 @@ def diff(src, dst):
     bcontrol = BytesIO()
     for c in tcontrol:
         for x in c:
-            bcontrol.write(_encode_offt(x))
+            bcontrol.write(encode_offt(x))
     del tcontrol
     bcontrol = bcontrol.getvalue()
     # compress each block
     bcontrol = bz2.compress(bcontrol)
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
-    return "".join((
-            "BSDIFF40",
-            _encode_offt(len(bcontrol)),
-            _encode_offt(len(bdiff)),
-            _encode_offt(len(dst)),
+    return ''.join((
+            'BSDIFF40',
+            encode_offt(len(bcontrol)),
+            encode_offt(len(bdiff)),
+            encode_offt(len(dst)),
             bcontrol,
             bdiff,
             bextra,
@@ -83,20 +83,17 @@ def patch(src, patch):
     magic = patch[:8]
     assert magic.startswith('BSDIFF4')
     # read the length headers
-    l_bcontrol = _decode_offt(patch[8:16])
-    l_bdiff = _decode_offt(patch[16:24])
-    l_target = _decode_offt(patch[24:32])
+    l_bcontrol = decode_offt(patch[8:16])
+    l_bdiff = decode_offt(patch[16:24])
+    l_target = decode_offt(patch[24:32])
     # read the three data blocks
-    bcontrol = bz2.decompress(patch[32:32+l_bcontrol])
-    bdiff = bz2.decompress(patch[32+l_bcontrol:32+l_bcontrol+l_bdiff])
-    bextra = bz2.decompress(patch[32+l_bcontrol+l_bdiff:])
+    bcontrol = bz2.decompress(patch[32:32 + l_bcontrol])
+    bdiff = bz2.decompress(patch[32 + l_bcontrol:32 + l_bcontrol + l_bdiff])
+    bextra = bz2.decompress(patch[32 + l_bcontrol + l_bdiff:])
     # decode the control tuples
-    tcontrol = []
-    for i in xrange(0, len(bcontrol), 24):
-        tcontrol.append((
-            _decode_offt(bcontrol[i:i+8]),
-            _decode_offt(bcontrol[i+8:i+16]),
-            _decode_offt(bcontrol[i+16:i+24]),
-        ))
+    tcontrol = [(decode_offt(bcontrol[i:i + 8]),
+                 decode_offt(bcontrol[i + 8:i + 16]),
+                 decode_offt(bcontrol[i + 16:i + 24]))
+                for i in xrange(0, len(bcontrol), 24)]
     # actually do the patching
     return core.Patch(src, l_target, tcontrol, bdiff, bextra)

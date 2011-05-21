@@ -458,19 +458,14 @@ static PyObject* Patch(PyObject* self, PyObject* args)
 
 
 /* declaration of methods supported by this module */
-static PyMethodDef g_ModuleMethods[] = {
+static PyMethodDef ModuleMethods[] = {
     {"Diff", Diff, METH_VARARGS},
     {"Patch", Patch, METH_VARARGS},
-    {NULL, NULL}
+    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
 /* initialization routine for the shared libary */
 void initcore(void)
 {
-    PyObject *module;
-
-    // initialize module and retrieve the dictionary
-    module = Py_InitModule("core", g_ModuleMethods);
-    if (module == NULL)
-        return;
+    Py_InitModule("core", ModuleMethods);
 }

@@ -1,23 +1,16 @@
-//-----------------------------------------------------------------------------
-// bsdiff.c
-//   Shared library for use by Python. This is derived from bsdiff, the
-// standalone utility produced for BSD which can be found at
-// http://www.daemonology.net/bsdiff.
-//-----------------------------------------------------------------------------
+/*
+  bsdiff.c
+      Shared library for use by Python. This is derived from bsdiff, the
+      standalone utility produced for BSD which can be found at
+      http://www.daemonology.net/bsdiff.
+*/
 
 #include <Python.h>
 
 #define MIN(x,y) (((x)<(y)) ? (x) : (y))
 
-//-----------------------------------------------------------------------------
-// split()
-//-----------------------------------------------------------------------------
-static void split(
-    off_t *I,
-    off_t *V,
-    off_t start,
-    off_t len,
-    off_t h)
+
+static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
 {
     off_t i, j, k, x, tmp, jj, kk;
 
@@ -42,9 +35,7 @@ static void split(
             if (j == 1)
                 I[k] = -1;
         }
-
     } else {
-
         jj = 0;
         kk = 0;
         x = V[I[start + len / 2] + h];
@@ -100,14 +91,7 @@ static void split(
 }
 
 
-//-----------------------------------------------------------------------------
-// qsufsort()
-//-----------------------------------------------------------------------------
-static void qsufsort(
-    off_t *I,
-    off_t *V,
-    unsigned char *old,
-    off_t oldsize)
+static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
 {
     off_t buckets[256], i, h, len;
 
@@ -156,14 +140,8 @@ static void qsufsort(
 }
 
 
-//-----------------------------------------------------------------------------
-// matchlen()
-//-----------------------------------------------------------------------------
-static off_t matchlen(
-    unsigned char *old,
-    off_t oldsize,
-    unsigned char *new,
-    off_t newsize)
+static off_t matchlen(unsigned char *old, off_t oldsize,
+                      unsigned char *new, off_t newsize)
 {
     off_t i;
 
@@ -174,18 +152,10 @@ static off_t matchlen(
 }
 
 
-//-----------------------------------------------------------------------------
-// search()
-//-----------------------------------------------------------------------------
-static off_t search(
-    off_t *I,
-    unsigned char *old,
-    off_t oldsize,
-    unsigned char *new,
-    off_t newsize,
-    off_t st,
-    off_t en,
-    off_t *pos)
+static off_t search(off_t *I,
+                    unsigned char *old, off_t oldsize,
+                    unsigned char *new, off_t newsize,
+                    off_t st, off_t en, off_t *pos)
 {
     off_t x, y;
 
@@ -211,14 +181,12 @@ static off_t search(
 }
 
 
-//-----------------------------------------------------------------------------
-// Diff()
-//   Performs a diff between the two data streams and returns a tuple
-// containing the control, diff and extra blocks that bsdiff produces.
-//-----------------------------------------------------------------------------
-static PyObject* Diff(
-    PyObject* self,                     // passthrough argument
-    PyObject* args)                     // arguments to function
+/*
+   Diff()
+     Performs a diff between the two data streams and returns a tuple
+   containing the control, diff and extra blocks that bsdiff produces.
+*/
+static PyObject* Diff(PyObject* self, PyObject* args)
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
@@ -227,17 +195,16 @@ static PyObject* Diff(
     char *origData, *newData;
     unsigned char *db, *eb;
 
-    // parse arguments
     if (!PyArg_ParseTuple(args, "s#s#", &origData, &origDataLength, &newData,
-            &newDataLength))
+                          &newDataLength))
         return NULL;
 
-    // create the control tuple
+    /* create the control tuple */
     controlTuples = PyList_New(0);
     if (!controlTuples)
         return NULL;
 
-    // perform sort on original data
+    /* perform sort on original data */
     I = PyMem_Malloc((origDataLength + 1) * sizeof(off_t));
     if (!I) {
         Py_DECREF(controlTuples);
@@ -252,7 +219,7 @@ static PyObject* Diff(
     qsufsort(I, V, origData, origDataLength);
     PyMem_Free(V);
 
-    // allocate memory for the diff and extra blocks
+    /* allocate memory for the diff and extra blocks */
     db = PyMem_Malloc(newDataLength + 1);
     if (!db) {
         Py_DECREF(controlTuples);
@@ -269,7 +236,7 @@ static PyObject* Diff(
     dblen = 0;
     eblen = 0;
 
-    // perform the diff
+    /* perform the diff */
     len = 0;
     scan = 0;
     lastscan = 0;
@@ -407,14 +374,12 @@ static PyObject* Diff(
 }
 
 
-//-----------------------------------------------------------------------------
-// Patch()
-//   Takes the original data and the control, diff and extra blocks produced
-// by bsdiff and returns the new data.
-//-----------------------------------------------------------------------------
-static PyObject* Patch(
-    PyObject* self,                     // passthrough argument
-    PyObject* args)                     // arguments to function
+/*
+   Patch()
+     Takes the original data and the control, diff and extra blocks produced
+   by bsdiff and returns the new data.
+*/
+static PyObject* Patch(PyObject* self, PyObject* args)
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
     int origDataLength, newDataLength, diffBlockLength, extraBlockLength;
@@ -422,13 +387,12 @@ static PyObject* Patch(
     off_t oldpos, newpos, x, y, z;
     int i, j, numTuples;
 
-    // parse arguments
     if (!PyArg_ParseTuple(args, "s#iO!s#s#", &origData, &origDataLength,
             &newDataLength, &PyList_Type, &controlTuples, &diffBlock,
             &diffBlockLength, &extraBlock, &extraBlockLength))
         return NULL;
 
-    // allocate the memory for the new data
+    /* allocate the memory for the new data */
     newData = PyMem_Malloc(newDataLength + 1);
     if (!newData)
         return PyErr_NoMemory();
@@ -473,7 +437,7 @@ static PyObject* Patch(
         oldpos += z;
     }
 
-    // confirm that a valid patch was applied
+    /* confirm that a valid patch was applied */
     if (newpos != newDataLength ||
             diffPtr != diffBlock + diffBlockLength ||
             extraPtr != extraBlock + extraBlockLength) {
@@ -488,19 +452,14 @@ static PyObject* Patch(
 }
 
 
-//-----------------------------------------------------------------------------
-//   Declaration of methods supported by this module
-//-----------------------------------------------------------------------------
+/* declaration of methods supported by this module */
 static PyMethodDef g_ModuleMethods[] = {
     { "Diff", Diff, METH_VARARGS },
     { "Patch", Patch, METH_VARARGS },
     { NULL, NULL }
 };
 
-//-----------------------------------------------------------------------------
-// initbsdiff()
-//   Initialization routine for the shared libary.
-//-----------------------------------------------------------------------------
+/* initialization routine for the shared libary */
 void initbsdiff(void)
 {
     PyObject *module, *moduleDict;
@@ -517,6 +476,4 @@ void initbsdiff(void)
     if (PyDict_SetItemString(moduleDict, "version",
             PyString_FromString("1.0")) < 0)
         return;
-
 }
-

@@ -80,6 +80,8 @@ def patch(src, patch):
     This function returns the result of applying the BSDIFF4-format patch
     'patch' to the input string 'src',
     """
+    magic = patch[:8]
+    assert magic.startswith('BSDIFF4')
     # read the length headers
     l_bcontrol = _decode_offt(patch[8:16])
     l_bdiff = _decode_offt(patch[16:24])

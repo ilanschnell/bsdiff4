@@ -466,13 +466,10 @@ static PyMethodDef g_ModuleMethods[] = {
 /* initialization routine for the shared libary */
 void initcore(void)
 {
-    PyObject *module, *moduleDict;
+    PyObject *module;
 
     // initialize module and retrieve the dictionary
     module = Py_InitModule("core", g_ModuleMethods);
-    if (!module)
-        return;
-    moduleDict = PyModule_GetDict(module);
-    if (!moduleDict)
+    if (module == NULL)
         return;
 }

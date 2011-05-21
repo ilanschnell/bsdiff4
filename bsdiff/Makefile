@@ -13,4 +13,4 @@ clean:
 
 
 test:
-	${PYTHON} test_all.py
+	${PYTHON} test_bsdiff4.py

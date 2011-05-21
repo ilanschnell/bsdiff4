@@ -1,8 +1,7 @@
 /*
-  bsdiff.c
-      Shared library for use by Python. This is derived from bsdiff, the
-      standalone utility produced for BSD which can be found at
-      http://www.daemonology.net/bsdiff.
+  Shared library for use by Python. This is derived from bsdiff, the
+  standalone utility produced for BSD which can be found at
+  http://www.daemonology.net/bsdiff.
 */
 
 #include <Python.h>
@@ -197,8 +196,9 @@ static PyObject* Diff(PyObject* self, PyObject* args)
     char *origData, *newData;
     unsigned char *db, *eb;
 
-    if (!PyArg_ParseTuple(args, "s#s#", &origData, &origDataLength, &newData,
-                          &newDataLength))
+    if (!PyArg_ParseTuple(args, "s#s#",
+                          &origData, &origDataLength,
+                          &newData, &newDataLength))
         return NULL;
 
     /* create the control tuple */
@@ -464,20 +464,15 @@ static PyMethodDef g_ModuleMethods[] = {
 };
 
 /* initialization routine for the shared libary */
-void initbsdiff(void)
+void initcore(void)
 {
     PyObject *module, *moduleDict;
 
     // initialize module and retrieve the dictionary
-    module = Py_InitModule("bsdiff", g_ModuleMethods);
+    module = Py_InitModule("core", g_ModuleMethods);
     if (!module)
         return;
     moduleDict = PyModule_GetDict(module);
     if (!moduleDict)
-        return;
-
-    // set version for easier support
-    if (PyDict_SetItemString(moduleDict, "version",
-            PyString_FromString("1.0")) < 0)
         return;
 }

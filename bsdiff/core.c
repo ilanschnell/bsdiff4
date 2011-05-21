@@ -35,7 +35,9 @@ static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
             if (j == 1)
                 I[k] = -1;
         }
+
     } else {
+
         jj = 0;
         kk = 0;
         x = V[I[start + len / 2] + h];
@@ -114,7 +116,7 @@ static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
     for (i = 1; i < 256; i++)
         if (buckets[i] == buckets[i - 1] + 1)
             I[buckets[i]] = -1;
-    I[0]=-1;
+    I[0] = -1;
 
     for (h = 1; I[0] != -(oldsize + 1); h += h) {
         len = 0;
@@ -247,15 +249,15 @@ static PyObject* Diff(PyObject* self, PyObject* args)
 
         for (scsc = scan += len; scan < newDataLength; scan++) {
             len = search(I, origData, origDataLength, newData + scan,
-                    newDataLength - scan, 0, origDataLength, &pos);
+                         newDataLength - scan, 0, origDataLength, &pos);
             for (; scsc < scan + len; scsc++)
                 if ((scsc + lastoffset < origDataLength) &&
-                        (origData[scsc + lastoffset] == newData[scsc]))
+                          (origData[scsc + lastoffset] == newData[scsc]))
                     oldscore++;
             if (((len == oldscore) && (len != 0)) || (len > oldscore + 8))
                 break;
-            if((scan + lastoffset < origDataLength) &&
-                    (origData[scan + lastoffset] == newData[scan]))
+            if ((scan + lastoffset < origDataLength) &&
+                      (origData[scan + lastoffset] == newData[scan]))
                 oldscore--;
         }
 
@@ -264,7 +266,7 @@ static PyObject* Diff(PyObject* self, PyObject* args)
             Sf = 0;
             lenf = 0;
             for (i = 0; (lastscan + i < scan) &&
-                    (lastpos + i < origDataLength);) {
+                     (lastpos + i < origDataLength);) {
                 if (origData[lastpos + i] == newData[lastscan + i])
                     s++;
                 i++;
@@ -387,9 +389,11 @@ static PyObject* Patch(PyObject* self, PyObject* args)
     off_t oldpos, newpos, x, y, z;
     int i, j, numTuples;
 
-    if (!PyArg_ParseTuple(args, "s#iO!s#s#", &origData, &origDataLength,
-            &newDataLength, &PyList_Type, &controlTuples, &diffBlock,
-            &diffBlockLength, &extraBlock, &extraBlockLength))
+    if (!PyArg_ParseTuple(args, "s#iO!s#s#",
+                          &origData, &origDataLength,
+                          &newDataLength, &PyList_Type, &controlTuples,
+                          &diffBlock, &diffBlockLength, &extraBlock,
+                          &extraBlockLength))
         return NULL;
 
     /* allocate the memory for the new data */
@@ -454,9 +458,9 @@ static PyObject* Patch(PyObject* self, PyObject* args)
 
 /* declaration of methods supported by this module */
 static PyMethodDef g_ModuleMethods[] = {
-    { "Diff", Diff, METH_VARARGS },
-    { "Patch", Patch, METH_VARARGS },
-    { NULL, NULL }
+    {"Diff", Diff, METH_VARARGS},
+    {"Patch", Patch, METH_VARARGS},
+    {NULL, NULL}
 };
 
 /* initialization routine for the shared libary */

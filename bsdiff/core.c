@@ -48,13 +48,13 @@ static void split(
         jj = 0;
         kk = 0;
         x = V[I[start + len / 2] + h];
-	for (i = start; i < start + len; i++) {
+        for (i = start; i < start + len; i++) {
             if (V[I[i] + h] < x)
                 jj++;
             if (V[I[i] + h] == x)
                 kk++;
         }
-	jj += start;
+        jj += start;
         kk += jj;
 
         j = 0;
@@ -217,8 +217,8 @@ static off_t search(
 // containing the control, diff and extra blocks that bsdiff produces.
 //-----------------------------------------------------------------------------
 static PyObject* Diff(
-    PyObject* self,			// passthrough argument
-    PyObject* args)			// arguments to function
+    PyObject* self,                     // passthrough argument
+    PyObject* args)                     // arguments to function
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
@@ -413,8 +413,8 @@ static PyObject* Diff(
 // by bsdiff and returns the new data.
 //-----------------------------------------------------------------------------
 static PyObject* Patch(
-    PyObject* self,			// passthrough argument
-    PyObject* args)			// arguments to function
+    PyObject* self,                     // passthrough argument
+    PyObject* args)                     // arguments to function
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
     int origDataLength, newDataLength, diffBlockLength, extraBlockLength;

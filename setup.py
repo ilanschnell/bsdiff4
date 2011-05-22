@@ -10,7 +10,7 @@ kwds['long_description'] = open('README.rst').read()
 
 # Read version from core/__init__.py
 pat = re.compile(r'__version__\s*=\s*(.+)', re.M)
-data = open(join('bsdiff', '__init__.py')).read()
+data = open(join('bsdiff4', '__init__.py')).read()
 kwds['version'] = eval(pat.search(data).group(1))
 
 
@@ -29,8 +29,8 @@ setup(
         "Topic :: Utilities",
     ],
     description = "efficient arrays of booleans -- C extension",
-    packages = ["bsdiff"],
-    ext_modules = [Extension(name = "bsdiff.core",
-                             sources = ["bsdiff/core.c"])],
+    packages = ["bsdiff4"],
+    ext_modules = [Extension(name = "bsdiff4.core",
+                             sources = ["bsdiff4/core.c"])],
     **kwds
 )

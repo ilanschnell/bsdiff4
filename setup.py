@@ -32,5 +32,11 @@ setup(
     packages = ["bsdiff4"],
     ext_modules = [Extension(name = "bsdiff4.core",
                              sources = ["bsdiff4/core.c"])],
+    entry_points = {
+        'console_scripts': [
+            'bsdiff4 = bsdiff4.cli:main_bsdiff4',
+            'bspatch4 = bsdiff4.cli:main_bspatch4',
+        ],
+    },
     **kwds
 )

@@ -1,20 +1,20 @@
 import random
 import unittest
 
-import bsdiff4
+import api
 
 
 def gen_random_bytes(size):
     return ''.join(chr(random.randint(0, 255)) for i in xrange(size))
 
 
-class TestBSDiff4(unittest.TestCase):
+class TestAPI(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        patch = bsdiff4.diff(src, dst)
+        patch = api.diff(src, dst)
         #if self.verbose:
         print len(src), len(patch)
-        dst2 = bsdiff4.patch(src, patch)
+        dst2 = api.patch(src, patch)
         self.assertEqual(dst, dst2)
 
     def test_zero(self):
@@ -35,6 +35,16 @@ class TestBSDiff4(unittest.TestCase):
         src = a + gen_random_bytes(100) + b
         dst = a = gen_random_bytes(100) + b
         self.round_trip(src, dst)
+
+
+def run(verbosity):
+    suite = unittest.TestSuite()
+    for cls in [TestAPI]:
+        suite.addTest(unittest.makeSuite(cls))
+
+    runner = unittest.TextTestRunner(verbosity=verbosity)
+
+    return runner.run(suite)
 
 
 if __name__ == '__main__':

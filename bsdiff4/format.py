@@ -12,15 +12,15 @@ def diff(src, dst):
     faux = StringIO()
     for c in tcontrol:
         for x in c:
-            faux.write(core.encode_offt(x))
+            faux.write(core.encode_int64(x))
     # compress each block
     bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
     return ('BSDIFF40' +
-            core.encode_offt(len(bcontrol)) +
-            core.encode_offt(len(bdiff)) +
-            core.encode_offt(len(dst)) +
+            core.encode_int64(len(bcontrol)) +
+            core.encode_int64(len(bdiff)) +
+            core.encode_int64(len(dst)) +
             bcontrol + bdiff + bextra)
 
 
@@ -30,9 +30,9 @@ def patch(src, patch):
     magic = patch[:8]
     assert magic.startswith('BSDIFF4')
     # length headers
-    len_control = core.decode_offt(patch[8:16])
-    len_diff = core.decode_offt(patch[16:24])
-    len_dst = core.decode_offt(patch[24:32])
+    len_control = core.decode_int64(patch[8:16])
+    len_diff = core.decode_int64(patch[16:24])
+    len_dst = core.decode_int64(patch[24:32])
     # start positions of blocks
     pos_control = 32
     pos_diff = pos_control + len_control
@@ -42,9 +42,9 @@ def patch(src, patch):
     bdiff = bz2.decompress(patch[pos_diff:pos_extra])
     bextra = bz2.decompress(patch[pos_extra:])
     # decode the control tuples
-    tcontrol = [(core.decode_offt(bcontrol[i:i + 8]),
-                 core.decode_offt(bcontrol[i + 8:i + 16]),
-                 core.decode_offt(bcontrol[i + 16:i + 24]))
+    tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
+                 core.decode_int64(bcontrol[i + 8:i + 16]),
+                 core.decode_int64(bcontrol[i + 16:i + 24]))
                 for i in xrange(0, len(bcontrol), 24)]
     # actually do the patching
     return core.patch(src, len_dst, tcontrol, bdiff, bextra)

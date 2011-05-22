@@ -454,10 +454,10 @@ static PyObject* patch(PyObject* self, PyObject* args)
 }
 
 
-/* encode an off_t value as a string of 8 bytes */
-static PyObject *encode_offt(PyObject *self, PyObject *value)
+/* encode an integer value as a string of 8 bytes */
+static PyObject *encode_int64(PyObject *self, PyObject *value)
 {
-    off_t x;
+    long long x;
     char bs[8], sign = 0;
     int i;
 
@@ -478,9 +478,9 @@ static PyObject *encode_offt(PyObject *self, PyObject *value)
 
 
 /* decode an off_t value from an 8 byte string */
-static PyObject *decode_offt(PyObject *self, PyObject *string)
+static PyObject *decode_int64(PyObject *self, PyObject *string)
 {
-    off_t x;
+    long long x;
     char *bs;
     int i;
 
@@ -495,7 +495,7 @@ static PyObject *decode_offt(PyObject *self, PyObject *string)
         x = x * 256 + (unsigned char) bs[i];
     if (bs[7] & 0x80)
         x = -x;
-    return PyLong_FromLongLong((long long) x);
+    return PyLong_FromLongLong(x);
 }
 
 
@@ -503,8 +503,8 @@ static PyObject *decode_offt(PyObject *self, PyObject *string)
 static PyMethodDef ModuleMethods[] = {
     {"diff", diff, METH_VARARGS},
     {"patch", patch, METH_VARARGS},
-    {"encode_offt", encode_offt, METH_O},
-    {"decode_offt", decode_offt, METH_O},
+    {"encode_int64", encode_int64, METH_O},
+    {"decode_int64", decode_int64, METH_O},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 

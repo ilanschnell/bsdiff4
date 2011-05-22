@@ -30,15 +30,15 @@ class TestEncode(unittest.TestCase):
             (257, '\x01\x01\x00\x00\x00\x00\x00\x00'),
             (N, '\xff\xff\xff\xff\xff\xff\xff\x7f'),
             ]:
-            self.assertEqual(core.encode_offt(n), s)
-            self.assertEqual(core.decode_offt(s), n)
+            self.assertEqual(core.encode_int64(n), s)
+            self.assertEqual(core.decode_int64(s), n)
 
     def test_random(self):
         for dum in xrange(10000):
             x = random.randint(-N, N)
-            s = core.encode_offt(x)
+            s = core.encode_int64(x)
             self.assertEqual(len(s), 8)
-            self.assertEqual(core.decode_offt(s), x)
+            self.assertEqual(core.decode_int64(s), x)
 
 
 class TestFormat(unittest.TestCase):

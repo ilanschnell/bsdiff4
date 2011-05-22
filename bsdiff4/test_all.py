@@ -2,10 +2,39 @@ import random
 import unittest
 
 import api
+import core
+
+
+N = 2 ** 63 - 1
 
 
 def gen_random_bytes(size):
     return ''.join(chr(random.randint(0, 255)) for i in xrange(size))
+
+
+class TestEncode(unittest.TestCase):
+
+    def test_special_values(self):
+        for n, s in [
+            (-N, '\xff\xff\xff\xff\xff\xff\xff\xff'),
+            (-256, '\x00\x01\x00\x00\x00\x00\x00\x80'),
+            (-128, '\x80\x00\x00\x00\x00\x00\x00\x80'),
+            (-1, '\x01\x00\x00\x00\x00\x00\x00\x80'),
+            (0, '\x00\x00\x00\x00\x00\x00\x00\x00'),
+            (1, '\x01\x00\x00\x00\x00\x00\x00\x00'),
+            (128, '\x80\x00\x00\x00\x00\x00\x00\x00'),
+            (256, '\x00\x01\x00\x00\x00\x00\x00\x00'),
+            (N, '\xff\xff\xff\xff\xff\xff\xff\x7f'),
+            ]:
+            self.assertEqual(core.encode_offt(n), s)
+            self.assertEqual(core.decode_offt(s), n)
+
+    def test_random(self):
+        for dum in xrange(10000):
+            x = random.randint(-N, N)
+            s = core.encode_offt(x)
+            self.assertEqual(len(s), 8)
+            self.assertEqual(core.decode_offt(s), x)
 
 
 class TestAPI(unittest.TestCase):
@@ -39,7 +68,7 @@ class TestAPI(unittest.TestCase):
 
 def run(verbosity):
     suite = unittest.TestSuite()
-    for cls in [TestAPI]:
+    for cls in [TestEncode, TestAPI]:
         suite.addTest(unittest.makeSuite(cls))
 
     runner = unittest.TextTestRunner(verbosity=verbosity)

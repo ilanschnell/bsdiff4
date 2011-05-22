@@ -31,10 +31,11 @@ def read_data(path):
 def file_diff(src_path, dst_path, patch_path, verbose=False):
     src = read_data(src_path)
     dst = read_data(dst_path)
-    patch = format.diff(src, dst)
     if verbose:
         print 'src: %s' % human_bytes(len(src))
         print 'dst: %s' % human_bytes(len(dst))
+    patch = format.diff(src, dst)
+    if verbose:
         print 'patch: %s (%.2f%% of dst)' % (human_bytes(len(patch)),
                                              100.0 * len(patch) / len(dst))
     write_data(patch_path, patch)

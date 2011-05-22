@@ -53,14 +53,12 @@ def diff(src, dst):
     """
     tcontrol, bdiff, bextra = core.Diff(src, dst)
     # write control tuples as series of offts
-    bcontrol = BytesIO()
+    faux = BytesIO()
     for c in tcontrol:
         for x in c:
-            bcontrol.write(encode_offt(x))
-    del tcontrol
-    bcontrol = bcontrol.getvalue()
+            faux.write(encode_offt(x))
     # compress each block
-    bcontrol = bz2.compress(bcontrol)
+    bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
     return ''.join((

@@ -15,10 +15,10 @@ kwds['version'] = eval(pat.search(data).group(1))
 
 
 setup(
-    name = "bsdiff",
+    name = "bsdiff4",
     author = "Ilan Schnell",
     author_email = "ilanschnell@gmail.com",
-    url = "http://pypi.python.org/pypi/bsdiff/",
+    url = "http://pypi.python.org/pypi/bsdiff4/",
     license = "BSD",
     classifiers = [
         "Development Status :: 5 - Production/Stable",

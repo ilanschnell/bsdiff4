@@ -1,6 +1,6 @@
 from optparse import OptionParser
 
-import api
+import format
 
 
 def human_bytes(n):
@@ -31,7 +31,7 @@ def read_data(path):
 def file_diff(src_path, dst_path, patch_path, verbose=False):
     src = read_data(src_path)
     dst = read_data(dst_path)
-    patch = api.diff(src, dst)
+    patch = format.diff(src, dst)
     if verbose:
         print 'src: %s' % human_bytes(len(src))
         print 'dst: %s' % human_bytes(len(dst))
@@ -60,7 +60,7 @@ def main_bsdiff4():
 def file_patch(src_path, dst_path, patch_path):
     src = read_data(src_path)
     patch = read_data(patch_path)
-    dst = api.patch(src, patch)
+    dst = format.patch(src, patch)
     write_data(dst_path, dst)
 
 

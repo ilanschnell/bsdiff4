@@ -1,8 +1,8 @@
 import random
 import unittest
 
-import api
 import core
+import format
 
 
 N = 2 ** 63 - 1
@@ -41,12 +41,12 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.decode_offt(s), x)
 
 
-class TestAPI(unittest.TestCase):
+class TestFormat(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        patch = api.diff(src, dst)
+        patch = format.diff(src, dst)
         #print len(src), len(patch)
-        dst2 = api.patch(src, patch)
+        dst2 = format.patch(src, patch)
         self.assertEqual(dst, dst2)
 
     def test_zero(self):
@@ -71,7 +71,7 @@ class TestAPI(unittest.TestCase):
 
 def run(verbosity):
     suite = unittest.TestSuite()
-    for cls in [TestEncode, TestAPI]:
+    for cls in [TestEncode, TestFormat]:
         suite.addTest(unittest.makeSuite(cls))
 
     runner = unittest.TextTestRunner(verbosity=verbosity)

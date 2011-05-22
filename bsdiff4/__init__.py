@@ -1,4 +1,4 @@
-from api import diff, patch
+from format import diff, patch
 
 __version__ = '1.0.0'
 

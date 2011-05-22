@@ -29,18 +29,22 @@ def patch(src, patch):
     """
     magic = patch[:8]
     assert magic.startswith('BSDIFF4')
-    # read the length headers
-    l_bcontrol = core.decode_offt(patch[8:16])
-    l_bdiff = core.decode_offt(patch[16:24])
-    l_dst = core.decode_offt(patch[24:32])
-    # read the three data blocks
-    bcontrol = bz2.decompress(patch[32:32 + l_bcontrol])
-    bdiff = bz2.decompress(patch[32 + l_bcontrol:32 + l_bcontrol + l_bdiff])
-    bextra = bz2.decompress(patch[32 + l_bcontrol + l_bdiff:])
+    # length headers
+    len_control = core.decode_offt(patch[8:16])
+    len_diff = core.decode_offt(patch[16:24])
+    len_dst = core.decode_offt(patch[24:32])
+    # start positions of blocks
+    pos_control = 32
+    pos_diff = pos_control + len_control
+    pos_extra = pos_diff + len_diff
+    # the three data blocks
+    bcontrol = bz2.decompress(patch[pos_control:pos_diff])
+    bdiff = bz2.decompress(patch[pos_diff:pos_extra])
+    bextra = bz2.decompress(patch[pos_extra:])
     # decode the control tuples
     tcontrol = [(core.decode_offt(bcontrol[i:i + 8]),
                  core.decode_offt(bcontrol[i + 8:i + 16]),
                  core.decode_offt(bcontrol[i + 16:i + 24]))
                 for i in xrange(0, len(bcontrol), 24)]
     # actually do the patching
-    return core.patch(src, l_dst, tcontrol, bdiff, bextra)
+    return core.patch(src, len_dst, tcontrol, bdiff, bextra)

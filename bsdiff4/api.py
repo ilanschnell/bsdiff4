@@ -17,15 +17,11 @@ def diff(src, dst):
     bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
-    return ''.join((
-            'BSDIFF40',
-            core.encode_offt(len(bcontrol)),
-            core.encode_offt(len(bdiff)),
-            core.encode_offt(len(dst)),
-            bcontrol,
-            bdiff,
-            bextra,
-    ))
+    return ('BSDIFF40' +
+            core.encode_offt(len(bcontrol)) +
+            core.encode_offt(len(bdiff)) +
+            core.encode_offt(len(dst)) +
+            bcontrol + bdiff + bextra)
 
 
 def patch(src, patch):

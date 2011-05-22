@@ -41,8 +41,7 @@ class TestAPI(unittest.TestCase):
 
     def round_trip(self, src, dst):
         patch = api.diff(src, dst)
-        #if self.verbose:
-        print len(src), len(patch)
+        #print len(src), len(patch)
         dst2 = api.patch(src, patch)
         self.assertEqual(dst, dst2)
 

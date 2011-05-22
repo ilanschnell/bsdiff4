@@ -1,7 +1,8 @@
 /*
-  Shared library for use by Python. This is derived from bsdiff, the
-  standalone utility produced for BSD which can be found at
-  http://www.daemonology.net/bsdiff.
+  The code below is mostly derived from cx_bsdiff (written by Anthony
+  Tuininga, http://cx-bsdiff.sourceforge.net/).  The cx_bsdiff code in
+  turn was derived from bsdiff, the standalone utility produced for BSD
+  which can be found at http://www.daemonology.net/bsdiff.
 */
 
 #include <Python.h>
@@ -182,9 +183,8 @@ static off_t search(off_t *I,
 }
 
 
-/*
-  Performs a diff between the two data streams and returns a tuple
-  containing the control, diff and extra blocks that bsdiff produces.
+/* performs a diff between the two data streams and returns a tuple
+   containing the control, diff and extra blocks that bsdiff produces
 */
 static PyObject* diff(PyObject* self, PyObject* args)
 {
@@ -376,9 +376,8 @@ static PyObject* diff(PyObject* self, PyObject* args)
 }
 
 
-/*
-  Takes the original data and the control, diff and extra blocks produced
-  by bsdiff and returns the new data.
+/* takes the original data and the control, diff and extra blocks produced
+   by bsdiff and returns the new data
 */
 static PyObject* patch(PyObject* self, PyObject* args)
 {
@@ -508,6 +507,7 @@ static PyMethodDef ModuleMethods[] = {
     {"decode_offt", decode_offt, METH_O},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
+
 
 /* initialization routine for the shared libary */
 void initcore(void)

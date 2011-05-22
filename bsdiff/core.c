@@ -183,11 +183,10 @@ static off_t search(off_t *I,
 
 
 /*
-   Diff()
-     Performs a diff between the two data streams and returns a tuple
-   containing the control, diff and extra blocks that bsdiff produces.
+  Performs a diff between the two data streams and returns a tuple
+  containing the control, diff and extra blocks that bsdiff produces.
 */
-static PyObject* Diff(PyObject* self, PyObject* args)
+static PyObject* diff(PyObject* self, PyObject* args)
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
@@ -378,11 +377,10 @@ static PyObject* Diff(PyObject* self, PyObject* args)
 
 
 /*
-   Patch()
-     Takes the original data and the control, diff and extra blocks produced
-   by bsdiff and returns the new data.
+  Takes the original data and the control, diff and extra blocks produced
+  by bsdiff and returns the new data.
 */
-static PyObject* Patch(PyObject* self, PyObject* args)
+static PyObject* patch(PyObject* self, PyObject* args)
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
     int origDataLength, newDataLength, diffBlockLength, extraBlockLength;
@@ -457,6 +455,7 @@ static PyObject* Patch(PyObject* self, PyObject* args)
 }
 
 
+/* encode an off_t value as a string of 8 bytes */
 static PyObject *encode_offt(PyObject *self, PyObject *o)
 {
     off_t x;
@@ -479,6 +478,7 @@ static PyObject *encode_offt(PyObject *self, PyObject *o)
 }
 
 
+/* decode an off_t value from am 8 byte string */
 static PyObject *decode_offt(PyObject *self, PyObject *string)
 {
     off_t x;
@@ -502,8 +502,8 @@ static PyObject *decode_offt(PyObject *self, PyObject *string)
 
 /* declaration of methods supported by this module */
 static PyMethodDef ModuleMethods[] = {
-    {"Diff", Diff, METH_VARARGS},
-    {"Patch", Patch, METH_VARARGS},
+    {"diff", diff, METH_VARARGS},
+    {"patch", patch, METH_VARARGS},
     {"encode_offt", encode_offt, METH_O},
     {"decode_offt", decode_offt, METH_O},
     {NULL, NULL, 0, NULL}  /* Sentinel */

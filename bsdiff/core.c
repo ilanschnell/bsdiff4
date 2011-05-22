@@ -457,10 +457,56 @@ static PyObject* Patch(PyObject* self, PyObject* args)
 }
 
 
+static PyObject *encode_offt(PyObject *self, PyObject *args)
+{
+    off_t x;
+    char bs[8], sign = 0;
+    int i;
+
+    if (!PyArg_Parse(args, "L", &x))
+        return NULL;
+
+    if (x < 0) {
+        x = -x;
+        sign = 0x80;
+    }
+    for (i = 0; i < 8; i++) {
+        bs[i] = x % 256;
+        x /= 256;
+    }
+    bs[7] |= sign;
+    return PyString_FromStringAndSize(bs, 8);
+}
+
+
+static PyObject *decode_offt(PyObject *self, PyObject *args)
+{
+    off_t x;
+    char bs[8], sign = 0;
+    int i;
+
+    if (!PyArg_Parse(args, "L", &x))
+        return NULL;
+
+    if (x < 0) {
+        x = -x;
+        sign = 0x80;
+    }
+    for (i = 0; i < 8; i++) {
+        bs[i] = x % 256;
+        x /= 256;
+    }
+    bs[7] |= sign;
+    return PyString_FromStringAndSize(bs, 8);
+}
+
+
 /* declaration of methods supported by this module */
 static PyMethodDef ModuleMethods[] = {
     {"Diff", Diff, METH_VARARGS},
     {"Patch", Patch, METH_VARARGS},
+    {"encode_offt", encode_offt, METH_O},
+    {"decode_offt", decode_offt, METH_O},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 

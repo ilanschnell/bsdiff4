@@ -456,13 +456,13 @@ static PyObject* patch(PyObject* self, PyObject* args)
 
 
 /* encode an off_t value as a string of 8 bytes */
-static PyObject *encode_offt(PyObject *self, PyObject *o)
+static PyObject *encode_offt(PyObject *self, PyObject *value)
 {
     off_t x;
     char bs[8], sign = 0;
     int i;
 
-    if (!PyArg_Parse(o, "L", &x))
+    if (!PyArg_Parse(value, "L", &x))
         return NULL;
 
     if (x < 0) {
@@ -478,7 +478,7 @@ static PyObject *encode_offt(PyObject *self, PyObject *o)
 }
 
 
-/* decode an off_t value from am 8 byte string */
+/* decode an off_t value from an 8 byte string */
 static PyObject *decode_offt(PyObject *self, PyObject *string)
 {
     off_t x;

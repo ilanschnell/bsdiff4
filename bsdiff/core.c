@@ -457,13 +457,13 @@ static PyObject* Patch(PyObject* self, PyObject* args)
 }
 
 
-static PyObject *encode_offt(PyObject *self, PyObject *args)
+static PyObject *encode_offt(PyObject *self, PyObject *o)
 {
     off_t x;
     char bs[8], sign = 0;
     int i;
 
-    if (!PyArg_Parse(args, "L", &x))
+    if (!PyArg_Parse(o, "L", &x))
         return NULL;
 
     if (x < 0) {
@@ -479,25 +479,24 @@ static PyObject *encode_offt(PyObject *self, PyObject *args)
 }
 
 
-static PyObject *decode_offt(PyObject *self, PyObject *args)
+static PyObject *decode_offt(PyObject *self, PyObject *string)
 {
     off_t x;
-    char bs[8], sign = 0;
+    char *bs;
     int i;
 
-    if (!PyArg_Parse(args, "L", &x))
+    if (!PyString_Check(string)) {
+        PyErr_SetString(PyExc_TypeError, "string expected");
         return NULL;
+    }
+    bs = PyString_AsString(string);
 
-    if (x < 0) {
+    x = bs[7] & 0x7F;
+    for (i = 6; i >= 0; i--)
+        x = x * 256 + (unsigned char) bs[i];
+    if (bs[7] & 0x80)
         x = -x;
-        sign = 0x80;
-    }
-    for (i = 0; i < 8; i++) {
-        bs[i] = x % 256;
-        x /= 256;
-    }
-    bs[7] |= sign;
-    return PyString_FromStringAndSize(bs, 8);
+    return PyLong_FromLongLong((long long) x);
 }
 
 

@@ -11,6 +11,7 @@ from bsdiff, the standalone utility produced for BSD which can be found
 at http://www.daemonology.net/bsdiff.
 In addition to the two functions (diff and patch) cx_bsdiff provides, this
 package includes:
+
   * an interface to the BSDIFF4-format
   * command line interfaces: bsdiff4 and bspatch4
   * tests

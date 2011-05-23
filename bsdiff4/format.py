@@ -44,15 +44,15 @@ def file_diff(src_path, dst_path, patch_path):
     fo.close()
 
 
-def read_patch(f, header_only=False):
-    magic = f.read(8)
+def read_patch(fi, header_only=False):
+    magic = fi.read(8)
     assert magic.startswith('BSDIFF4')
     # length headers
-    len_control = core.decode_int64(f.read(8))
-    len_diff = core.decode_int64(f.read(8))
-    len_dst = core.decode_int64(f.read(8))
+    len_control = core.decode_int64(fi.read(8))
+    len_diff = core.decode_int64(fi.read(8))
+    len_dst = core.decode_int64(fi.read(8))
     # read the control header
-    bcontrol = bz2.decompress(f.read(len_control))
+    bcontrol = bz2.decompress(fi.read(len_control))
     tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
                  core.decode_int64(bcontrol[i + 8:i + 16]),
                  core.decode_int64(bcontrol[i + 16:i + 24]))
@@ -60,18 +60,15 @@ def read_patch(f, header_only=False):
     if header_only:
         return len_control, len_diff, len_dst, tcontrol
     # read the diff and extra blocks
-    bdiff = bz2.decompress(f.read(len_diff))
-    bextra = bz2.decompress(f.read())
+    bdiff = bz2.decompress(fi.read(len_diff))
+    bextra = bz2.decompress(fi.read())
     return len_dst, tcontrol, bdiff, bextra
 
 
 def patch(src, patch):
     """apply the BSDIFF4-format 'patch' to 'src'
     """
-    f = StringIO(patch)
-    res = core.patch(src, *read_patch(f))
-    f.close()
-    return res
+    return core.patch(src, *read_patch(StringIO(patch)))
 
 
 def file_patch(src_path, dst_path, patch_path):

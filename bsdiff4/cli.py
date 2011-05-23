@@ -70,4 +70,4 @@ def main_bspatch4():
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
 
-    file_patch(args[0], args[1], args[2])
+    file_patch(*args)

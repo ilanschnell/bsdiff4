@@ -8,7 +8,7 @@ core.so: core.c
 
 
 clean:
-	rm core.so
+	rm -f *.pyc *.so *.pyd
 	rm -rf ../build
 
 

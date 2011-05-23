@@ -20,8 +20,9 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     bextra = bz2.compress(bextra)
     for n in len(bcontrol), len(bdiff), len_dst:
         fo.write(core.encode_int64(n))
-    for data in bcontrol, bdiff, bextra:
-        fo.write(data)
+    fo.write(bcontrol)
+    fo.write(bdiff)
+    fo.write(bextra)
 
 
 def read_patch(fi, header_only=False):

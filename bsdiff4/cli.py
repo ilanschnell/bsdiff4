@@ -4,6 +4,7 @@ from optparse import OptionParser
 
 import core
 import format
+from format import read_data, write_data
 
 
 def human_bytes(n):
@@ -16,19 +17,6 @@ def human_bytes(n):
     if k < 1024:
         return '%i KB' % k
     return '%.2f MB' % (float(n) / (2 ** 20))
-
-
-def write_data(path, data):
-    fo = open(path, 'wb')
-    fo.write(data)
-    fo.close()
-
-
-def read_data(path):
-    fi = open(path, 'rb')
-    data = fi.read()
-    fi.close()
-    return data
 
 
 def file_diff(src_path, dst_path, patch_path, verbose=False):
@@ -59,13 +47,6 @@ def main_bsdiff4():
         p.error('requies 3 arguments, try -h')
 
     file_diff(args[0], args[1], args[2], opts.verbose)
-
-
-def file_patch(src_path, dst_path, patch_path):
-    src = read_data(src_path)
-    patch = read_data(patch_path)
-    dst = format.patch(src, patch)
-    write_data(dst_path, dst)
 
 
 def show_patch(patch_path):
@@ -106,4 +87,4 @@ def main_bspatch4():
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
 
-    file_patch(args[0], args[1], args[2])
+    format.file_patch(args[0], args[1], args[2])

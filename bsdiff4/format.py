@@ -4,6 +4,19 @@ from StringIO import StringIO
 import core
 
 
+def write_data(path, data):
+    fo = open(path, 'wb')
+    fo.write(data)
+    fo.close()
+
+
+def read_data(path):
+    fi = open(path, 'rb')
+    data = fi.read()
+    fi.close()
+    return data
+
+
 def diff(src, dst):
     """generate a BSDIFF4-format patch from 'src' to 'dst'
     """
@@ -24,27 +37,40 @@ def diff(src, dst):
             bcontrol + bdiff + bextra)
 
 
-def patch(src, patch):
-    """apply the BSDIFF4-format 'patch' to 'src'
-    """
-    magic = patch[:8]
+def read_patch(f, header_only=False):
+    magic = f.read(8)
     assert magic.startswith('BSDIFF4')
     # length headers
-    len_control = core.decode_int64(patch[8:16])
-    len_diff = core.decode_int64(patch[16:24])
-    len_dst = core.decode_int64(patch[24:32])
-    # start positions of blocks
-    pos_control = 32
-    pos_diff = pos_control + len_control
-    pos_extra = pos_diff + len_diff
-    # the three data blocks
-    bcontrol = bz2.decompress(patch[pos_control:pos_diff])
-    bdiff = bz2.decompress(patch[pos_diff:pos_extra])
-    bextra = bz2.decompress(patch[pos_extra:])
-    # decode the control tuples
+    len_control = core.decode_int64(f.read(8))
+    len_diff = core.decode_int64(f.read(8))
+    len_dst = core.decode_int64(f.read(8))
+    # read the control header
+    bcontrol = bz2.decompress(f.read(len_control))
     tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
                  core.decode_int64(bcontrol[i + 8:i + 16]),
                  core.decode_int64(bcontrol[i + 16:i + 24]))
                 for i in xrange(0, len(bcontrol), 24)]
-    # actually do the patching
+    if header_only:
+        return len_control, len_diff, len_dst, tcontrol
+    # read the diff and extra blocks
+    bdiff = bz2.decompress(f.read(len_diff))
+    bextra = bz2.decompress(f.read())
+    return len_dst, tcontrol, bdiff, bextra
+
+
+def patch(src, patch):
+    """apply the BSDIFF4-format 'patch' to 'src'
+    """
+    f = StringIO(patch)
+    len_dst, tcontrol, bdiff, bextra = read_patch(f)
+    f.close()
     return core.patch(src, len_dst, tcontrol, bdiff, bextra)
+
+
+def file_patch(src_path, dst_path, patch_path):
+    src = read_data(src_path)
+    fi = open(patch_path, 'rb')
+    len_dst, tcontrol, bdiff, bextra = read_patch(fi)
+    fi.close()
+    write_data(dst_path,
+               core.patch(src, len_dst, tcontrol, bdiff, bextra))

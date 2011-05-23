@@ -31,18 +31,16 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
 def diff(src, dst):
     """generate a BSDIFF4-format patch from 'src' to 'dst'
     """
-    tcontrol, bdiff, bextra = core.diff(src, dst)
     faux = StringIO()
-    write_patch(faux, len(dst), tcontrol, bdiff, bextra)
+    write_patch(faux, len(dst), *core.diff(src, dst))
     return faux.getvalue()
 
 
 def file_diff(src_path, dst_path, patch_path):
     src = read_data(src_path)
     dst = read_data(dst_path)
-    tcontrol, bdiff, bextra = core.diff(src, dst)
     fo = open(patch_path, 'wb')
-    write_patch(fo, len(dst), tcontrol, bdiff, bextra)
+    write_patch(fo, len(dst), *core.diff(src, dst))
     fo.close()
 
 
@@ -71,17 +69,14 @@ def patch(src, patch):
     """apply the BSDIFF4-format 'patch' to 'src'
     """
     f = StringIO(patch)
-    len_dst, tcontrol, bdiff, bextra = read_patch(f)
+    res = core.patch(src, *read_patch(f))
     f.close()
-    return core.patch(src, len_dst, tcontrol, bdiff, bextra)
+    return res
 
 
 def file_patch(src_path, dst_path, patch_path):
-    src = read_data(src_path)
     fi = open(patch_path, 'rb')
-    len_dst, tcontrol, bdiff, bextra = read_patch(fi)
-    fi.close()
-
     fo = open(dst_path, 'wb')
-    fo.write(core.patch(src, len_dst, tcontrol, bdiff, bextra))
+    fo.write(core.patch(read_data(src_path), *read_patch(fi)))
     fo.close()
+    fi.close()

@@ -31,7 +31,7 @@ setup(
         "Programming Language :: Python",
         "Topic :: Utilities",
     ],
-    description = "efficient arrays of booleans -- C extension",
+    description = "binary diff and patch using the BSDIFF4-format",
     packages = ["bsdiff4"],
     ext_modules = [Extension(name = "bsdiff4.core",
                              sources = ["bsdiff4/core.c"])],

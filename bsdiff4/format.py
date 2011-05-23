@@ -4,14 +4,10 @@ from StringIO import StringIO
 import core
 
 
-def read_data(path):
-    fi = open(path, 'rb')
-    data = fi.read()
-    fi.close()
-    return data
-
 
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
+    """write a BSDIFF4-format patch to stream 'fo'
+    """
     fo.write('BSDIFF40')
     faux = StringIO()
     # write control tuples as series of offts
@@ -28,23 +24,9 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
         fo.write(data)
 
 
-def diff(src, dst):
-    """generate a BSDIFF4-format patch from 'src' to 'dst'
-    """
-    faux = StringIO()
-    write_patch(faux, len(dst), *core.diff(src, dst))
-    return faux.getvalue()
-
-
-def file_diff(src_path, dst_path, patch_path):
-    src = read_data(src_path)
-    dst = read_data(dst_path)
-    fo = open(patch_path, 'wb')
-    write_patch(fo, len(dst), *core.diff(src, dst))
-    fo.close()
-
-
 def read_patch(fi, header_only=False):
+    """read a BSDIFF4-format patch from stream 'fi'
+    """
     magic = fi.read(8)
     assert magic.startswith('BSDIFF4')
     # length headers
@@ -65,13 +47,42 @@ def read_patch(fi, header_only=False):
     return len_dst, tcontrol, bdiff, bextra
 
 
+def read_data(path):
+    fi = open(path, 'rb')
+    data = fi.read()
+    fi.close()
+    return data
+
+
+def diff(src, dst):
+    """returns a BSDIFF4-format patch (from 'src' to 'dst') as a string
+    """
+    faux = StringIO()
+    write_patch(faux, len(dst), *core.diff(src, dst))
+    return faux.getvalue()
+
+
+def file_diff(src_path, dst_path, patch_path):
+    """writes a BSDIFF4-format patch (from the file 'src_path' to 'dst_path')
+    to the file 'patch_path.
+    """
+    src = read_data(src_path)
+    dst = read_data(dst_path)
+    fo = open(patch_path, 'wb')
+    write_patch(fo, len(dst), *core.diff(src, dst))
+    fo.close()
+
+
 def patch(src, patch):
-    """apply the BSDIFF4-format 'patch' to 'src'
+    """apply the BSDIFF4-format 'patch' to 'src' and return the string
     """
     return core.patch(src, *read_patch(StringIO(patch)))
 
 
 def file_patch(src_path, dst_path, patch_path):
+    """apply the BSDIFF4-format file 'patch_path' to the file 'src_path' and
+    write patched result to the file 'dst_path'
+    """
     fi = open(patch_path, 'rb')
     fo = open(dst_path, 'wb')
     fo.write(core.patch(read_data(src_path), *read_patch(fi)))

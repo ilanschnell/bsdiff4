@@ -79,6 +79,7 @@ def show_patch(patch_path):
     for var_name in 'total', 'control', 'diff', 'extra', 'dst':
         print '%s size: %d (%s)' % (var_name, size[var_name],
                                    human_bytes(size[var_name]))
+    print 'total / dst = %.2f%%' % (100.0 * size['total'] / size['dst'])
     bcontrol = bz2.decompress(fi.read(size['control']))
     fi.close()
     tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),

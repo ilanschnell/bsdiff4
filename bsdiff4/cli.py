@@ -19,19 +19,6 @@ def human_bytes(n):
     return '%.2f MB' % (float(n) / (2 ** 20))
 
 
-def file_diff(src_path, dst_path, patch_path, verbose=False):
-    src = read_data(src_path)
-    dst = read_data(dst_path)
-    if verbose:
-        print 'src: %s' % human_bytes(len(src))
-        print 'dst: %s' % human_bytes(len(dst))
-    patch = format.diff(src, dst)
-    if verbose:
-        print 'patch: %s (%.2f%% of dst)' % (human_bytes(len(patch)),
-                                             100.0 * len(patch) / len(dst))
-    write_data(patch_path, patch)
-
-
 def main_bsdiff4():
     p = OptionParser(
         usage="usage: %prog [options] SRC DST PATCH",
@@ -46,7 +33,13 @@ def main_bsdiff4():
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
 
-    file_diff(args[0], args[1], args[2], opts.verbose)
+    format.file_diff(*args)
+    size = [getsize(args[i]) for i in xrange(3)]
+    if opts.verbose:
+        print 'src: %s' % human_bytes(size[0])
+        print 'dst: %s' % human_bytes(size[1])
+        print 'patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),
+                                             100.0 * size[2] / size[1])
 
 
 def show_patch(patch_path):

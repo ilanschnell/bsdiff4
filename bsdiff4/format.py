@@ -28,12 +28,10 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
-    fo.write(core.encode_int64(len(bcontrol)))
-    fo.write(core.encode_int64(len(bdiff)))
-    fo.write(core.encode_int64(len_dst))
-    fo.write(bcontrol)
-    fo.write(bdiff)
-    fo.write(bextra)
+    for n in len(bcontrol), len(bdiff), len_dst:
+        fo.write(core.encode_int64(n))
+    for data in bcontrol, bdiff, bextra:
+        fo.write(data)
 
 
 def diff(src, dst):
@@ -48,7 +46,10 @@ def diff(src, dst):
 def file_diff(src_path, dst_path, patch_path):
     src = read_data(src_path)
     dst = read_data(dst_path)
-    write_data(patch_path, diff(src, dst))
+    tcontrol, bdiff, bextra = core.diff(src, dst)
+    fo = open(patch_path, 'wb')
+    write_patch(fo, len(dst), tcontrol, bdiff, bextra)
+    fo.close()
 
 
 def read_patch(f, header_only=False):

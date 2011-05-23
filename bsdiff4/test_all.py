@@ -73,9 +73,7 @@ def run(verbosity):
     suite = unittest.TestSuite()
     for cls in [TestEncode, TestFormat]:
         suite.addTest(unittest.makeSuite(cls))
-
     runner = unittest.TextTestRunner(verbosity=verbosity)
-
     return runner.run(suite)
 
 

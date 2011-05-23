@@ -4,7 +4,7 @@ from optparse import OptionParser
 
 import core
 import format
-from format import read_data, write_data
+from format import read_data, write_data, read_patch
 
 
 def human_bytes(n):
@@ -50,23 +50,16 @@ def main_bsdiff4():
 
 
 def show_patch(patch_path):
+    s_total = getsize(patch_path)
     fi = open(patch_path, 'rb')
-    print 'magic: %r' % fi.read(8)
-    size = {'total': getsize(patch_path)}
-    for var_name in 'control', 'diff', 'dst':
-        size[var_name] = core.decode_int64(fi.read(8))
-    size['extra'] = size['total'] - 32 - size['control'] - size['diff']
+    s_control, s_diff, s_dst, tcontrol = read_patch(fi, header_only=True)
+    fi.close()
+    s_extra = s_total - 32 - s_control - s_diff
 
     for var_name in 'total', 'control', 'diff', 'extra', 'dst':
-        print '%s size: %d (%s)' % (var_name, size[var_name],
-                                   human_bytes(size[var_name]))
-    print 'total / dst = %.2f%%' % (100.0 * size['total'] / size['dst'])
-    bcontrol = bz2.decompress(fi.read(size['control']))
-    fi.close()
-    tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
-                 core.decode_int64(bcontrol[i + 8:i + 16]),
-                 core.decode_int64(bcontrol[i + 16:i + 24]))
-                for i in xrange(0, len(bcontrol), 24)]
+        size = eval('s_' + var_name)
+        print '%s size: %d (%s)' % (var_name, size, human_bytes(size))
+    print 'total / dst = %.2f%%' % (100.0 * s_total / s_dst)
     print 'number of control tuples: %d' % len(tcontrol)
     #for t in tcontrol:
     #    print '%20d %10d %10d' % t

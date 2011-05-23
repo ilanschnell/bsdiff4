@@ -1,18 +1,21 @@
+import bz2
+from os.path import getsize
 from optparse import OptionParser
 
+import core
 import format
 
 
 def human_bytes(n):
     """
-    Return the number of bytes n in more human readable form.
+    return the number of bytes 'n' in more human readable form
     """
     if n < 1024:
         return '%i B' % n
     k = (n - 1) / 1024 + 1
     if k < 1024:
         return '%i KB' % k
-    return '%.2f MB' % (float(n) / (2**20))
+    return '%.2f MB' % (float(n) / (2 ** 20))
 
 
 def write_data(path, data):
@@ -65,6 +68,28 @@ def file_patch(src_path, dst_path, patch_path):
     write_data(dst_path, dst)
 
 
+def show_patch(patch_path):
+    fi = open(patch_path, 'rb')
+    print 'magic: %r' % fi.read(8)
+    size = {'total': getsize(patch_path)}
+    for var_name in 'control', 'diff', 'dst':
+        size[var_name] = core.decode_int64(fi.read(8))
+    size['extra'] = size['total'] - 32 - size['control'] - size['diff']
+
+    for var_name in 'total', 'control', 'diff', 'extra', 'dst':
+        print '%s size: %d (%s)' % (var_name, size[var_name],
+                                   human_bytes(size[var_name]))
+    bcontrol = bz2.decompress(fi.read(size['control']))
+    fi.close()
+    tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
+                 core.decode_int64(bcontrol[i + 8:i + 16]),
+                 core.decode_int64(bcontrol[i + 16:i + 24]))
+                for i in xrange(0, len(bcontrol), 24)]
+    print 'number of control tuples: %d' % len(tcontrol)
+    #for t in tcontrol:
+    #    print '%20d %10d %10d' % t
+
+
 def main_bspatch4():
     p = OptionParser(
         usage="usage: %prog [options] SRC DST PATCH",
@@ -72,6 +97,10 @@ def main_bspatch4():
                      "file to SRC"))
 
     opts, args = p.parse_args()
+
+    if len(args) == 1:
+        show_patch(args[0])
+        return
 
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')

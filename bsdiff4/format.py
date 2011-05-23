@@ -17,12 +17,10 @@ def read_data(path):
     return data
 
 
-def diff(src, dst):
-    """generate a BSDIFF4-format patch from 'src' to 'dst'
-    """
-    tcontrol, bdiff, bextra = core.diff(src, dst)
-    # write control tuples as series of offts
+def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
+    fo.write('BSDIFF40')
     faux = StringIO()
+    # write control tuples as series of offts
     for c in tcontrol:
         for x in c:
             faux.write(core.encode_int64(x))
@@ -30,11 +28,27 @@ def diff(src, dst):
     bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
-    return ('BSDIFF40' +
-            core.encode_int64(len(bcontrol)) +
-            core.encode_int64(len(bdiff)) +
-            core.encode_int64(len(dst)) +
-            bcontrol + bdiff + bextra)
+    fo.write(core.encode_int64(len(bcontrol)))
+    fo.write(core.encode_int64(len(bdiff)))
+    fo.write(core.encode_int64(len_dst))
+    fo.write(bcontrol)
+    fo.write(bdiff)
+    fo.write(bextra)
+
+
+def diff(src, dst):
+    """generate a BSDIFF4-format patch from 'src' to 'dst'
+    """
+    tcontrol, bdiff, bextra = core.diff(src, dst)
+    faux = StringIO()
+    write_patch(faux, len(dst), tcontrol, bdiff, bextra)
+    return faux.getvalue()
+
+
+def file_diff(src_path, dst_path, patch_path):
+    src = read_data(src_path)
+    dst = read_data(dst_path)
+    write_data(patch_path, diff(src, dst))
 
 
 def read_patch(f, header_only=False):

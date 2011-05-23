@@ -31,8 +31,8 @@ def main_bsdiff4():
         p.error('requies 3 arguments, try -h')
 
     file_diff(*args)
-    size = [getsize(args[i]) for i in xrange(3)]
     if opts.verbose:
+        size = [getsize(args[i]) for i in xrange(3)]
         print 'src: %s' % human_bytes(size[0])
         print 'dst: %s' % human_bytes(size[1])
         print 'patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),

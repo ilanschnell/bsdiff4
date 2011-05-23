@@ -21,7 +21,7 @@ setup(
     name = "bsdiff4",
     author = "Ilan Schnell",
     author_email = "ilanschnell@gmail.com",
-    url = "http://pypi.python.org/pypi/bsdiff4/",
+    url = "https://github.com/ilanschnell/bsdiff4",
     license = "BSD",
     classifiers = [
         "Development Status :: 5 - Production/Stable",

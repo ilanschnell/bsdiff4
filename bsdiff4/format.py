@@ -4,12 +4,6 @@ from StringIO import StringIO
 import core
 
 
-def write_data(path, data):
-    fo = open(path, 'wb')
-    fo.write(data)
-    fo.close()
-
-
 def read_data(path):
     fi = open(path, 'rb')
     data = fi.read()
@@ -87,5 +81,7 @@ def file_patch(src_path, dst_path, patch_path):
     fi = open(patch_path, 'rb')
     len_dst, tcontrol, bdiff, bextra = read_patch(fi)
     fi.close()
-    write_data(dst_path,
-               core.patch(src, len_dst, tcontrol, bdiff, bextra))
+
+    fo = open(dst_path, 'wb')
+    fo.write(core.patch(src, len_dst, tcontrol, bdiff, bextra))
+    fo.close()

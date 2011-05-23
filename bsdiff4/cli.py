@@ -1,10 +1,7 @@
-import bz2
 from os.path import getsize
 from optparse import OptionParser
 
-import core
-import format
-from format import read_data, write_data, read_patch
+from format import file_diff, file_patch, read_patch
 
 
 def human_bytes(n):
@@ -33,7 +30,7 @@ def main_bsdiff4():
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
 
-    format.file_diff(*args)
+    file_diff(*args)
     size = [getsize(args[i]) for i in xrange(3)]
     if opts.verbose:
         print 'src: %s' % human_bytes(size[0])
@@ -73,4 +70,4 @@ def main_bspatch4():
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
 
-    format.file_patch(args[0], args[1], args[2])
+    file_patch(args[0], args[1], args[2])

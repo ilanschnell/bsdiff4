@@ -9,19 +9,19 @@ def slow_patch(src_path, dst_path, patch_path):
     len_dst, tcontrol, bdiff, bextra = read_patch(fi_patch)
     fi_patch.close()
 
-    fi_src = open(src_path, 'rb')
+    fi = open(src_path, 'rb')
     fo = open(dst_path, 'wb')
     faux_diff = StringIO(bdiff)
     faux_extra = StringIO(bextra)
     for x, y, z in tcontrol:
         diff_data = faux_diff.read(x)
-        orig_data = fi_src.read(x)
+        src_data = fi.read(x)
         for i in xrange(len(diff_data)):
-            fo.write(chr((ord(diff_data[i]) + ord(orig_data[i])) % 256))
+            fo.write(chr((ord(diff_data[i]) + ord(src_data[i])) % 256))
         fo.write(faux_extra.read(y))
-        fi_src.seek(z, os.SEEK_CUR)
+        fi.seek(z, os.SEEK_CUR)
     fo.close()
-    fi_src.close()
+    fi.close()
 
 
 if __name__ == '__main__':

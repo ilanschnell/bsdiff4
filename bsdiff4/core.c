@@ -31,7 +31,7 @@ static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
                 }
             }
             for (i = 0; i < j; i++)
-                V[I[k +i ]] = k + j -1;
+                V[I[k + i]] = k + j - 1;
             if (j == 1)
                 I[k] = -1;
         }

@@ -16,7 +16,6 @@ pat = re.compile(r'__version__\s*=\s*(.+)', re.M)
 data = open(join('bsdiff4', '__init__.py')).read()
 kwds['version'] = eval(pat.search(data).group(1))
 
-
 setup(
     name = "bsdiff4",
     author = "Ilan Schnell",

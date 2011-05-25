@@ -1,5 +1,5 @@
 import bz2
-from StringIO import StringIO
+from cStringIO import StringIO
 
 import core
 

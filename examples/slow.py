@@ -1,5 +1,5 @@
 import os
-from StringIO import StringIO
+from cStringIO import StringIO
 
 from bsdiff4.format import read_patch
 

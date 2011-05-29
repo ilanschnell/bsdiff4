@@ -1,0 +1,11 @@
+2011-??-??   1.0.1:
+-------------------
+  * add example which implements a slow pure Python patch function
+
+  * using cStringIO (instead of StringIO) in format module
+
+
+2011-05-23   1.0.0:
+-------------------
+
+initial release

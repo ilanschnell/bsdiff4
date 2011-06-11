@@ -12,7 +12,7 @@ kwds = {}
 kwds['long_description'] = open('README.rst').read()
 
 # Read version from core/__init__.py
-pat = re.compile(r'__version__\s*=\s*(.+)', re.M)
+pat = re.compile(r'__version__\s*=\s*(\S+)', re.M)
 data = open(join('bsdiff4', '__init__.py')).read()
 kwds['version'] = eval(pat.search(data).group(1))
 

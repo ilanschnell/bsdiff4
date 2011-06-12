@@ -1,9 +1,6 @@
-=======
-bsdiff4
-=======
-
-binary diff and patch using the BSDIFF4-format
-
+=======================================================
+bsdiff4: binary diff and patch using the BSDIFF4-format
+=======================================================
 
 The code is mostly derived from cx_bsdiff (written by Anthony Tuininga,
 http://cx-bsdiff.sourceforge.net/).  The cx_bsdiff code in turn was derived

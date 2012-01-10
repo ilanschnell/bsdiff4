@@ -458,7 +458,7 @@ static PyObject* patch(PyObject* self, PyObject* args)
 static PyObject *encode_int64(PyObject *self, PyObject *value)
 {
     long long x;
-    char bs[8], sign = 0;
+    char bs[8], sign = 0x00;
     int i;
 
     if (!PyArg_Parse(value, "L", &x))
@@ -486,6 +486,10 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
 
     if (!PyString_Check(string)) {
         PyErr_SetString(PyExc_TypeError, "string expected");
+        return NULL;
+    }
+    if (PyString_Size(string) != 8) {
+        PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
     bs = PyString_AsString(string);

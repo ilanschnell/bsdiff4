@@ -34,8 +34,14 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.encode_int64(n), s)
             self.assertEqual(core.decode_int64(s), n)
 
+    def test_errors(self):
+        self.assertRaises(TypeError, core.encode_int64, 'x')
+        self.assertRaises(TypeError, core.decode_int64, 12345)
+        self.assertRaises(ValueError, core.decode_int64, '1234567')
+        self.assertRaises(ValueError, core.decode_int64, '123456789')
+
     def test_random(self):
-        for dum in xrange(10000):
+        for dum in xrange(1000):
             x = random.randint(-N, N)
             s = core.encode_int64(x)
             self.assertEqual(len(s), 8)

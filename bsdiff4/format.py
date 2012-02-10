@@ -4,7 +4,8 @@ import sys
 is_py3k = bool(sys.version_info[0] == 3)
 
 if is_py3k:
-    from io import StringIO
+    import io
+    from io import BytesIO as StringIO
 else:
     from cStringIO import StringIO
 
@@ -14,7 +15,7 @@ import bsdiff4.core as core
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     """write a BSDIFF4-format patch to stream 'fo'
     """
-    fo.write('BSDIFF40')
+    fo.write(b'BSDIFF40')
     faux = StringIO()
     # write control tuples as series of offts
     for c in tcontrol:
@@ -35,7 +36,7 @@ def read_patch(fi, header_only=False):
     """read a BSDIFF4-format patch from stream 'fi'
     """
     magic = fi.read(8)
-    assert magic.startswith('BSDIFF4')
+    assert magic.startswith(b'BSDIFF4')
     # length headers
     len_control = core.decode_int64(fi.read(8))
     len_diff = core.decode_int64(fi.read(8))
@@ -45,7 +46,7 @@ def read_patch(fi, header_only=False):
     tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
                  core.decode_int64(bcontrol[i + 8:i + 16]),
                  core.decode_int64(bcontrol[i + 16:i + 24]))
-                for i in xrange(0, len(bcontrol), 24)]
+                for i in range(0, len(bcontrol), 24)]
     if header_only:
         return len_control, len_diff, len_dst, tcontrol
     # read the diff and extra blocks

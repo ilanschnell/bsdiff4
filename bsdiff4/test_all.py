@@ -17,19 +17,19 @@ class TestEncode(unittest.TestCase):
 
     def test_special_values(self):
         for n, s in [
-            (-N, '\xff\xff\xff\xff\xff\xff\xff\xff'),
-            (-256, '\x00\x01\x00\x00\x00\x00\x00\x80'),
-            (-128, '\x80\x00\x00\x00\x00\x00\x00\x80'),
-            (-1, '\x01\x00\x00\x00\x00\x00\x00\x80'),
-            (0, '\x00\x00\x00\x00\x00\x00\x00\x00'),
-            (1, '\x01\x00\x00\x00\x00\x00\x00\x00'),
-            (127, '\x7f\x00\x00\x00\x00\x00\x00\x00'),
-            (128, '\x80\x00\x00\x00\x00\x00\x00\x00'),
-            (129, '\x81\x00\x00\x00\x00\x00\x00\x00'),
-            (255, '\xff\x00\x00\x00\x00\x00\x00\x00'),
-            (256, '\x00\x01\x00\x00\x00\x00\x00\x00'),
-            (257, '\x01\x01\x00\x00\x00\x00\x00\x00'),
-            (N, '\xff\xff\xff\xff\xff\xff\xff\x7f'),
+            (-N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
+            (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
+            (-128, b'\x80\x00\x00\x00\x00\x00\x00\x80'),
+            (-1, b'\x01\x00\x00\x00\x00\x00\x00\x80'),
+            (0, b'\x00\x00\x00\x00\x00\x00\x00\x00'),
+            (1, b'\x01\x00\x00\x00\x00\x00\x00\x00'),
+            (127, b'\x7f\x00\x00\x00\x00\x00\x00\x00'),
+            (128, b'\x80\x00\x00\x00\x00\x00\x00\x00'),
+            (129, b'\x81\x00\x00\x00\x00\x00\x00\x00'),
+            (255, b'\xff\x00\x00\x00\x00\x00\x00\x00'),
+            (256, b'\x00\x01\x00\x00\x00\x00\x00\x00'),
+            (257, b'\x01\x01\x00\x00\x00\x00\x00\x00'),
+            (N, b'\xff\xff\xff\xff\xff\xff\xff\x7f'),
             ]:
             self.assertEqual(core.encode_int64(n), s)
             self.assertEqual(core.decode_int64(s), n)
@@ -37,8 +37,8 @@ class TestEncode(unittest.TestCase):
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
         self.assertRaises(TypeError, core.decode_int64, 12345)
-        self.assertRaises(ValueError, core.decode_int64, '1234567')
-        self.assertRaises(ValueError, core.decode_int64, '123456789')
+        self.assertRaises(ValueError, core.decode_int64, b'1234567')
+        self.assertRaises(ValueError, core.decode_int64, b'123456789')
 
     def test_random(self):
         for dum in range(1000):
@@ -57,7 +57,7 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(dst, dst2)
 
     def test_zero(self):
-        self.round_trip('', '')
+        self.round_trip(b'', b'')
 
     def test_extra(self):
         src = gen_random_bytes(1000)
@@ -79,7 +79,7 @@ class TestFormat(unittest.TestCase):
 def run(verbosity=1):
     from . import __version__
     print('bsdiff4 is installed in: ' + os.path.dirname(__file__))
-    print('bsdiff4 version:' + __version__)
+    print('bsdiff4 version: ' + __version__)
 
     suite = unittest.TestSuite()
     for cls in [TestEncode, TestFormat]:

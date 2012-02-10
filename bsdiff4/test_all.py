@@ -9,8 +9,8 @@ import format
 N = 2 ** 63 - 1
 
 
-def gen_random_bytes(size):
-    return ''.join(chr(random.randint(0, 255)) for i in xrange(size))
+def gen_random_bytes(n):
+    return os.urandom(n)
 
 
 class TestEncode(unittest.TestCase):

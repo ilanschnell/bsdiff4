@@ -2,8 +2,8 @@ import os
 import random
 import unittest
 
-import core
-import format
+import bsdiff4.core as core
+import bsdiff4.format as format
 
 
 N = 2 ** 63 - 1
@@ -41,7 +41,7 @@ class TestEncode(unittest.TestCase):
         self.assertRaises(ValueError, core.decode_int64, '123456789')
 
     def test_random(self):
-        for dum in xrange(1000):
+        for dum in range(1000):
             x = random.randint(-N, N)
             s = core.encode_int64(x)
             self.assertEqual(len(s), 8)

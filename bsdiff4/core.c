@@ -11,6 +11,15 @@
 #define IS_PY3K
 #endif
 
+#ifdef IS_PY3K
+#include "bytesobject.h"
+#define PyString_FromStringAndSize  PyBytes_FromStringAndSize
+#define PyString_Check  PyBytes_Check
+#define PyString_Size  PyBytes_Size
+#define PyString_AsString  PyBytes_AsString
+#define Py_TPFLAGS_HAVE_WEAKREFS  0
+#endif
+
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 
@@ -331,11 +340,11 @@ static PyObject* diff(PyObject* self, PyObject* args)
                 PyMem_Free(eb);
                 return NULL;
             }
-            PyTuple_SET_ITEM(tuple, 0, PyInt_FromLong(lenf));
+            PyTuple_SET_ITEM(tuple, 0, PyLong_FromLong(lenf));
             PyTuple_SET_ITEM(tuple, 1,
-                    PyInt_FromLong((scan - lenb) - (lastscan + lenf)));
+                    PyLong_FromLong((scan - lenb) - (lastscan + lenf)));
             PyTuple_SET_ITEM(tuple, 2,
-                    PyInt_FromLong((pos - lenb) - (lastpos + lenf)));
+                    PyLong_FromLong((pos - lenb) - (lastpos + lenf)));
             if (PyList_Append(controlTuples, tuple) < 0) {
                 Py_DECREF(controlTuples);
                 Py_DECREF(tuple);
@@ -420,9 +429,9 @@ static PyObject* patch(PyObject* self, PyObject* args)
             PyErr_SetString(PyExc_TypeError, "expecting tuple of size 3");
             return NULL;
         }
-        x = PyInt_AsLong(PyTuple_GET_ITEM(tuple, 0));
-        y = PyInt_AsLong(PyTuple_GET_ITEM(tuple, 1));
-        z = PyInt_AsLong(PyTuple_GET_ITEM(tuple, 2));
+        x = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 0));
+        y = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 1));
+        z = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 2));
         if (newpos + x > newDataLength ||
                 diffPtr + x > diffBlock + diffBlockLength ||
                 extraPtr + y > extraBlock + extraBlockLength) {
@@ -522,7 +531,7 @@ static PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
 };
 PyMODINIT_FUNC
-PyInit__bitarray(void)
+PyInit_core(void)
 {
     PyObject *m;
 

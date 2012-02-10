@@ -33,10 +33,10 @@ def main_bsdiff4():
     file_diff(*args)
     if opts.verbose:
         size = [getsize(args[i]) for i in xrange(3)]
-        print 'src: %s' % human_bytes(size[0])
-        print 'dst: %s' % human_bytes(size[1])
-        print 'patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),
-                                             100.0 * size[2] / size[1])
+        print('src: %s' % human_bytes(size[0]))
+        print('dst: %s' % human_bytes(size[1]))
+        print('patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),
+                                             100.0 * size[2] / size[1]))
 
 
 def show_patch(patch_path):
@@ -48,11 +48,11 @@ def show_patch(patch_path):
 
     for var_name in 'total', 'control', 'diff', 'extra', 'dst':
         size = eval('s_' + var_name)
-        print '%s size: %d (%s)' % (var_name, size, human_bytes(size))
-    print 'total / dst = %.2f%%' % (100.0 * s_total / s_dst)
-    print 'number of control tuples: %d' % len(tcontrol)
+        print('%s size: %d (%s)' % (var_name, size, human_bytes(size)))
+    print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
+    print('number of control tuples: %d' % len(tcontrol))
     #for t in tcontrol:
-    #    print '%20d %10d %10d' % t
+    #    print('%20d %10d %10d' % t)
 
 
 def main_bspatch4():

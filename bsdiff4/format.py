@@ -1,8 +1,14 @@
 import bz2
-from cStringIO import StringIO
+import sys
 
-import core
+is_py3k = bool(sys.version_info[0] == 3)
 
+if is_py3k:
+    from io import StringIO
+else:
+    from cStringIO import StringIO
+
+import bsdiff4.core as core
 
 
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):

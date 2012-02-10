@@ -7,6 +7,10 @@
 
 #include <Python.h>
 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PY3K
+#endif
+
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 
@@ -504,7 +508,7 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
 
 
 /* declaration of methods supported by this module */
-static PyMethodDef ModuleMethods[] = {
+static PyMethodDef module_functions[] = {
     {"diff", diff, METH_VARARGS},
     {"patch", patch, METH_VARARGS},
     {"encode_int64", encode_int64, METH_O},
@@ -512,9 +516,25 @@ static PyMethodDef ModuleMethods[] = {
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
-
 /* initialization routine for the shared libary */
-void initcore(void)
+#ifdef IS_PY3K
+static PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
+};
+PyMODINIT_FUNC
+PyInit__bitarray(void)
 {
-    Py_InitModule("core", ModuleMethods);
+    PyObject *m;
+
+    m = PyModule_Create(&moduledef);
+    if (m == NULL)
+        return NULL;
+    return m;
 }
+#else
+PyMODINIT_FUNC
+initcore(void)
+{
+    Py_InitModule("core", module_functions);
+}
+#endif

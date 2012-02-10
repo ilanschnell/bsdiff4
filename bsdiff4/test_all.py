@@ -72,7 +72,7 @@ class TestFormat(unittest.TestCase):
         a = gen_random_bytes(50000)
         b = gen_random_bytes(40000)
         src = a + gen_random_bytes(100) + b
-        dst = a = gen_random_bytes(100) + b
+        dst = a + gen_random_bytes(100) + b
         self.round_trip(src, dst)
 
 

@@ -77,7 +77,7 @@ def diff(src, dst):
 
 def file_diff(src_path, dst_path, patch_path):
     """writes a BSDIFF4-format patch (from the file 'src_path' to 'dst_path')
-    to the file 'patch_path.
+    to the file 'patch_path'.
     """
     src = read_data(src_path)
     dst = read_data(dst_path)

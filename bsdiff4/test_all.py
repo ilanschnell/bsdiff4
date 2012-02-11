@@ -1,10 +1,13 @@
 import os
 import sys
 import random
+import shutil
 import unittest
+import tempfile
 
 import bsdiff4.core as core
 import bsdiff4.format as format
+from bsdiff4 import diff, patch, file_diff, file_patch
 
 
 def to_bytes(s):
@@ -61,9 +64,9 @@ class TestEncode(unittest.TestCase):
 class TestFormat(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        patch = format.diff(src, dst)
-        #print(len(src), len(patch))
-        dst2 = format.patch(src, patch)
+        p = diff(src, dst)
+        #print(len(src), len(p))
+        dst2 = patch(src, p)
         self.assertEqual(dst, dst2)
 
     def test_zero(self):
@@ -86,13 +89,53 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
 
+class TestFile(unittest.TestCase):
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def path(self, fn):
+        return os.path.join(self.tmpdir, fn)
+
+    def round_trip(self):
+        # write file 'patch'
+        file_diff(self.path('src'), self.path('dst'), self.path('patch'))
+        # write file 'dst2'
+        file_patch(self.path('src'), self.path('dst2'), self.path('patch'))
+        # compare files 'dst' and 'dst2'
+        data1 = format.read_data(self.path('dst'))
+        data2 = format.read_data(self.path('dst2'))
+        self.assertEqual(data1, data2)
+
+    def write_data(self, fn, data):
+        fo = open(self.path(fn), 'wb')
+        fo.write(data)
+        fo.close()
+
+    def test_1(self):
+        a = 1000 * to_bytes('ABCDE')
+        b = 1000 * to_bytes('XYZ')
+        self.write_data('src', a + random_bytes(100) + b)
+        self.write_data('dst', a + random_bytes(100) + b)
+        self.round_trip()
+
+    def test_2(self):
+        a = 10000 * to_bytes('ABCDEFG')
+        self.write_data('src', a)
+        self.write_data('dst', a + to_bytes('extra bytes at the end'))
+        self.round_trip()
+
+
 def run(verbosity=1):
     from . import __version__
     print('bsdiff4 is installed in: ' + os.path.dirname(__file__))
     print('bsdiff4 version: ' + __version__)
 
     suite = unittest.TestSuite()
-    for cls in [TestEncode, TestFormat]:
+    for cls in [TestEncode, TestFormat, TestFile]:
         suite.addTest(unittest.makeSuite(cls))
     runner = unittest.TextTestRunner(verbosity=verbosity)
     return runner.run(suite)

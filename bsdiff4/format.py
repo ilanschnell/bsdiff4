@@ -6,8 +6,13 @@ is_py3k = bool(sys.version_info[0] == 3)
 if is_py3k:
     import io
     from io import BytesIO as StringIO
+    MAGIC = bytes('BSDIFF40'.encode('latin1'))
 else:
     from cStringIO import StringIO
+    if sys.version_info[:2] >= (2, 6):
+        MAGIC = bytes('BSDIFF40')
+    else: # 2.5
+        MAGIC = 'BSDIFF40'
 
 import bsdiff4.core as core
 
@@ -15,7 +20,7 @@ import bsdiff4.core as core
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     """write a BSDIFF4-format patch to stream 'fo'
     """
-    fo.write(b'BSDIFF40')
+    fo.write(MAGIC)
     faux = StringIO()
     # write control tuples as series of offts
     for c in tcontrol:
@@ -36,7 +41,7 @@ def read_patch(fi, header_only=False):
     """read a BSDIFF4-format patch from stream 'fi'
     """
     magic = fi.read(8)
-    assert magic.startswith(b'BSDIFF4')
+    assert magic[:7] == MAGIC[:7]
     # length headers
     len_control = core.decode_int64(fi.read(8))
     len_diff = core.decode_int64(fi.read(8))

@@ -79,7 +79,10 @@ class TestFormat(unittest.TestCase):
         self.round_trip(dst, src)
 
     def test_random(self):
-        self.round_trip(random_bytes(2000), random_bytes(2000))
+        for _ in range(100):
+            n1 = random.randint(0, 1000)
+            n2 = random.randint(0, 1000)
+            self.round_trip(random_bytes(n1), random_bytes(n2))
 
     def test_large(self):
         a = random_bytes(50000)

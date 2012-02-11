@@ -1,3 +1,8 @@
+2012-02-XX   1.1.0:
+-------------------
+  * add Python 3 support
+
+
 2011-06-11   1.0.1:
 -------------------
   * add example which implements a slow pure Python patch function
@@ -7,5 +12,4 @@
 
 2011-05-23   1.0.0:
 -------------------
-
 initial release

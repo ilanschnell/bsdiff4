@@ -1,15 +1,18 @@
-2012-02-XX   1.1.0:
+2012-XX-XX   1.1.1:
+-------------------
+
+
+
+2012-02-11   1.1.0:
 -------------------
   * add Python 3 support
   * impove documentation
-
 
 
 2011-06-11   1.0.1:
 -------------------
   * add example which implements a slow pure Python patch function
   * using cStringIO (instead of StringIO) in format module
-
 
 
 2011-05-23   1.0.0:

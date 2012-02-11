@@ -18,7 +18,7 @@ def to_bytes(s):
 N = 2 ** 63 - 1
 
 
-def gen_random_bytes(n):
+def random_bytes(n):
     return os.urandom(n)
 
 
@@ -47,21 +47,22 @@ class TestEncode(unittest.TestCase):
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
         self.assertRaises(TypeError, core.decode_int64, 12345)
-        self.assertRaises(ValueError, core.decode_int64, to_bytes('1234567'))
+        self.assertRaises(ValueError, core.decode_int64, to_bytes(7 * 'a'))
+        self.assertRaises(ValueError, core.decode_int64, to_bytes(9 * 'b'))
 
     def test_random(self):
         for dum in range(1000):
-            x = random.randint(-N, N)
-            s = core.encode_int64(x)
-            self.assertEqual(len(s), 8)
-            self.assertEqual(core.decode_int64(s), x)
+            n = random.randint(-N, N)
+            b = core.encode_int64(n)
+            self.assertEqual(len(b), 8)
+            self.assertEqual(core.decode_int64(b), n)
 
 
 class TestFormat(unittest.TestCase):
 
     def round_trip(self, src, dst):
         patch = format.diff(src, dst)
-        #print len(src), len(patch)
+        #print(len(src), len(patch))
         dst2 = format.patch(src, patch)
         self.assertEqual(dst, dst2)
 
@@ -69,19 +70,19 @@ class TestFormat(unittest.TestCase):
         self.round_trip(to_bytes(''), to_bytes(''))
 
     def test_extra(self):
-        src = gen_random_bytes(1000)
-        dst = src + gen_random_bytes(10)
+        src = random_bytes(1000)
+        dst = src + random_bytes(10)
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
     def test_random(self):
-        self.round_trip(gen_random_bytes(2000), gen_random_bytes(2000))
+        self.round_trip(random_bytes(2000), random_bytes(2000))
 
     def test_large(self):
-        a = gen_random_bytes(50000)
-        b = gen_random_bytes(40000)
-        src = a + gen_random_bytes(100) + b
-        dst = a + gen_random_bytes(100) + b
+        a = random_bytes(50000)
+        b = random_bytes(40000)
+        src = a + random_bytes(100) + b
+        dst = a + random_bytes(100) + b
         self.round_trip(src, dst)
 
 

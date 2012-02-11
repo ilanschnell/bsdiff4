@@ -17,7 +17,6 @@
 #define PyString_Check  PyBytes_Check
 #define PyString_Size  PyBytes_Size
 #define PyString_AsString  PyBytes_AsString
-#define Py_TPFLAGS_HAVE_WEAKREFS  0
 #endif
 
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))

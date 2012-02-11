@@ -530,6 +530,7 @@ static PyMethodDef module_functions[] = {
 static PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
 };
+
 PyMODINIT_FUNC
 PyInit_core(void)
 {

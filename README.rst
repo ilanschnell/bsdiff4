@@ -34,10 +34,11 @@ The bsdiff4 package defines the following high level functions:
 Example:
 
    >>> import bsdiff4
-   >>> a = 10000 * 'a'
-   >>> b = a + 'b'
-   >>> p = bsdiff4.diff(a, b)
+   >>> a = bytes(100000 * 'a')
+   >>> b = bytearray(a)
+   >>> b[100:106] = ' diff '
+   >>> p = bsdiff4.diff(a, bytes(b))
    >>> len(p)
-   166
+   154
    >>> bsdiff4.patch(a, p) == b
    True

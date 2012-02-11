@@ -4,7 +4,6 @@ import sys
 is_py3k = bool(sys.version_info[0] == 3)
 
 if is_py3k:
-    import io
     from io import BytesIO as StringIO
     MAGIC = bytes('BSDIFF40'.encode('latin1'))
 else:

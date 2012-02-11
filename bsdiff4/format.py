@@ -67,17 +67,17 @@ def read_data(path):
     return data
 
 
-def diff(src, dst):
-    """returns a BSDIFF4-format patch (from 'src' to 'dst') as a string
+def diff(src_bytes, dst_bytes):
+    """returns a BSDIFF4-format patch (from src to dst) as a string
     """
     faux = StringIO()
-    write_patch(faux, len(dst), *core.diff(src, dst))
+    write_patch(faux, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
     return faux.getvalue()
 
 
 def file_diff(src_path, dst_path, patch_path):
-    """writes a BSDIFF4-format patch (from the file 'src_path' to 'dst_path')
-    to the file 'patch_path'.
+    """writes a BSDIFF4-format patch (from the file src_path to dst_path)
+    to the file patch_path.
     """
     src = read_data(src_path)
     dst = read_data(dst_path)
@@ -86,15 +86,15 @@ def file_diff(src_path, dst_path, patch_path):
     fo.close()
 
 
-def patch(src, patch):
-    """apply the BSDIFF4-format 'patch' to 'src' and return the string
+def patch(src_bytes, patch_bytes):
+    """apply the BSDIFF4-format patch to src and return the string
     """
-    return core.patch(src, *read_patch(StringIO(patch)))
+    return core.patch(src_bytes, *read_patch(StringIO(patch_bytes)))
 
 
 def file_patch(src_path, dst_path, patch_path):
-    """apply the BSDIFF4-format file 'patch_path' to the file 'src_path' and
-    write patched result to the file 'dst_path'
+    """apply the BSDIFF4-format file patch_path to the file src_path and
+    write patched result to the file dst_path
     """
     fi = open(patch_path, 'rb')
     fo = open(dst_path, 'wb')

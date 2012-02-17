@@ -481,8 +481,8 @@ static PyObject *encode_int64(PyObject *self, PyObject *value)
         sign = 0x80;
     }
     for (i = 0; i < 8; i++) {
-        bs[i] = x % 256;
-        x /= 256;
+        bs[i] = x & 0xff;
+        x >>= 8;  /* x /= 256 */
     }
     bs[7] |= sign;
     return PyString_FromStringAndSize(bs, 8);
@@ -507,8 +507,10 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
     bs = PyString_AsString(string);
 
     x = bs[7] & 0x7F;
-    for (i = 6; i >= 0; i--)
-        x = x * 256 + (unsigned char) bs[i];
+    for (i = 6; i >= 0; i--) {
+        x <<= 8;  /* x = x * 256 + (unsigned char) bs[i]; */
+        x |= (unsigned char) bs[i];
+    }
     if (bs[7] & 0x80)
         x = -x;
     return PyLong_FromLongLong(x);

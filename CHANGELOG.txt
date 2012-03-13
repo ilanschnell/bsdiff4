@@ -1,6 +1,7 @@
 2012-XX-XX   1.1.1:
 -------------------
-
+  * while performing the diff, we are now releasing the GIL while performing
+    nested for loop
 
 
 2012-02-11   1.1.0:

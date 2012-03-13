@@ -258,6 +258,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
     while (scan < newDataLength) {
         oldscore = 0;
 
+        Py_BEGIN_ALLOW_THREADS  /* release the GIL */
         for (scsc = scan += len; scan < newDataLength; scan++) {
             len = search(I, (unsigned char *) origData, origDataLength,
                          (unsigned char *) newData + scan,
@@ -272,6 +273,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
                       (origData[scan + lastoffset] == newData[scan]))
                 oldscore--;
         }
+        Py_END_ALLOW_THREADS
 
         if ((len != oldscore) || (scan == newDataLength)) {
             s = 0;

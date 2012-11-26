@@ -7,7 +7,7 @@ import tempfile
 
 import bsdiff4.core as core
 import bsdiff4.format as format
-from bsdiff4 import diff, patch, file_diff, file_patch
+from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
 def to_bytes(s):
@@ -103,15 +103,21 @@ class TestFile(unittest.TestCase):
     def path(self, fn):
         return os.path.join(self.tmpdir, fn)
 
+    def assert_same_file_content(self, fn1, fn2):
+        data1 = format.read_data(self.path(fn1))
+        data2 = format.read_data(self.path(fn2))
+        self.assertEqual(data1, data2)
+
     def round_trip(self):
         # write file 'patch'
         file_diff(self.path('src'), self.path('dst'), self.path('patch'))
         # write file 'dst2'
         file_patch(self.path('src'), self.path('dst2'), self.path('patch'))
         # compare files 'dst' and 'dst2'
-        data1 = format.read_data(self.path('dst'))
-        data2 = format.read_data(self.path('dst2'))
-        self.assertEqual(data1, data2)
+        self.assert_same_file_content('dst', 'dst2')
+        # patch 'src' in place
+        file_patch(self.path('src'), self.path('src'), self.path('patch'))
+        self.assert_same_file_content('src', 'dst')
 
     def write_data(self, fn, data):
         fo = open(self.path(fn), 'wb')
@@ -130,6 +136,15 @@ class TestFile(unittest.TestCase):
         self.write_data('src', a)
         self.write_data('dst', a + to_bytes('extra bytes at the end'))
         self.round_trip()
+
+    def test_inplace(self):
+        a = 1000 * to_bytes('ABCDE')
+        b = 1000 * to_bytes('XYZ')
+        self.write_data('src', a + random_bytes(100) + b)
+        self.write_data('dst', a + random_bytes(100) + b)
+        file_diff(self.path('src'), self.path('dst'), self.path('patch'))
+        file_patch_inplace(self.path('src'), self.path('patch'))
+        self.assert_same_file_content('src', 'dst')
 
 
 def run(verbosity=1):

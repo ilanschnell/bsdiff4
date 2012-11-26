@@ -17,18 +17,24 @@ package includes:
 The bsdiff4 package defines the following high level functions:
 
 ``diff(src_bytes, dst_bytes)`` -> bytes
-   Return a BSDIFF4-format patch (from src_bytes to dst_bytes) as bytes.
+   Return a BSDIFF4-format patch (from ``src_bytes`` to ``dst_bytes``) as
+   bytes.
 
 ``patch(src_bytes, patch_bytes)`` -> bytes
-   Apply the BSDIFF4-format patch_bytes to src_bytes and return the bytes.
+   Apply the BSDIFF4-format patch_bytes to ``src_bytes`` and return
+   the bytes.
 
 ``file_diff(src_path, dst_path, patch_path)``
-   Write a BSDIFF4-format patch (from the file src_path to the file dst_path)
-   to the file patch_path.
+   Write a BSDIFF4-format patch (from the file ``src_path`` to the
+   file ``dst_path``) to the file ``patch_path``.
 
 ``file_patch(src_path, dst_path, patch_path)``
-   Apply the BSDIFF4-format file patch_path to the file src_path and
-   write the result to the file dst_path.
+   Apply the BSDIFF4-format file ``patch_path`` to the file ``src_path``
+   and write the result to the file ``dst_path``.
+
+``file_patch_inplace(path, patch_path)``
+   Apply the BSDIFF4-format file ``patch_path`` to the file ``path``
+   in place.
 
 
 Example:

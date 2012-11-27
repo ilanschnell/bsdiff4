@@ -1,8 +1,7 @@
-2012-XX-XX   1.1.2:
+2012-11-27   1.1.2:
 -------------------
   * fixed file_patch when src_path and dst_path are the same file
   * add file_patch_inplace()
-
 
 
 2012-03-14   1.1.1:

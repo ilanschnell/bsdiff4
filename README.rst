@@ -21,7 +21,7 @@ The bsdiff4 package defines the following high level functions:
    bytes.
 
 ``patch(src_bytes, patch_bytes)`` -> bytes
-   Apply the BSDIFF4-format patch_bytes to ``src_bytes`` and return
+   Apply the BSDIFF4-format ``patch_bytes`` to ``src_bytes`` and return
    the bytes.
 
 ``file_diff(src_path, dst_path, patch_path)``

@@ -1,6 +1,6 @@
 from .format import diff, patch, file_diff, file_patch, file_patch_inplace
 
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 
 def test(verbosity=1):

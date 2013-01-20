@@ -117,9 +117,9 @@ def file_patch(src_path, dst_path, patch_path):
     Apply the BSDIFF4-format file patch_path to the file src_path and
     write the result to the file dst_path.
     """
-    from os.path import isfile, samefile
+    from os.path import abspath, isfile
 
-    if isfile(dst_path) and samefile(dst_path, src_path):
+    if isfile(dst_path) and abspath(dst_path) == abspath(src_path):
         file_patch_inplace(src_path, patch_path)
         return
 

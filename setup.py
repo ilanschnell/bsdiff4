@@ -33,6 +33,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.1",
         "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
         "Topic :: Utilities",
     ],
     description = "binary diff and patch using the BSDIFF4-format",

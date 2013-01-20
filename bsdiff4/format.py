@@ -111,15 +111,24 @@ def file_patch_inplace(path, patch_path):
     fi.close()
 
 
+def _samefile(path1, path2):
+    if sys.platform == 'win32':
+        from os.path import abspath
+        return abspath(path1) == abspath(path2)
+    else:
+        from os.path import samefile
+        return samefile(path1, path2)
+
+
 def file_patch(src_path, dst_path, patch_path):
     """file_patch(src_path, dst_path, patch_path)
 
     Apply the BSDIFF4-format file patch_path to the file src_path and
     write the result to the file dst_path.
     """
-    from os.path import abspath, isfile
+    from os.path import isfile
 
-    if isfile(dst_path) and abspath(dst_path) == abspath(src_path):
+    if isfile(dst_path) and _samefile(dst_path, src_path):
         file_patch_inplace(src_path, patch_path)
         return
 

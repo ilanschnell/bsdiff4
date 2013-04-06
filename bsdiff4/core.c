@@ -138,7 +138,7 @@ static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
                 i -= I[i];
             } else {
                 if (len)
-                    I[i - len] =- len;
+                    I[i - len] = -len;
                 len = V[I[i]] + 1 - i;
                 split(I, V, i, len, h);
                 i += len;
@@ -146,7 +146,7 @@ static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
             }
         }
         if (len)
-            I[i - len] =- len;
+            I[i - len] = -len;
     }
 
     for (i = 0; i < oldsize + 1; i++)

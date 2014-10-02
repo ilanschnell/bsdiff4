@@ -107,6 +107,7 @@ def file_patch_inplace(path, patch_path):
     data = f.read()
     f.seek(0)
     f.write(core.patch(data, *read_patch(fi)))
+    f.truncate()
     f.close()
     fi.close()
 

@@ -1,4 +1,4 @@
-2017-XX-XX   1.1.5:
+2017-01-07   1.1.5:
 -------------------
   * fix for patch_inplace when the resulting file is smaller than before #5
   * add Python 3.4, 3.5 and 3.5 as officially supported

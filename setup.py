@@ -4,8 +4,10 @@ from distutils.core import setup, Extension
 
 
 kwds = {}
-
-kwds['long_description'] = open('README.rst').read()
+try:
+    kwds['long_description'] = open('README.rst').read()
+except IOError:
+    pass
 
 # Read version from bsdiff/__init__.py
 pat = re.compile(r'__version__\s*=\s*(\S+)', re.M)

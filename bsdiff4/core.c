@@ -257,6 +257,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
     lastscan = 0;
     lastpos = 0;
     lastoffset = 0;
+    pos = 0;
     while (scan < newDataLength) {
         oldscore = 0;
 

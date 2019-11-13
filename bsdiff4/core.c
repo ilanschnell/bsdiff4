@@ -11,13 +11,6 @@
 #define IS_PY3K
 #endif
 
-#ifdef IS_PY3K
-#include "bytesobject.h"
-#define PyString_FromStringAndSize  PyBytes_FromStringAndSize
-#define PyString_Check  PyBytes_Check
-#define PyString_Size  PyBytes_Size
-#define PyString_AsString  PyBytes_AsString
-#endif
 
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
@@ -373,7 +366,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
         return NULL;
     }
     PyTuple_SET_ITEM(results, 0, controlTuples);
-    temp = PyString_FromStringAndSize((char *) db, dblen);
+    temp = PyBytes_FromStringAndSize((char *) db, dblen);
     PyMem_Free(db);
     if (!temp) {
         PyMem_Free(eb);
@@ -381,7 +374,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
         return NULL;
     }
     PyTuple_SET_ITEM(results, 1, temp);
-    temp = PyString_FromStringAndSize((char *) eb, eblen);
+    temp = PyBytes_FromStringAndSize((char *) eb, eblen);
     PyMem_Free(eb);
     if (!temp) {
         Py_DECREF(results);
@@ -465,7 +458,7 @@ static PyObject* patch(PyObject* self, PyObject* args)
         return NULL;
     }
 
-    results = PyString_FromStringAndSize(newData, newDataLength);
+    results = PyBytes_FromStringAndSize(newData, newDataLength);
     PyMem_Free(newData);
     return results;
 }
@@ -490,7 +483,7 @@ static PyObject *encode_int64(PyObject *self, PyObject *value)
         x >>= 8;  /* x /= 256 */
     }
     bs[7] |= sign;
-    return PyString_FromStringAndSize(bs, 8);
+    return PyBytes_FromStringAndSize(bs, 8);
 }
 
 
@@ -501,15 +494,15 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
     char *bs;
     int i;
 
-    if (!PyString_Check(string)) {
+    if (!PyBytes_Check(string)) {
         PyErr_SetString(PyExc_TypeError, "string expected");
         return NULL;
     }
-    if (PyString_Size(string) != 8) {
+    if (PyBytes_Size(string) != 8) {
         PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
-    bs = PyString_AsString(string);
+    bs = PyBytes_AsString(string);
 
     x = bs[7] & 0x7F;
     for (i = 6; i >= 0; i--) {

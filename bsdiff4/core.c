@@ -464,7 +464,7 @@ static PyObject* patch(PyObject* self, PyObject* args)
 }
 
 
-/* encode an integer value as a string of 8 bytes */
+/* encode an integer value as 8 bytes */
 static PyObject *encode_int64(PyObject *self, PyObject *value)
 {
     long long x;
@@ -487,7 +487,7 @@ static PyObject *encode_int64(PyObject *self, PyObject *value)
 }
 
 
-/* decode an off_t value from an 8 byte string */
+/* decode an off_t value from 8 bytes */
 static PyObject *decode_int64(PyObject *self, PyObject *string)
 {
     long long x;

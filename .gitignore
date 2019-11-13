@@ -2,5 +2,6 @@
 *.pyc
 *.egg-info
 *.so
+MANIFEST
 build/
 dist/

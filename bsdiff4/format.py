@@ -1,17 +1,14 @@
 import bz2
 import sys
 
-is_py3k = bool(sys.version_info[0] == 3)
 
-if is_py3k:
-    from io import BytesIO as StringIO
-    MAGIC = bytes('BSDIFF40'.encode('latin1'))
+if sys.version_info[0] == 2:
+    from cStringIO import StringIO as BytesIO
 else:
-    from cStringIO import StringIO
-    if sys.version_info[:2] >= (2, 6):
-        MAGIC = bytes('BSDIFF40')
-    else: # 2.5
-        MAGIC = 'BSDIFF40'
+    from io import BytesIO
+
+MAGIC = b'BSDIFF40'
+
 
 import bsdiff4.core as core
 
@@ -20,7 +17,7 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     """write a BSDIFF4-format patch to stream 'fo'
     """
     fo.write(MAGIC)
-    faux = StringIO()
+    faux = BytesIO()
     # write control tuples as series of offts
     for c in tcontrol:
         for x in c:
@@ -71,7 +68,7 @@ def diff(src_bytes, dst_bytes):
 
     Return a BSDIFF4-format patch (from src_bytes to dst_bytes) as bytes.
     """
-    faux = StringIO()
+    faux = BytesIO()
     write_patch(faux, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
     return faux.getvalue()
 
@@ -94,7 +91,7 @@ def patch(src_bytes, patch_bytes):
 
     Apply the BSDIFF4-format patch_bytes to src_bytes and return the bytes.
     """
-    return core.patch(src_bytes, *read_patch(StringIO(patch_bytes)))
+    return core.patch(src_bytes, *read_patch(BytesIO(patch_bytes)))
 
 
 def file_patch_inplace(path, patch_path):

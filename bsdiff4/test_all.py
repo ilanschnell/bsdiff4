@@ -107,9 +107,8 @@ class TestFile(unittest.TestCase):
         self.assert_same_file_content('src', 'dst')
 
     def write_data(self, fn, data):
-        fo = open(self.path(fn), 'wb')
-        fo.write(data)
-        fo.close()
+        with open(self.path(fn), 'wb') as fo:
+            fo.write(data)
 
     def test_1(self):
         a = 1000 * b'ABCDE'

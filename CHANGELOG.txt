@@ -1,6 +1,7 @@
 2020-XX-XX   1.1.7:
 -------------------
   * simplified Python code by using bytes syntax
+  * use file context manager
 
 
 2019-11-13   1.1.6:

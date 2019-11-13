@@ -57,9 +57,8 @@ def read_patch(fi, header_only=False):
 
 
 def read_data(path):
-    fi = open(path, 'rb')
-    data = fi.read()
-    fi.close()
+    with open(path, 'rb') as fi:
+        data = fi.read()
     return data
 
 
@@ -81,9 +80,8 @@ def file_diff(src_path, dst_path, patch_path):
     """
     src = read_data(src_path)
     dst = read_data(dst_path)
-    fo = open(patch_path, 'wb')
-    write_patch(fo, len(dst), *core.diff(src, dst))
-    fo.close()
+    with open(patch_path, 'wb') as fo:
+        write_patch(fo, len(dst), *core.diff(src, dst))
 
 
 def patch(src_bytes, patch_bytes):
@@ -99,14 +97,12 @@ def file_patch_inplace(path, patch_path):
 
     Apply the BSDIFF4-format file patch_path to the file 'path' in place.
     """
-    fi = open(patch_path, 'rb')
-    f = open(path, 'r+b')
-    data = f.read()
-    f.seek(0)
-    f.write(core.patch(data, *read_patch(fi)))
-    f.truncate()
-    f.close()
-    fi.close()
+    with open(patch_path, 'rb') as fi:
+        with open(path, 'r+b') as fo:
+            data = fo.read()
+            fo.seek(0)
+            fo.write(core.patch(data, *read_patch(fi)))
+            fo.truncate()
 
 
 def file_patch(src_path, dst_path, patch_path):
@@ -121,8 +117,6 @@ def file_patch(src_path, dst_path, patch_path):
         file_patch_inplace(src_path, patch_path)
         return
 
-    fi = open(patch_path, 'rb')
-    fo = open(dst_path, 'wb')
-    fo.write(core.patch(read_data(src_path), *read_patch(fi)))
-    fo.close()
-    fi.close()
+    with open(patch_path, 'rb') as fi:
+        with open(dst_path, 'wb') as fo:
+            fo.write(core.patch(read_data(src_path), *read_patch(fi)))

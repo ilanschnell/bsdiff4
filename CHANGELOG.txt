@@ -3,6 +3,7 @@
   * simplified Python code by using bytes syntax
   * use file context manager
   * remove not working example
+  * add license file to source
 
 
 2019-11-13   1.1.6:

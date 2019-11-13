@@ -10,48 +10,35 @@ import bsdiff4.format as format
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
-def to_bytes(s):
-    if sys.version_info[0] >= 3:
-        return bytes(s.encode('latin1'))
-    elif sys.version_info[:2] >= (2, 6):
-        return bytes(s)
-    else:
-        return s
-
 N = 2 ** 63 - 1
-
-
-def random_bytes(n):
-    return os.urandom(n)
 
 
 class TestEncode(unittest.TestCase):
 
     def test_special_values(self):
-        for n, s in [
-            (-N, '\xff\xff\xff\xff\xff\xff\xff\xff'),
-            (-256, '\x00\x01\x00\x00\x00\x00\x00\x80'),
-            (-128, '\x80\x00\x00\x00\x00\x00\x00\x80'),
-            (-1, '\x01\x00\x00\x00\x00\x00\x00\x80'),
-            (0, '\x00\x00\x00\x00\x00\x00\x00\x00'),
-            (1, '\x01\x00\x00\x00\x00\x00\x00\x00'),
-            (127, '\x7f\x00\x00\x00\x00\x00\x00\x00'),
-            (128, '\x80\x00\x00\x00\x00\x00\x00\x00'),
-            (129, '\x81\x00\x00\x00\x00\x00\x00\x00'),
-            (255, '\xff\x00\x00\x00\x00\x00\x00\x00'),
-            (256, '\x00\x01\x00\x00\x00\x00\x00\x00'),
-            (257, '\x01\x01\x00\x00\x00\x00\x00\x00'),
-            (N, '\xff\xff\xff\xff\xff\xff\xff\x7f'),
+        for n, b in [
+            (-N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
+            (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
+            (-128, b'\x80\x00\x00\x00\x00\x00\x00\x80'),
+            (-1, b'\x01\x00\x00\x00\x00\x00\x00\x80'),
+            (0, b'\x00\x00\x00\x00\x00\x00\x00\x00'),
+            (1, b'\x01\x00\x00\x00\x00\x00\x00\x00'),
+            (127, b'\x7f\x00\x00\x00\x00\x00\x00\x00'),
+            (128, b'\x80\x00\x00\x00\x00\x00\x00\x00'),
+            (129, b'\x81\x00\x00\x00\x00\x00\x00\x00'),
+            (255, b'\xff\x00\x00\x00\x00\x00\x00\x00'),
+            (256, b'\x00\x01\x00\x00\x00\x00\x00\x00'),
+            (257, b'\x01\x01\x00\x00\x00\x00\x00\x00'),
+            (N, b'\xff\xff\xff\xff\xff\xff\xff\x7f'),
             ]:
-            b = to_bytes(s)
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
         self.assertRaises(TypeError, core.decode_int64, 12345)
-        self.assertRaises(ValueError, core.decode_int64, to_bytes(7 * 'a'))
-        self.assertRaises(ValueError, core.decode_int64, to_bytes(9 * 'b'))
+        self.assertRaises(ValueError, core.decode_int64, 7 * b'a')
+        self.assertRaises(ValueError, core.decode_int64, 9 * b'b')
 
     def test_random(self):
         for dum in range(1000):
@@ -70,11 +57,11 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(dst, dst2)
 
     def test_zero(self):
-        self.round_trip(to_bytes(''), to_bytes(''))
+        self.round_trip(b'', b'')
 
     def test_extra(self):
-        src = random_bytes(1000)
-        dst = src + random_bytes(10)
+        src = os.urandom(1000)
+        dst = src + os.urandom(10)
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
@@ -82,13 +69,13 @@ class TestFormat(unittest.TestCase):
         for _ in range(100):
             n1 = random.randint(0, 1000)
             n2 = random.randint(0, 1000)
-            self.round_trip(random_bytes(n1), random_bytes(n2))
+            self.round_trip(os.urandom(n1), os.urandom(n2))
 
     def test_large(self):
-        a = random_bytes(50000)
-        b = random_bytes(40000)
-        src = a + random_bytes(100) + b
-        dst = a + random_bytes(100) + b
+        a = os.urandom(50000)
+        b = os.urandom(40000)
+        src = a + os.urandom(100) + b
+        dst = a + os.urandom(100) + b
         self.round_trip(src, dst)
 
 
@@ -125,23 +112,23 @@ class TestFile(unittest.TestCase):
         fo.close()
 
     def test_1(self):
-        a = 1000 * to_bytes('ABCDE')
-        b = 1000 * to_bytes('XYZ')
-        self.write_data('src', a + random_bytes(100) + b)
-        self.write_data('dst', a + random_bytes(100) + b)
+        a = 1000 * b'ABCDE'
+        b = 1000 * b'XYZ'
+        self.write_data('src', a + os.urandom(100) + b)
+        self.write_data('dst', a + os.urandom(100) + b)
         self.round_trip()
 
     def test_2(self):
-        a = 10000 * to_bytes('ABCDEFG')
+        a = 10000 * b'ABCDEFG'
         self.write_data('src', a)
-        self.write_data('dst', a + to_bytes('extra bytes at the end'))
+        self.write_data('dst', a + b'extra bytes at the end')
         self.round_trip()
 
     def test_inplace(self):
-        a = 1000 * to_bytes('ABCDE')
-        b = 1000 * to_bytes('XYZ')
-        self.write_data('src', a + random_bytes(100) + b)
-        self.write_data('dst', a + random_bytes(100) + b)
+        a = 1000 * b'ABCDE'
+        b = 1000 * b'XYZ'
+        self.write_data('src', a + os.urandom(100) + b)
+        self.write_data('dst', a + os.urandom(100) + b)
         file_diff(self.path('src'), self.path('dst'), self.path('patch'))
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')

@@ -495,7 +495,7 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
     int i;
 
     if (!PyBytes_Check(string)) {
-        PyErr_SetString(PyExc_TypeError, "string expected");
+        PyErr_SetString(PyExc_TypeError, "bytes expected");
         return NULL;
     }
     if (PyBytes_Size(string) != 8) {

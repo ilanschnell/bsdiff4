@@ -40,9 +40,9 @@ The bsdiff4 package defines the following high level functions:
 Example:
 
    >>> import bsdiff4
-   >>> a = bytes(100000 * 'a')
+   >>> a = 100000 * b'a'
    >>> b = bytearray(a)
-   >>> b[100:106] = ' diff '
+   >>> b[100:106] = b' diff '
    >>> p = bsdiff4.diff(a, bytes(b))
    >>> len(p)
    154

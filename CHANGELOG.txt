@@ -1,3 +1,8 @@
+20XX-XX-XX   1.1.8:
+-------------------
+  * update readme example to use bytes syntax
+
+
 2019-11-15   1.1.7:
 -------------------
   * define PY_SSIZE_T_CLEAN, should fix issue #11

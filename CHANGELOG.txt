@@ -1,5 +1,6 @@
-2019-XX-XX   1.1.7:
+2019-11-15   1.1.7:
 -------------------
+  * define PY_SSIZE_T_CLEAN, should fix issue #11
   * simplified Python code by using bytes syntax
   * use file context manager
   * remove not working example

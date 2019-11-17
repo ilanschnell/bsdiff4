@@ -1,5 +1,6 @@
-20XX-XX-XX   1.1.8:
+2019-11-16   1.1.8:
 -------------------
+  * fix bsdiff4 -v option using Python 3, issue #12
   * update readme example to use bytes syntax
 
 

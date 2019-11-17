@@ -32,7 +32,7 @@ def main_bsdiff4():
 
     file_diff(*args)
     if opts.verbose:
-        size = [getsize(args[i]) for i in xrange(3)]
+        size = [getsize(args[i]) for i in range(3)]
         print('src: %s' % human_bytes(size[0]))
         print('dst: %s' % human_bytes(size[1]))
         print('patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),

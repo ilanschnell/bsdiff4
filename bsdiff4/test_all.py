@@ -65,6 +65,12 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
+    def test_small(self): # issue #14
+        src = b'123456789 987654321'
+        dst = b'123456789000987654321'
+        self.round_trip(src, dst)
+        self.round_trip(dst, src)
+
     def test_random(self):
         for _ in range(100):
             n1 = random.randint(0, 1000)

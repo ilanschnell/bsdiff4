@@ -1,3 +1,9 @@
+2019-11-XX   1.1.9:
+-------------------
+  * add test for small file, #14
+  * fix PyArg_ParseTuple s# uses Py_ssize_t, see issue #13
+
+
 2019-11-16   1.1.8:
 -------------------
   * fix bsdiff4 -v option using Python 3, issue #12

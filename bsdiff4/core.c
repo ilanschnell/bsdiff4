@@ -197,7 +197,7 @@ static PyObject* diff(PyObject* self, PyObject* args)
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
     PyObject *controlTuples, *tuple, *results, *temp;
-    int origDataLength, newDataLength;
+    Py_ssize_t origDataLength, newDataLength;
     char *origData, *newData;
     unsigned char *db, *eb;
 
@@ -393,16 +393,16 @@ static PyObject* diff(PyObject* self, PyObject* args)
 static PyObject* patch(PyObject* self, PyObject* args)
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
-    int origDataLength, newDataLength, diffBlockLength, extraBlockLength;
+    Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;
     PyObject *controlTuples, *tuple, *results;
     off_t oldpos, newpos, x, y, z;
     int i, j, numTuples;
 
-    if (!PyArg_ParseTuple(args, "s#iO!s#s#",
-                          &origData, &origDataLength,
-                          &newDataLength, &PyList_Type, &controlTuples,
-                          &diffBlock, &diffBlockLength, &extraBlock,
-                          &extraBlockLength))
+    if (!PyArg_ParseTuple(args, "s#nO!s#s#",
+                          &origData, &origDataLength, &newDataLength,
+                          &PyList_Type, &controlTuples,
+                          &diffBlock, &diffBlockLength,
+                          &extraBlock, &extraBlockLength))
         return NULL;
 
     /* allocate the memory for the new data */

@@ -1,4 +1,4 @@
-2019-11-XX   1.1.9:
+2019-11-20   1.1.9:
 -------------------
   * add test for small file, #14
   * fix PyArg_ParseTuple s# uses Py_ssize_t, see issue #13

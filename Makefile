@@ -1,8 +1,9 @@
 bsdiff4/core.so: bsdiff4/core.c
-	$(PYTHON) setup.py build_ext --inplace
+	python setup.py build_ext --inplace
+
 
 test: bsdiff4/core.so
-	$(PYTHON) -c "import bsdiff4; bsdiff4.test()"
+	python -c "import bsdiff4; bsdiff4.test()"
 
 
 clean:

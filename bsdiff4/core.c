@@ -8,12 +8,9 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#if PY_MAJOR_VERSION >= 3
-#define IS_PY3K
+#if PY_MAJOR_VERSION == 2
+#define Py_MIN(x, y)  (((x) > (y)) ? (y) : (x))
 #endif
-
-
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 
 static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
@@ -181,7 +178,7 @@ static off_t search(off_t *I,
     }
 
     x = st + (en - st) / 2;
-    if (memcmp(old + I[x], new, MIN(oldsize - I[x], newsize)) < 0) {
+    if (memcmp(old + I[x], new, Py_MIN(oldsize - I[x], newsize)) < 0) {
         return search(I, old, oldsize, new, newsize, x, en, pos);
     } else {
         return search(I, old, oldsize, new, newsize, st, x, pos);
@@ -531,7 +528,7 @@ static PyMethodDef module_functions[] = {
 };
 
 /* initialization routine for the shared libary */
-#ifdef IS_PY3K
+#if PY_MAJOR_VERSION == 3
 static PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
 };

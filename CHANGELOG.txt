@@ -1,6 +1,7 @@
-2020-07-XX   1.2.0:
+2020-07-18   1.2.0:
 -------------------
   * apply patch from Robert Scott to fix some bounds checking
+  * update license information
   * add official Python 3.9 support
   * drop support for Python 2.6, 3.3 and 3.4 (things will probably still work)
 

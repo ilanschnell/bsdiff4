@@ -141,8 +141,9 @@ class TestFile(unittest.TestCase):
 
 def run(verbosity=1):
     from . import __version__
-    print('bsdiff4 is installed in: ' + os.path.dirname(__file__))
-    print('bsdiff4 version: ' + __version__)
+    print('Python version: %s' % sys.version)
+    print('bsdiff4 is installed in: %s' % os.path.dirname(__file__))
+    print('bsdiff4 version: %s' % __version__)
 
     suite = unittest.TestSuite()
     for cls in [TestEncode, TestFormat, TestFile]:

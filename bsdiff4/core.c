@@ -13,7 +13,8 @@
 #endif
 
 
-static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
+static void
+split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
 {
     off_t i, j, k, x, tmp, jj, kk;
 
@@ -96,7 +97,8 @@ static void split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
 }
 
 
-static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
+static void
+qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
 {
     off_t buckets[256], i, h, len;
 
@@ -145,8 +147,9 @@ static void qsufsort(off_t *I, off_t *V, unsigned char *old, off_t oldsize)
 }
 
 
-static off_t matchlen(unsigned char *old, off_t oldsize,
-                      unsigned char *new, off_t newsize)
+static off_t
+matchlen(unsigned char *old, off_t oldsize,
+         unsigned char *new, off_t newsize)
 {
     off_t i;
 
@@ -157,10 +160,11 @@ static off_t matchlen(unsigned char *old, off_t oldsize,
 }
 
 
-static off_t search(off_t *I,
-                    unsigned char *old, off_t oldsize,
-                    unsigned char *new, off_t newsize,
-                    off_t st, off_t en, off_t *pos)
+static off_t
+search(off_t *I,
+       unsigned char *old, off_t oldsize,
+       unsigned char *new, off_t newsize,
+       off_t st, off_t en, off_t *pos)
 {
     off_t x, y;
 
@@ -189,7 +193,8 @@ static off_t search(off_t *I,
 /* performs a diff between the two data streams and returns a tuple
    containing the control, diff and extra blocks that bsdiff produces
 */
-static PyObject* diff(PyObject* self, PyObject* args)
+static PyObject *
+diff(PyObject* self, PyObject* args)
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
@@ -387,7 +392,8 @@ static PyObject* diff(PyObject* self, PyObject* args)
 /* takes the original data and the control, diff and extra blocks produced
    by bsdiff and returns the new data
 */
-static PyObject* patch(PyObject* self, PyObject* args)
+static PyObject *
+patch(PyObject* self, PyObject* args)
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
     Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;
@@ -468,7 +474,8 @@ static PyObject* patch(PyObject* self, PyObject* args)
 
 
 /* encode an integer value as 8 bytes */
-static PyObject *encode_int64(PyObject *self, PyObject *value)
+static PyObject *
+encode_int64(PyObject *self, PyObject *value)
 {
     long long x;
     char bs[8], sign = 0x00;
@@ -491,7 +498,8 @@ static PyObject *encode_int64(PyObject *self, PyObject *value)
 
 
 /* decode an off_t value from 8 bytes */
-static PyObject *decode_int64(PyObject *self, PyObject *string)
+static PyObject *
+decode_int64(PyObject *self, PyObject *string)
 {
     long long x;
     char *bs;
@@ -520,8 +528,8 @@ static PyObject *decode_int64(PyObject *self, PyObject *string)
 
 /* declaration of methods supported by this module */
 static PyMethodDef module_functions[] = {
-    {"diff", diff, METH_VARARGS},
-    {"patch", patch, METH_VARARGS},
+    {"diff",         diff,         METH_VARARGS},
+    {"patch",        patch,        METH_VARARGS},
     {"encode_int64", encode_int64, METH_O},
     {"decode_int64", decode_int64, METH_O},
     {NULL, NULL, 0, NULL}  /* Sentinel */

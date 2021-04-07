@@ -9,6 +9,7 @@
 #include <Python.h>
 
 #if PY_MAJOR_VERSION == 2
+/* the Py_MIN macro was introduced in Python 3.3 */
 #define Py_MIN(x, y)  (((x) > (y)) ? (y) : (x))
 #endif
 

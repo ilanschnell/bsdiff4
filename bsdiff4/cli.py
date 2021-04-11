@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+
 from os.path import getsize
 from optparse import OptionParser
 
-from .format import file_diff, file_patch, read_patch
+from bsdiff4.format import file_diff, file_patch, read_patch
 
 
 def human_bytes(n):

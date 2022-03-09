@@ -195,7 +195,7 @@ search(off_t *I,
    containing the control, diff and extra blocks that bsdiff produces
 */
 static PyObject *
-diff(PyObject* self, PyObject* args)
+diff(PyObject *self, PyObject *args)
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
     off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
@@ -394,7 +394,7 @@ diff(PyObject* self, PyObject* args)
    by bsdiff and returns the new data
 */
 static PyObject *
-patch(PyObject* self, PyObject* args)
+patch(PyObject *self, PyObject *args)
 {
     char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
     Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;

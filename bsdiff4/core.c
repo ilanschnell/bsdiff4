@@ -478,7 +478,7 @@ patch(PyObject *self, PyObject *args)
 static PyObject *
 encode_int64(PyObject *self, PyObject *value)
 {
-    long long x;
+    PY_INT64_T x;
     char bs[8], sign = 0x00;
     int i;
 
@@ -502,7 +502,7 @@ encode_int64(PyObject *self, PyObject *value)
 static PyObject *
 decode_int64(PyObject *self, PyObject *string)
 {
-    long long x;
+    PY_INT64_T x;
     char *bs;
     int i;
 

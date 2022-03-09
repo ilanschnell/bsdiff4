@@ -1,3 +1,11 @@
+2022-03-09   1.2.2:
+-------------------
+  * enable building wheels for multiple platforms and Python versions using
+    pypa/cibuildwheel
+  * use setuptools instead of distutils in setup.py
+  * add official Python 3.11 support
+
+
 2021-04-11   1.2.1:
 -------------------
   * add official Python 3.10 support

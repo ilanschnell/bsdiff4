@@ -1,3 +1,9 @@
+2022-XX-XX   1.2.3:
+-------------------
+  * handle signals in the diff function so this code can be interrupted if
+    it's stuck, #21
+
+
 2022-03-09   1.2.2:
 -------------------
   * enable building wheels for multiple platforms and Python versions using

@@ -256,6 +256,10 @@ diff(PyObject *self, PyObject *args)
     lastoffset = 0;
     pos = 0;
     while (scan < newDataLength) {
+        if (PyErr_CheckSignals() != 0) {
+            PyErr_SetNone(PyExc_KeyboardInterrupt);
+            return NULL;
+        }
         oldscore = 0;
 
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
@@ -361,6 +365,7 @@ diff(PyObject *self, PyObject *args)
             lastoffset = pos - scan;
         }
     }
+
 
     PyMem_Free(I);
     results = PyTuple_New(3);

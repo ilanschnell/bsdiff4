@@ -39,7 +39,8 @@ def read_patch(fi, header_only=False):
     """read a BSDIFF4-format patch from stream 'fi'
     """
     magic = fi.read(8)
-    assert magic[:7] == MAGIC[:7]
+    if magic[:7] != MAGIC[:7]:
+        raise ValueError("no magic header")
     # length headers
     len_control = core.decode_int64(fi.read(8))
     len_diff = core.decode_int64(fi.read(8))

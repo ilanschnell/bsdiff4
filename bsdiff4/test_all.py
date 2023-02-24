@@ -118,6 +118,12 @@ class TestFile(unittest.TestCase):
         with open(self.path(fn), 'wb') as fo:
             fo.write(data)
 
+    def test_wrong_header(self):
+        path = self.path('foo')
+        self.write_data(path, b"WRONG_HEADER")
+        with open(path, "rb") as fi:
+            self.assertRaises(ValueError, format.read_patch, fi)
+
     def test_1(self):
         a = 1000 * b'ABCDE'
         b = 1000 * b'XYZ'

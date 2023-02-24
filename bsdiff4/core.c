@@ -520,7 +520,7 @@ decode_int64(PyObject *self, PyObject *string)
     }
     bs = PyBytes_AsString(string);
 
-    x = bs[7] & 0x7F;
+    x = bs[7] & 0x7f;
     for (i = 6; i >= 0; i--) {
         x <<= 8;  /* x = x * 256 + (unsigned char) bs[i]; */
         x |= (unsigned char) bs[i];

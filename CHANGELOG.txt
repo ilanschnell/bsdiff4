@@ -2,6 +2,7 @@
 -------------------
   * handle signals in the diff function so this code can be interrupted if
     it's stuck, #21
+  * better error message for reading wrong header
 
 
 2022-03-09   1.2.2:

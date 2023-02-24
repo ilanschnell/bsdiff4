@@ -1,3 +1,7 @@
+2023-XX-XX   1.2.4:
+-------------------
+
+
 2023-02-24   1.2.3:
 -------------------
   * handle signals in the diff function so this code can be interrupted if

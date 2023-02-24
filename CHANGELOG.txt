@@ -1,5 +1,6 @@
 2023-XX-XX   1.2.4:
 -------------------
+  * add `--version` option to `bsdiff4` and `bspatch4`
 
 
 2023-02-24   1.2.3:

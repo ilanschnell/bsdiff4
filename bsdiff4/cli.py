@@ -6,6 +6,11 @@ from optparse import OptionParser
 from bsdiff4.format import file_diff, file_patch, read_patch
 
 
+def display_version():
+    from bsdiff4 import __version__
+    print("bsdiff4 %s" % __version__)
+
+
 def human_bytes(n):
     """
     return the number of bytes 'n' in more human readable form
@@ -27,7 +32,14 @@ def main_bsdiff4():
     p.add_option('-v', "--verbose",
                  action="store_true")
 
+    p.add_option("--version",
+                 action="store_true")
+
     opts, args = p.parse_args()
+
+    if opts.version:
+        display_version()
+        return
 
     if len(args) != 3:
         p.error('requies 3 arguments, try -h')
@@ -63,7 +75,14 @@ def main_bspatch4():
         description=("genertaes DST, by applying the BSDIFF4-format PATCH "
                      "file to SRC"))
 
+    p.add_option("--version",
+                 action="store_true")
+
     opts, args = p.parse_args()
+
+    if opts.version:
+        display_version()
+        return
 
     if len(args) == 1:
         show_patch(args[0])

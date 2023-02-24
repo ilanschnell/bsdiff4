@@ -40,7 +40,7 @@ def read_patch(fi, header_only=False):
     """
     magic = fi.read(8)
     if magic[:7] != MAGIC[:7]:
-        raise ValueError("no magic header")
+        raise ValueError("incorrect magic bsdiff4 header")
     # length headers
     len_control = core.decode_int64(fi.read(8))
     len_diff = core.decode_int64(fi.read(8))

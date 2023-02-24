@@ -1,8 +1,9 @@
-2023-XX-XX   1.2.3:
+2023-02-24   1.2.3:
 -------------------
   * handle signals in the diff function so this code can be interrupted if
     it's stuck, #21
   * better error message for reading wrong header
+  * add official Python 3.12 support
 
 
 2022-03-09   1.2.2:

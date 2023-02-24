@@ -366,7 +366,6 @@ diff(PyObject *self, PyObject *args)
         }
     }
 
-
     PyMem_Free(I);
     results = PyTuple_New(3);
     if (!results) {

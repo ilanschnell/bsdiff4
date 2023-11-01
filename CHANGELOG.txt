@@ -1,5 +1,6 @@
 2023-XX-XX   1.2.4:
 -------------------
+  * update cibuildwheel to 2.16.1 in order to provide cp312 wheels on PyPI
   * add `--version` option to `bsdiff4` and `bspatch4`
 
 

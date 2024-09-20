@@ -153,9 +153,9 @@ def run(verbosity=1):
     print('bsdiff4 is installed in: %s' % os.path.dirname(__file__))
     print('bsdiff4 version: %s' % __version__)
 
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    for cls in [TestEncode, TestFormat, TestFile]:
-        suite.addTest(unittest.makeSuite(cls))
+    suite.addTests(loader.loadTestsFromModule(sys.modules[__name__]))
     runner = unittest.TextTestRunner(verbosity=verbosity)
     return runner.run(suite)
 

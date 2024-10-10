@@ -1,3 +1,7 @@
+2024-XX-XX   1.2.6:
+-------------------
+
+
 2024-10-09   1.2.5:
 -------------------
   * update cibuildwheel to 2.21.3 in order to provide cp312 wheels on PyPI

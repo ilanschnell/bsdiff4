@@ -3,6 +3,7 @@
   * add Python 3.14 support
   * remove Python 2 support
   * remove Python 3.5 and 3.6 support
+  * update cibuildwheel to 3.2.0
 
 
 2025-02-19   1.2.6:

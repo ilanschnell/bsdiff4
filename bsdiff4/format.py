@@ -1,13 +1,7 @@
-from __future__ import absolute_import
-
 import bz2
 import sys
+from io import BytesIO
 
-
-if sys.version_info[0] == 2:
-    from cStringIO import StringIO as BytesIO
-else:
-    from io import BytesIO
 
 MAGIC = b'BSDIFF40'
 

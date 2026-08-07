@@ -8,11 +8,6 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#if PY_MAJOR_VERSION == 2
-/* the Py_MIN macro was introduced in Python 3.3 */
-#define Py_MIN(x, y)  (((x) > (y)) ? (y) : (x))
-#endif
-
 
 static void
 split(off_t *I, off_t *V, off_t start, off_t len, off_t h)
@@ -537,11 +532,9 @@ static PyMethodDef module_functions[] = {
     {"patch",        patch,        METH_VARARGS},
     {"encode_int64", encode_int64, METH_O},
     {"decode_int64", decode_int64, METH_O},
-    {NULL, NULL, 0, NULL}  /* Sentinel */
+    {NULL}  /* Sentinel */
 };
 
-/* initialization routine for the shared libary */
-#if PY_MAJOR_VERSION == 3
 static PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
 };
@@ -554,12 +547,6 @@ PyInit_core(void)
     m = PyModule_Create(&moduledef);
     if (m == NULL)
         return NULL;
+
     return m;
 }
-#else
-PyMODINIT_FUNC
-initcore(void)
-{
-    Py_InitModule("core", module_functions);
-}
-#endif

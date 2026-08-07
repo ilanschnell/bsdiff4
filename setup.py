@@ -6,15 +6,12 @@ except ImportError:
 
 
 kwds = {}
-try:
-    kwds['long_description'] = open('README.rst').read()
-except IOError:
-    pass
+kwds['long_description'] = open('README.rst').read()
 
 # Read version from bsdiff/__init__.py
-pat = re.compile(r'__version__\s*=\s*(\S+)', re.M)
+pat = re.compile(r'__version__\s*=\s*"(\S+)"', re.M)
 data = open('bsdiff4/__init__.py').read()
-kwds['version'] = eval(pat.search(data).group(1))
+kwds['version'] = pat.search(data).group(1)
 
 setup(
     name = "bsdiff4",

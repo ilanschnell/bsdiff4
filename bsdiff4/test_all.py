@@ -86,6 +86,11 @@ class TestFormat(unittest.TestCase):
         dst = a + os.urandom(100) + b
         self.round_trip(src, dst)
 
+    def test_corrupt(self):
+        for tcontrol in [(-1, 0, 0)], [(0, -1, 0)], [(5, 0, 0)], [(0, 5, 0)]:
+            self.assertRaises(ValueError, core.patch,
+                              b'abcd', 4, tcontrol, 4 * b'\x00', b'')
+
 
 class TestFile(unittest.TestCase):
 

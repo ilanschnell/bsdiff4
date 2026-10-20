@@ -433,8 +433,8 @@ patch(PyObject *self, PyObject *args)
         x = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 0));
         y = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 1));
         z = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 2));
-        if (newpos + x > newDataLength ||
-                diffPtr + x > diffBlock + diffBlockLength) {
+        if (x < 0 || x > newDataLength - newpos ||
+                x > diffBlock + diffBlockLength - diffPtr) {
             PyMem_Free(newData);
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             return NULL;
@@ -446,8 +446,8 @@ patch(PyObject *self, PyObject *args)
                 newData[newpos + j] += origData[oldpos + j];
         newpos += x;
         oldpos += x;
-        if (newpos + y > newDataLength ||
-                extraPtr + y > extraBlock + extraBlockLength) {
+        if (y < 0 || y > newDataLength - newpos ||
+                y > extraBlock + extraBlockLength - extraPtr) {
             PyMem_Free(newData);
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             return NULL;

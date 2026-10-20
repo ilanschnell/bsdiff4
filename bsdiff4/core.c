@@ -478,7 +478,7 @@ static PyObject *
 encode_int64(PyObject *self, PyObject *value)
 {
     PY_INT64_T x;
-    char bs[8], sign = 0x00;
+    char str[8], sign = 0x00;
     int i;
 
     x = PyLong_AsLongLong(value);
@@ -490,11 +490,11 @@ encode_int64(PyObject *self, PyObject *value)
         sign = 0x80;
     }
     for (i = 0; i < 8; i++) {
-        bs[i] = x & 0xff;
+        str[i] = x & 0xff;
         x >>= 8;  /* x /= 256 */
     }
-    bs[7] |= sign;
-    return PyBytes_FromStringAndSize(bs, 8);
+    str[7] |= sign;
+    return PyBytes_FromStringAndSize(str, 8);
 }
 
 
@@ -503,7 +503,7 @@ static PyObject *
 decode_int64(PyObject *self, PyObject *bytes)
 {
     PY_INT64_T x;
-    char *bs;
+    char *str;
     int i;
 
     if (!PyBytes_Check(bytes)) {
@@ -514,14 +514,14 @@ decode_int64(PyObject *self, PyObject *bytes)
         PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
-    bs = PyBytes_AsString(bytes);
+    str = PyBytes_AsString(bytes);
 
-    x = bs[7] & 0x7f;
+    x = str[7] & 0x7f;
     for (i = 6; i >= 0; i--) {
         x <<= 8;  /* x = x * 256 + (unsigned char) bs[i]; */
-        x |= (unsigned char) bs[i];
+        x |= (unsigned char) str[i];
     }
-    if (bs[7] & 0x80)
+    if (str[7] & 0x80)
         x = -x;
     return PyLong_FromLongLong(x);
 }

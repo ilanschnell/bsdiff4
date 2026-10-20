@@ -481,7 +481,8 @@ encode_int64(PyObject *self, PyObject *value)
     char bs[8], sign = 0x00;
     int i;
 
-    if (!PyArg_Parse(value, "L", &x))
+    x = PyLong_AsLongLong(value);
+    if (x == -1 && PyErr_Occurred())
         return NULL;
 
     if (x < 0) {
@@ -499,21 +500,21 @@ encode_int64(PyObject *self, PyObject *value)
 
 /* decode an off_t value from 8 bytes */
 static PyObject *
-decode_int64(PyObject *self, PyObject *string)
+decode_int64(PyObject *self, PyObject *bytes)
 {
     PY_INT64_T x;
     char *bs;
     int i;
 
-    if (!PyBytes_Check(string)) {
+    if (!PyBytes_Check(bytes)) {
         PyErr_SetString(PyExc_TypeError, "bytes expected");
         return NULL;
     }
-    if (PyBytes_Size(string) != 8) {
+    if (PyBytes_Size(bytes) != 8) {
         PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
-    bs = PyBytes_AsString(string);
+    bs = PyBytes_AsString(bytes);
 
     x = bs[7] & 0x7f;
     for (i = 6; i >= 0; i--) {

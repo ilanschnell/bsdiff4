@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import sys
 import random
@@ -12,12 +10,12 @@ import bsdiff4.format as format
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
-N = 2 ** 63 - 1
-
-
 class TestEncode(unittest.TestCase):
 
+    N = (1 << 63) - 1
+
     def test_special_values(self):
+        N  = self.N
         for n, b in [
             (-N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
             (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
@@ -44,7 +42,7 @@ class TestEncode(unittest.TestCase):
 
     def test_random(self):
         for dum in range(1000):
-            n = random.randint(-N, N)
+            n = random.randint(-self.N, self.N)
             b = core.encode_int64(n)
             self.assertEqual(len(b), 8)
             self.assertEqual(core.decode_int64(b), n)

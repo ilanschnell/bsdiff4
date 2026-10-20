@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from os.path import getsize
 from optparse import OptionParser
 

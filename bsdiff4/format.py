@@ -1,5 +1,4 @@
 import bz2
-import sys
 from io import BytesIO
 
 

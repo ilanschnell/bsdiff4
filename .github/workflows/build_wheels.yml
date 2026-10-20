@@ -27,7 +27,7 @@ jobs:
           CIBW_SKIP: "cp3??t-*"
           # configure cibuildwheel to build native archs ('auto'), and some
           # emulated ones
-          CIBW_ARCHS_LINUX: ${{ runner.arch == 'X64' && 'auto ppc64le s390x' || 'auto' }}
+          CIBW_ARCHS_LINUX: ${{ runner.arch == 'X64' && 'auto ppc64le s390x riscv64' || 'auto' }}
           CIBW_TEST_COMMAND: python -c "import bsdiff4; assert bsdiff4.test().wasSuccessful()"
 
       - uses: actions/upload-artifact@v4

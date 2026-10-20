@@ -24,6 +24,7 @@ jobs:
         uses: pypa/cibuildwheel@v4.3.1
         # to supply options, put them in 'env', like:
         env:
+          CIBW_SKIP: "cp3??t-*"
           # configure cibuildwheel to build native archs ('auto'), and some
           # emulated ones
           CIBW_ARCHS_LINUX: ${{ runner.arch == 'X64' && 'auto ppc64le s390x' || 'auto' }}

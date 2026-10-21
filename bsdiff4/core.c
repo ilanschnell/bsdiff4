@@ -513,24 +513,28 @@ encode_int64(PyObject *self, PyObject *value)
     if (x == -1 && PyErr_Occurred())
         return NULL;
 
+    if (x == PY_LLONG_MIN) {
+        PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
+        return NULL;
+    }
+
     if (x < 0) {
         x = -x;
         sign = 0x80;
     }
     for (i = 0; i < 8; i++) {
         str[i] = x & 0xff;
-        x >>= 8;  /* x /= 256 */
+        x >>= 8;
     }
     str[7] |= sign;
     return PyBytes_FromStringAndSize(str, 8);
 }
 
-
 /* decode an off_t value from 8 bytes */
 static PyObject *
 decode_int64(PyObject *self, PyObject *bytes)
 {
-    PY_INT64_T x;
+    PY_INT64_T x = 0;
     char *str;
     int i;
 
@@ -543,11 +547,12 @@ decode_int64(PyObject *self, PyObject *bytes)
         return NULL;
     }
     str = PyBytes_AsString(bytes);
+    if (str == NULL)
+        return NULL;
 
-    x = str[7] & 0x7f;
-    for (i = 6; i >= 0; i--) {
-        x <<= 8;  /* x = x * 256 + (unsigned char) bs[i]; */
-        x |= (unsigned char) str[i];
+    for (i = 0; i < 8; i++) {
+        unsigned char c = (i < 7) ? str[i] : (str[7] & 0x7f);
+        x |= ((PY_INT64_T) c) << (i * 8);
     }
     if (str[7] & 0x80)
         x = -x;

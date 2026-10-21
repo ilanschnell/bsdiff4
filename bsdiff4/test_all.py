@@ -15,7 +15,7 @@ class TestEncode(unittest.TestCase):
     N = (1 << 63) - 1
 
     def test_special_values(self):
-        N  = self.N
+        N = self.N
         for n, b in [
             (-N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
             (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
@@ -36,6 +36,10 @@ class TestEncode(unittest.TestCase):
 
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
+        M = 1 << 63
+        for n in -M -1, -M, M, M + 1:
+            self.assertRaises(OverflowError, core.encode_int64, n)
+
         self.assertRaises(TypeError, core.decode_int64, 12345)
         self.assertRaises(ValueError, core.decode_int64, 7 * b'a')
         self.assertRaises(ValueError, core.decode_int64, 9 * b'b')

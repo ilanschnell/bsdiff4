@@ -427,7 +427,7 @@ patch(PyObject *self, PyObject *args)
     Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;
     PyObject *controlTuples, *tuple, *results;
     off_t oldpos, newpos, x, y, z;
-    int i, j, numTuples;
+    Py_ssize_t i, j, numTuples;
 
     if (!PyArg_ParseTuple(args, "s#nO!s#s#",
                           &origData, &origDataLength, &newDataLength,
@@ -435,6 +435,11 @@ patch(PyObject *self, PyObject *args)
                           &diffBlock, &diffBlockLength,
                           &extraBlock, &extraBlockLength))
         return NULL;
+
+    if (newDataLength < 0) {
+        PyErr_SetString(PyExc_ValueError, "negative new data length");
+        return NULL;
+    }
 
     /* allocate the memory for the new data */
     newData = PyMem_Malloc(newDataLength + 1);
@@ -459,8 +464,14 @@ patch(PyObject *self, PyObject *args)
             return NULL;
         }
         x = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 0));
+        if (x == -1 && PyErr_Occurred())
+            goto error;
         y = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 1));
+        if (y == -1 && PyErr_Occurred())
+            goto error;
         z = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 2));
+        if (z == -1 && PyErr_Occurred())
+            goto error;
         if (x < 0 || x > newDataLength - newpos ||
                 x > diffBlock + diffBlockLength - diffPtr) {
             PyMem_Free(newData);
@@ -498,6 +509,10 @@ patch(PyObject *self, PyObject *args)
     results = PyBytes_FromStringAndSize(newData, newDataLength);
     PyMem_Free(newData);
     return results;
+
+error:
+    PyMem_Free(newData);
+    return NULL;
 }
 
 

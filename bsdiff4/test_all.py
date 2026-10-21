@@ -95,6 +95,11 @@ class TestFormat(unittest.TestCase):
             self.assertRaises(ValueError, core.patch,
                               b'abcd', 4, tcontrol, 4 * b'\x00', b'')
 
+        self.assertRaises(ValueError, core.patch, b'', -1, [], b'', b'')
+        for control in [('x', 0, 0), (0, 'x', 0), (0, 0, 'x')]:
+            self.assertRaises(TypeError, core.patch,
+                              b'', 0, [control], b'', b'')
+
 
 class TestFile(unittest.TestCase):
 

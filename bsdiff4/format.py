@@ -9,11 +9,10 @@ import bsdiff4.core as core
 
 
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
-    """write a BSDIFF4-format patch to stream 'fo'
-    """
+    "write a BSDIFF4-format patch to stream 'fo'"
     fo.write(MAGIC)
     faux = BytesIO()
-    # write control tuples as series of offts
+    # write control tuples as series of offsets
     for c in tcontrol:
         for x in c:
             faux.write(core.encode_int64(x))
@@ -29,8 +28,7 @@ def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
 
 
 def read_patch(fi, header_only=False):
-    """read a BSDIFF4-format patch from stream 'fi'
-    """
+    "read a BSDIFF4-format patch from stream 'fi'"
     magic = fi.read(8)
     if magic[:7] != MAGIC[:7]:
         raise ValueError("incorrect magic bsdiff4 header")

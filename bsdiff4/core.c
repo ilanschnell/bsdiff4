@@ -217,13 +217,78 @@ append_control(PyObject *controls, off_t x, off_t y, off_t z)
     return res;
 }
 
+static off_t
+forward_match_length(const char *origData, Py_ssize_t origDataLength,
+                     const char *newData, off_t lastscan,
+                     off_t lastpos, off_t scan)
+{
+    off_t i, score = 0, best_score = 0, best_length = 0;
+
+    for (i = 0; (lastscan + i < scan) &&
+             (lastpos + i < origDataLength);) {
+        if (origData[lastpos + i] == newData[lastscan + i])
+            score++;
+        i++;
+        if (score * 2 - i > best_score * 2 - best_length) {
+            best_score = score;
+            best_length = i;
+        }
+    }
+    return best_length;
+}
+
+static off_t
+backward_match_length(const char *origData, const char *newData,
+                      off_t lastscan, off_t scan, off_t pos)
+{
+    off_t i, score = 0, best_score = 0, best_length = 0;
+
+    for (i = 1; (scan >= lastscan + i) && (pos >= i); i++) {
+        if (origData[pos - i] == newData[scan - i])
+            score++;
+        if (score * 2 - i > best_score * 2 - best_length) {
+            best_score = score;
+            best_length = i;
+        }
+    }
+    return best_length;
+}
+
+static void
+adjust_overlap(const char *origData, const char *newData,
+               off_t lastscan, off_t lastpos, off_t scan, off_t pos,
+               off_t *lenf, off_t *lenb)
+{
+    off_t i, score = 0, best_score = 0, best_length = 0;
+    off_t overlap;
+
+    if (lastscan + *lenf <= scan - *lenb)
+        return;
+    overlap = (lastscan + *lenf) - (scan - *lenb);
+
+    for (i = 0; i < overlap; i++) {
+        if (newData[lastscan + *lenf - overlap + i] ==
+                origData[lastpos + *lenf - overlap + i])
+            score++;
+        if (newData[scan - *lenb + i] == origData[pos - *lenb + i])
+            score--;
+        if (score > best_score) {
+            best_score = score;
+            best_length = i + 1;
+        }
+    }
+
+    *lenf += best_length - overlap;
+    *lenb -= best_length;
+}
+
 static int
 compute_diff(char *origData, Py_ssize_t origDataLength,
              char *newData, Py_ssize_t newDataLength, DiffResult *result)
 {
-    off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
+    off_t lastscan, lastpos, lastoffset, oldscore, scsc;
     off_t *I = NULL, *V = NULL;
-    off_t scan, pos, len, s, Sf, lenf, Sb, lenb, i;
+    off_t scan, pos, len, lenf, lenb, i;
 
     result->controls = PyList_New(0);
     if (!result->controls)
@@ -290,54 +355,14 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
         Py_END_ALLOW_THREADS
 
         if ((len != oldscore) || (scan == newDataLength)) {
-            s = 0;
-            Sf = 0;
-            lenf = 0;
-            for (i = 0; (lastscan + i < scan) &&
-                     (lastpos + i < origDataLength);) {
-                if (origData[lastpos + i] == newData[lastscan + i])
-                    s++;
-                i++;
-                if (s * 2 - i > Sf * 2 - lenf) {
-                    Sf = s;
-                    lenf = i;
-                }
-            }
-
+            lenf = forward_match_length(origData, origDataLength, newData,
+                                        lastscan, lastpos, scan);
             lenb = 0;
-            if (scan < newDataLength) {
-                s = 0;
-                Sb = 0;
-                for (i = 1; (scan >= lastscan + i) && (pos >= i); i++) {
-                    if (origData[pos - i] == newData[scan - i])
-                        s++;
-                    if (s * 2 - i > Sb * 2 - lenb) {
-                        Sb = s;
-                        lenb = i;
-                    }
-                }
-            }
-
-            if (lastscan + lenf > scan - lenb) {
-                overlap = (lastscan + lenf) - (scan - lenb);
-                s = 0;
-                Ss = 0;
-                lens = 0;
-                for (i = 0; i < overlap; i++) {
-                    if (newData[lastscan + lenf - overlap + i] ==
-                            origData[lastpos + lenf - overlap + i])
-                        s++;
-                    if (newData[scan - lenb + i] == origData[pos - lenb + i])
-                        s--;
-                    if (s > Ss) {
-                        Ss = s;
-                        lens = i + 1;
-                    }
-                }
-
-                lenf += lens - overlap;
-                lenb -= lens;
-            }
+            if (scan < newDataLength)
+                lenb = backward_match_length(origData, newData,
+                                             lastscan, scan, pos);
+            adjust_overlap(origData, newData, lastscan, lastpos, scan, pos,
+                           &lenf, &lenb);
 
             for (i = 0; i < lenf; i++)
                 result->diff[result->diff_len + i] =
@@ -349,11 +374,10 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
             result->diff_len += lenf;
             result->extra_len += (scan - lenb) - (lastscan + lenf);
 
-            if (append_control(
-                    result->controls,
-                    lenf,
-                    (scan - lenb) - (lastscan + lenf),
-                    (pos - lenb) - (lastpos + lenf)) < 0)
+            if (append_control(result->controls,
+                               lenf,
+                               (scan - lenb) - (lastscan + lenf),
+                               (pos - lenb) - (lastpos + lenf)) < 0)
                 goto error;
 
             lastscan = scan - lenb;

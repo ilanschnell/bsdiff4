@@ -534,29 +534,24 @@ encode_int64(PyObject *self, PyObject *value)
 static PyObject *
 decode_int64(PyObject *self, PyObject *bytes)
 {
-    PY_INT64_T x = 0;
+    PY_UINT64_T value = 0;
+    PY_INT64_T magnitude;
+    Py_ssize_t size;
     char *str;
     int i;
 
-    if (!PyBytes_Check(bytes)) {
-        PyErr_SetString(PyExc_TypeError, "bytes expected");
+    if (PyBytes_AsStringAndSize(bytes, &str, &size) < 0)
         return NULL;
-    }
-    if (PyBytes_Size(bytes) != 8) {
+    if (size != 8) {
         PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
-    str = PyBytes_AsString(bytes);
-    if (str == NULL)
-        return NULL;
 
-    for (i = 0; i < 8; i++) {
-        unsigned char c = (i < 7) ? str[i] : (str[7] & 0x7f);
-        x |= ((PY_INT64_T) c) << (i * 8);
-    }
-    if (str[7] & 0x80)
-        x = -x;
-    return PyLong_FromLongLong(x);
+    for (i = 0; i < 8; i++)
+        value |= ((PY_UINT64_T) (unsigned char) str[i]) << (i * 8);
+
+    magnitude = value & PY_LLONG_MAX;
+    return PyLong_FromLongLong(value >> 63 ? -magnitude : magnitude);
 }
 
 

@@ -1,3 +1,7 @@
+2026-XX-XX   1.3.2:
+-------------------
+
+
 2026-10-21   1.3.1:
 -------------------
   * reject negative and oversized control lengths in patch(), #29

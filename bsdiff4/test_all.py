@@ -12,10 +12,8 @@ from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 class TestEncode(unittest.TestCase):
 
-    N = (1 << 63) - 1
-
     def test_special_values(self):
-        N = self.N
+        N = (1 << 63) - 1
         for n, b in [
             (  -N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
             (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
@@ -45,8 +43,9 @@ class TestEncode(unittest.TestCase):
         self.assertRaises(ValueError, core.decode_int64, 9 * b'b')
 
     def test_random(self):
+        N = (1 << 63) - 1
         for _ in range(1000):
-            n = random.randint(-self.N, self.N)
+            n = random.randint(-N, N)
             b = core.encode_int64(n)
             self.assertEqual(len(b), 8)
             self.assertEqual(core.decode_int64(b), n)

@@ -9,6 +9,7 @@
 #include <Python.h>
 
 
+/* swap two suffix array entries */
 static inline void
 swap_indices(Py_ssize_t *a, Py_ssize_t *b)
 {
@@ -17,6 +18,7 @@ swap_indices(Py_ssize_t *a, Py_ssize_t *b)
     *b = tmp;
 }
 
+/* sort and rank a small suffix group */
 static void
 split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
             Py_ssize_t len, Py_ssize_t h)
@@ -43,6 +45,7 @@ split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
     }
 }
 
+/* partition a suffix group around a pivot rank */
 static void
 partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
                 Py_ssize_t len, Py_ssize_t h,
@@ -88,6 +91,7 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
     *upper = kk;
 }
 
+/* recursively split and rank a suffix group */
 static void
 split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
       Py_ssize_t len, Py_ssize_t h)
@@ -112,6 +116,7 @@ split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
         split(I, V, upper, start + len - upper, h);
 }
 
+/* construct the suffix array for old */
 static void
 qsufsort(Py_ssize_t *I, Py_ssize_t *V, unsigned char *old, Py_ssize_t oldsize)
 {
@@ -161,6 +166,7 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V, unsigned char *old, Py_ssize_t oldsize)
         I[V[i]] = i;
 }
 
+/* return the length of the common prefix */
 static Py_ssize_t
 matchlen(unsigned char *old, Py_ssize_t oldsize,
          unsigned char *new, Py_ssize_t newsize)
@@ -173,6 +179,7 @@ matchlen(unsigned char *old, Py_ssize_t oldsize,
     return i;
 }
 
+/* find the suffix with the longest prefix match */
 static Py_ssize_t
 search(Py_ssize_t *I,
        unsigned char *old, Py_ssize_t oldsize,
@@ -210,6 +217,7 @@ typedef struct {
     Py_ssize_t extra_len;   /* length of extra block */
 } DiffResult;
 
+/* release resources owned by a diff result */
 static void
 clear_diff_result(DiffResult *result)
 {
@@ -218,6 +226,7 @@ clear_diff_result(DiffResult *result)
     PyMem_Free(result->extra);
 }
 
+/* append a control tuple */
 static int
 append_control(PyObject *controls, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
 {
@@ -232,6 +241,7 @@ append_control(PyObject *controls, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
     return res;
 }
 
+/* find the best forward match length */
 static Py_ssize_t
 forward_match_length(const char *origData, Py_ssize_t origDataLength,
                      const char *newData, Py_ssize_t lastscan,
@@ -252,6 +262,7 @@ forward_match_length(const char *origData, Py_ssize_t origDataLength,
     return best_length;
 }
 
+/* find the best backward match length */
 static Py_ssize_t
 backward_match_length(const char *origData, const char *newData,
                       Py_ssize_t lastscan, Py_ssize_t scan, Py_ssize_t pos)
@@ -269,6 +280,7 @@ backward_match_length(const char *origData, const char *newData,
     return best_length;
 }
 
+/* resolve overlap between forward and backward matches */
 static void
 adjust_overlap(const char *origData, const char *newData,
                Py_ssize_t lastscan, Py_ssize_t lastpos, Py_ssize_t scan,
@@ -297,6 +309,7 @@ adjust_overlap(const char *origData, const char *newData,
     *lenb -= best_length;
 }
 
+/* construct the control, diff and extra blocks */
 static int
 compute_diff(char *origData, Py_ssize_t origDataLength,
              char *newData, Py_ssize_t newDataLength, DiffResult *result)
@@ -410,6 +423,7 @@ error:
     return -1;
 }
 
+/* convert a diff result into Python objects */
 static PyObject *
 build_diff_result(DiffResult *result)
 {
@@ -430,9 +444,7 @@ build_diff_result(DiffResult *result)
     return res;
 }
 
-/* performs a diff between the two data streams and returns a tuple
-   containing the control, diff and extra blocks that bsdiff produces
-*/
+/* return the control, diff and extra blocks for two byte strings */
 static PyObject *
 diff(PyObject *self, PyObject *args)
 {
@@ -455,10 +467,10 @@ diff(PyObject *self, PyObject *args)
     return res;
 }
 
+/* update the source offset while checking for overflow */
 static int
 update_oldpos(long long *oldpos, long long increment)
 {
-    /* check bounds without overflowing oldpos + increment */
     if ((increment > 0 && *oldpos > PY_LLONG_MAX - increment) ||
         (increment < 0 && *oldpos < PY_LLONG_MIN - increment)) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (offset overflow)");
@@ -468,9 +480,7 @@ update_oldpos(long long *oldpos, long long increment)
     return 0;
 }
 
-/* takes the original data and the control, diff and extra blocks produced
-   by bsdiff and returns the new data
-*/
+/* apply control, diff and extra blocks to the original data */
 static PyObject *
 patch(PyObject *self, PyObject *args)
 {
@@ -552,7 +562,7 @@ error:
 }
 
 
-/* encode an integer value as 8 bytes */
+/* encode an integer as 8 bytes */
 static PyObject *
 encode_int64(PyObject *self, PyObject *value)
 {
@@ -581,7 +591,7 @@ encode_int64(PyObject *self, PyObject *value)
     return PyBytes_FromStringAndSize(str, 8);
 }
 
-/* decode an integer value from 8 bytes */
+/* decode an integer from 8 bytes */
 static PyObject *
 decode_int64(PyObject *self, PyObject *bytes)
 {
@@ -619,6 +629,7 @@ static PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT, "core", 0, -1, module_functions,
 };
 
+/* initialize extension module */
 PyMODINIT_FUNC
 PyInit_core(void)
 {

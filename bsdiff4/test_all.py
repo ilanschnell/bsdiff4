@@ -77,6 +77,18 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
+    def test_diff_blocks(self):
+        # Exercise both split_small() and partition_group().
+        self.assertEqual(
+            core.diff(b'banana', b'bandana'),
+            ([(3, 4, 2)], 3 * b'\x00', b'dana'))
+
+        src = 32 * b'a'
+        dst = 16 * b'a' + b'b' + 16 * b'a'
+        self.assertEqual(
+            core.diff(src, dst),
+            ([(32, 1, -1)], 16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+
     def test_random(self):
         for _ in range(100):
             n1 = random.randint(0, 1000)

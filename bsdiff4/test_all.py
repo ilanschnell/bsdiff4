@@ -1,9 +1,12 @@
+import base64
+import bz2
 import os
 import sys
 import random
 import shutil
 import unittest
 import tempfile
+from io import BytesIO
 
 import bsdiff4.core as core
 import bsdiff4.format as format
@@ -65,6 +68,10 @@ class TestFormat(unittest.TestCase):
     def test_zero(self):
         self.round_trip(b'', b'')
 
+    def test_edge_cases(self):
+        for src, dst in [(b'', b'x'), (b'x', b''), (b'abc', b'abc')]:
+            self.round_trip(src, dst)
+
     def test_extra(self):
         src = os.urandom(1000)
         dst = src + os.urandom(10)
@@ -115,6 +122,24 @@ class TestFormat(unittest.TestCase):
             self.assertRaises(TypeError, core.patch,
                               b'', 0, [control], b'', b'')
 
+    def test_underflow(self):
+        for args in [
+            (b'', 1, [], b'', b''),
+            (b'', 0, [], b'x', b''),
+            (b'', 0, [], b'', b'x'),
+        ]:
+            self.assertRaises(ValueError, core.patch, *args)
+
+    def test_oldpos_out_of_range(self):
+        self.assertEqual(
+            core.patch(b'ab', 2, [(0, 0, -1), (2, 0, 0)],
+                       b'\x01\x01', b''),
+            b'\x01b')
+        self.assertEqual(
+            core.patch(b'ab', 2, [(0, 0, 2), (2, 0, 0)],
+                       b'\x01\x02', b''),
+            b'\x01\x02')
+
     def test_oldpos_overflow(self):
         M = 1 << 63
         for z in -M, M - 1:
@@ -128,6 +153,56 @@ class TestFormat(unittest.TestCase):
         self.assertRaises(
             ValueError, core.patch, b'', 2,
             [(0, 0, M - 1), (2, 0, 0)], 2 * b'\x00', b'')
+
+    def test_malformed_patch(self):
+        def header(len_control, len_diff, len_dst):
+            return (format.MAGIC + core.encode_int64(len_control) +
+                    core.encode_int64(len_diff) + core.encode_int64(len_dst))
+
+        empty = bz2.compress(b'')
+        self.assertRaises(
+            ValueError, format.read_patch, BytesIO(format.MAGIC))
+
+        for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
+            data = header(*lengths) + 3 * empty
+            self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+
+        invalid_blocks = [
+            header(1, len(empty), 0) + b'x' + empty + empty,
+            header(len(empty), 1, 0) + empty + b'x' + empty,
+            header(len(empty), len(empty), 0) + empty + empty + b'x',
+        ]
+        for data in invalid_blocks:
+            self.assertRaises(OSError, format.read_patch, BytesIO(data))
+
+        control = bz2.compress(b'\x00')
+        data = header(len(control), len(empty), 0) + control + 2 * empty
+        self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+
+        for data in [
+            header(len(empty) + 1, 0, 0) + empty,
+            header(len(empty), len(empty) + 1, 0) + 2 * empty,
+        ]:
+            self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+
+    def test_header_only(self):
+        fi = BytesIO()
+        format.write_patch(fi, 4, [(3, 1, 0)], 3 * b'\x00', b'!')
+        fi.seek(0)
+        len_control, len_diff, len_dst, controls = format.read_patch(
+            fi, header_only=True)
+        self.assertEqual((len_dst, controls), (4, [(3, 1, 0)]))
+        self.assertEqual(fi.tell(), 32 + len_control)
+        self.assertGreater(len_diff, 0)
+
+    def test_compatibility(self):
+        # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
+        data = base64.b64decode(
+            b'QlNESUZGNDAqAAAAAAAAACUAAAAAAAAABAAAAAAAAABCWmg5MUFZJlNZ0BSaKQAA'
+            b'BMAAaAggADDNNBk/UglZPF3JFOFCQ0BSaKRCWmg5MUFZJlNZTFqfSAAAAEAAYAA'
+            b'gACEAgoxdyRThQkExan0gQlpoOTFBWSZTWS0V6xwAAAAQACAAIAAhGEaC7kinCh'
+            b'IFor1jgA==')
+        self.assertEqual(patch(b'abc', data), b'abd!')
 
 
 class TestFile(unittest.TestCase):

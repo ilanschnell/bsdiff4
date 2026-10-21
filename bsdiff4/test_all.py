@@ -160,8 +160,8 @@ class TestFormat(unittest.TestCase):
                     core.encode_int64(len_diff) + core.encode_int64(len_dst))
 
         empty = bz2.compress(b'')
-        self.assertRaises(
-            ValueError, format.read_patch, BytesIO(format.MAGIC))
+        self.assertRaises(ValueError, format.read_patch,
+                          BytesIO(format.MAGIC))
 
         for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
             data = header(*lengths) + 3 * empty

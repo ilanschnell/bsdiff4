@@ -1,6 +1,11 @@
 2026-XX-XX   1.3.1:
 -------------------
   * reject negative and oversized control lengths in patch(), #29
+  * reject truncated patches, negative block sizes and malformed control
+    blocks
+  * prevent source-offset overflow when applying patches
+  * reject -2**63 in encode_int64(), which cannot be represented in BSDIFF40
+  * fix memory cleanup when diff() is interrupted
 
 
 2026-10-20   1.3.0:

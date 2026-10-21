@@ -187,13 +187,12 @@ search(off_t *I,
 
 
 typedef struct {
-    PyObject *controls;
-    unsigned char *diff;
-    unsigned char *extra;
-    off_t diff_len;
-    off_t extra_len;
+    PyObject *controls;     /* list of control tuples */
+    unsigned char *diff;    /* difference block */
+    unsigned char *extra;   /* extra block */
+    off_t diff_len;         /* length of difference block */
+    off_t extra_len;        /* length of extra block */
 } DiffResult;
-
 
 static void
 clear_diff_result(DiffResult *result)
@@ -202,7 +201,6 @@ clear_diff_result(DiffResult *result)
     PyMem_Free(result->diff);
     PyMem_Free(result->extra);
 }
-
 
 static int
 append_control(PyObject *controls, off_t x, off_t y, off_t z)
@@ -218,7 +216,6 @@ append_control(PyObject *controls, off_t x, off_t y, off_t z)
     Py_DECREF(tuple);
     return res;
 }
-
 
 static int
 compute_diff(char *origData, Py_ssize_t origDataLength,
@@ -374,7 +371,6 @@ error:
     return -1;
 }
 
-
 static PyObject *
 build_diff_result(DiffResult *result)
 {
@@ -394,7 +390,6 @@ build_diff_result(DiffResult *result)
     Py_DECREF(extra);
     return res;
 }
-
 
 /* performs a diff between the two data streams and returns a tuple
    containing the control, diff and extra blocks that bsdiff produces

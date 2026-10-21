@@ -17,20 +17,20 @@ class TestEncode(unittest.TestCase):
     def test_special_values(self):
         N = self.N
         for n, b in [
-            (-N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
+            (  -N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
             (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
             (-128, b'\x80\x00\x00\x00\x00\x00\x00\x80'),
-            (-1, b'\x01\x00\x00\x00\x00\x00\x00\x80'),
-            (0, b'\x00\x00\x00\x00\x00\x00\x00\x00'),
-            (1, b'\x01\x00\x00\x00\x00\x00\x00\x00'),
-            (127, b'\x7f\x00\x00\x00\x00\x00\x00\x00'),
-            (128, b'\x80\x00\x00\x00\x00\x00\x00\x00'),
-            (129, b'\x81\x00\x00\x00\x00\x00\x00\x00'),
-            (255, b'\xff\x00\x00\x00\x00\x00\x00\x00'),
-            (256, b'\x00\x01\x00\x00\x00\x00\x00\x00'),
-            (257, b'\x01\x01\x00\x00\x00\x00\x00\x00'),
-            (N, b'\xff\xff\xff\xff\xff\xff\xff\x7f'),
-            ]:
+            (  -1, b'\x01\x00\x00\x00\x00\x00\x00\x80'),
+            (   0, b'\x00\x00\x00\x00\x00\x00\x00\x00'),
+            (   1, b'\x01\x00\x00\x00\x00\x00\x00\x00'),
+            ( 127, b'\x7f\x00\x00\x00\x00\x00\x00\x00'),
+            ( 128, b'\x80\x00\x00\x00\x00\x00\x00\x00'),
+            ( 129, b'\x81\x00\x00\x00\x00\x00\x00\x00'),
+            ( 255, b'\xff\x00\x00\x00\x00\x00\x00\x00'),
+            ( 256, b'\x00\x01\x00\x00\x00\x00\x00\x00'),
+            ( 257, b'\x01\x01\x00\x00\x00\x00\x00\x00'),
+            (   N, b'\xff\xff\xff\xff\xff\xff\xff\x7f'),
+        ]:
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
@@ -45,7 +45,7 @@ class TestEncode(unittest.TestCase):
         self.assertRaises(ValueError, core.decode_int64, 9 * b'b')
 
     def test_random(self):
-        for dum in range(1000):
+        for _ in range(1000):
             n = random.randint(-self.N, self.N)
             b = core.encode_int64(n)
             self.assertEqual(len(b), 8)

@@ -186,62 +186,82 @@ search(off_t *I,
 }
 
 
-/* performs a diff between the two data streams and returns a tuple
-   containing the control, diff and extra blocks that bsdiff produces
-*/
-static PyObject *
-diff(PyObject *self, PyObject *args)
+typedef struct {
+    PyObject *controls;
+    unsigned char *diff;
+    unsigned char *extra;
+    off_t diff_len;
+    off_t extra_len;
+} DiffResult;
+
+
+static void
+clear_diff_result(DiffResult *result)
+{
+    Py_XDECREF(result->controls);
+    PyMem_Free(result->diff);
+    PyMem_Free(result->extra);
+}
+
+
+static int
+append_control(PyObject *controls, off_t x, off_t y, off_t z)
+{
+    PyObject *tuple;
+    int res;
+
+    tuple = Py_BuildValue("(LLL)",
+                          (long long) x, (long long) y, (long long) z);
+    if (!tuple)
+        return -1;
+    res = PyList_Append(controls, tuple);
+    Py_DECREF(tuple);
+    return res;
+}
+
+
+static int
+compute_diff(char *origData, Py_ssize_t origDataLength,
+             char *newData, Py_ssize_t newDataLength, DiffResult *result)
 {
     off_t lastscan, lastpos, lastoffset, oldscore, scsc, overlap, Ss, lens;
-    off_t *I, *V, dblen, eblen, scan, pos, len, s, Sf, lenf, Sb, lenb, i;
-    PyObject *controlTuples, *tuple, *results, *temp;
-    Py_ssize_t origDataLength, newDataLength;
-    char *origData, *newData;
-    unsigned char *db, *eb;
+    off_t *I = NULL, *V = NULL;
+    off_t scan, pos, len, s, Sf, lenf, Sb, lenb, i;
 
-    if (!PyArg_ParseTuple(args, "s#s#",
-                          &origData, &origDataLength,
-                          &newData, &newDataLength))
-        return NULL;
-
-    /* create the control tuple */
-    controlTuples = PyList_New(0);
-    if (!controlTuples)
-        return NULL;
+    result->controls = PyList_New(0);
+    if (!result->controls)
+        goto error;
 
     /* perform sort on original data */
     I = PyMem_Malloc((origDataLength + 1) * sizeof(off_t));
     if (!I) {
-        Py_DECREF(controlTuples);
-        return PyErr_NoMemory();
+        PyErr_NoMemory();
+        goto error;
     }
     V = PyMem_Malloc((origDataLength + 1) * sizeof(off_t));
     if (!V) {
-        Py_DECREF(controlTuples);
-        PyMem_Free(I);
-        return PyErr_NoMemory();
+        PyErr_NoMemory();
+        goto error;
     }
     Py_BEGIN_ALLOW_THREADS  /* release GIL */
     qsufsort(I, V, (unsigned char *) origData, origDataLength);
     Py_END_ALLOW_THREADS
     PyMem_Free(V);
+    V = NULL;
 
     /* allocate memory for the diff and extra blocks */
-    db = PyMem_Malloc(newDataLength + 1);
-    if (!db) {
-        Py_DECREF(controlTuples);
-        PyMem_Free(I);
-        return PyErr_NoMemory();
+    result->diff = PyMem_Malloc(newDataLength + 1);
+    if (!result->diff) {
+        PyErr_NoMemory();
+        goto error;
     }
-    eb = PyMem_Malloc(newDataLength + 1);
-    if (!eb) {
-        Py_DECREF(controlTuples);
-        PyMem_Free(I);
-        PyMem_Free(db);
-        return PyErr_NoMemory();
+    result->extra = PyMem_Malloc(newDataLength + 1);
+    if (!result->extra) {
+        PyErr_NoMemory();
+        goto error;
     }
-    dblen = 0;
-    eblen = 0;
+    result->diff_len = 0;
+    result->extra_len = 0;
 
     /* perform the diff */
     len = 0;
@@ -251,10 +271,8 @@ diff(PyObject *self, PyObject *args)
     lastoffset = 0;
     pos = 0;
     while (scan < newDataLength) {
-        if (PyErr_CheckSignals() != 0) {
-            PyErr_SetNone(PyExc_KeyboardInterrupt);
-            return NULL;
-        }
+        if (PyErr_CheckSignals() < 0)
+            goto error;
         oldscore = 0;
 
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
@@ -312,7 +330,7 @@ diff(PyObject *self, PyObject *args)
                     if (newData[lastscan + lenf - overlap + i] ==
                             origData[lastpos + lenf - overlap + i])
                         s++;
-                    if (newData[scan - lenb + i]== origData[pos - lenb + i])
+                    if (newData[scan - lenb + i] == origData[pos - lenb + i])
                         s--;
                     if (s > Ss) {
                         Ss = s;
@@ -325,35 +343,21 @@ diff(PyObject *self, PyObject *args)
             }
 
             for (i = 0; i < lenf; i++)
-                db[dblen + i] = newData[lastscan + i] - origData[lastpos + i];
+                result->diff[result->diff_len + i] =
+                    newData[lastscan + i] - origData[lastpos + i];
             for (i = 0; i < (scan - lenb) - (lastscan + lenf); i++)
-                eb[eblen + i] = newData[lastscan + lenf + i];
+                result->extra[result->extra_len + i] =
+                    newData[lastscan + lenf + i];
 
-            dblen += lenf;
-            eblen += (scan - lenb) - (lastscan + lenf);
+            result->diff_len += lenf;
+            result->extra_len += (scan - lenb) - (lastscan + lenf);
 
-            tuple = PyTuple_New(3);
-            if (!tuple) {
-                Py_DECREF(controlTuples);
-                PyMem_Free(I);
-                PyMem_Free(db);
-                PyMem_Free(eb);
-                return NULL;
-            }
-            PyTuple_SET_ITEM(tuple, 0, PyLong_FromLong(lenf));
-            PyTuple_SET_ITEM(tuple, 1,
-                    PyLong_FromLong((scan - lenb) - (lastscan + lenf)));
-            PyTuple_SET_ITEM(tuple, 2,
-                    PyLong_FromLong((pos - lenb) - (lastpos + lenf)));
-            if (PyList_Append(controlTuples, tuple) < 0) {
-                Py_DECREF(controlTuples);
-                Py_DECREF(tuple);
-                PyMem_Free(I);
-                PyMem_Free(db);
-                PyMem_Free(eb);
-                return NULL;
-            }
-            Py_DECREF(tuple);
+            if (append_control(
+                    result->controls,
+                    lenf,
+                    (scan - lenb) - (lastscan + lenf),
+                    (pos - lenb) - (lastpos + lenf)) < 0)
+                goto error;
 
             lastscan = scan - lenb;
             lastpos = pos - lenb;
@@ -362,30 +366,59 @@ diff(PyObject *self, PyObject *args)
     }
 
     PyMem_Free(I);
-    results = PyTuple_New(3);
-    if (!results) {
-        PyMem_Free(db);
-        PyMem_Free(eb);
-        return NULL;
-    }
-    PyTuple_SET_ITEM(results, 0, controlTuples);
-    temp = PyBytes_FromStringAndSize((char *) db, dblen);
-    PyMem_Free(db);
-    if (!temp) {
-        PyMem_Free(eb);
-        Py_DECREF(results);
-        return NULL;
-    }
-    PyTuple_SET_ITEM(results, 1, temp);
-    temp = PyBytes_FromStringAndSize((char *) eb, eblen);
-    PyMem_Free(eb);
-    if (!temp) {
-        Py_DECREF(results);
-        return NULL;
-    }
-    PyTuple_SET_ITEM(results, 2, temp);
+    return 0;
 
-    return results;
+error:
+    PyMem_Free(I);
+    PyMem_Free(V);
+    return -1;
+}
+
+
+static PyObject *
+build_diff_result(DiffResult *result)
+{
+    PyObject *diff, *extra, *res;
+
+    diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
+    if (!diff)
+        return NULL;
+    extra = PyBytes_FromStringAndSize((char *) result->extra,
+                                      result->extra_len);
+    if (!extra) {
+        Py_DECREF(diff);
+        return NULL;
+    }
+    res = PyTuple_Pack(3, result->controls, diff, extra);
+    Py_DECREF(diff);
+    Py_DECREF(extra);
+    return res;
+}
+
+
+/* performs a diff between the two data streams and returns a tuple
+   containing the control, diff and extra blocks that bsdiff produces
+*/
+static PyObject *
+diff(PyObject *self, PyObject *args)
+{
+    DiffResult result = {NULL, NULL, NULL, 0, 0};
+    Py_ssize_t origDataLength, newDataLength;
+    char *origData, *newData;
+    PyObject *res;
+
+    if (!PyArg_ParseTuple(args, "s#s#",
+                          &origData, &origDataLength,
+                          &newData, &newDataLength))
+        return NULL;
+
+    if (compute_diff(origData, origDataLength,
+                     newData, newDataLength, &result) < 0)
+        res = NULL;
+    else
+        res = build_diff_result(&result);
+    clear_diff_result(&result);
+    return res;
 }
 
 

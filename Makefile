@@ -4,6 +4,7 @@ bsdiff4/core.so: bsdiff4/core.c
 
 test: bsdiff4/core.so
 	python -c "import bsdiff4; bsdiff4.test()"
+	python -m doctest README.rst
 
 
 clean:

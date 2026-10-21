@@ -99,6 +99,9 @@ class TestFormat(unittest.TestCase):
         for control in [('x', 0, 0), (0, 'x', 0), (0, 0, 'x')]:
             self.assertRaises(TypeError, core.patch,
                               b'', 0, [control], b'', b'')
+        for control in [None, (), (0, 0), (0, 0, 0, 0)]:
+            self.assertRaises(TypeError, core.patch,
+                              b'', 0, [control], b'', b'')
 
 
 class TestFile(unittest.TestCase):

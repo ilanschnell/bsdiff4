@@ -423,11 +423,12 @@ diff(PyObject *self, PyObject *args)
 static PyObject *
 patch(PyObject *self, PyObject *args)
 {
-    char *origData, *newData, *diffBlock, *extraBlock, *diffPtr, *extraPtr;
+    char *origData, *newData, *diffBlock, *extraBlock;
     Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;
-    PyObject *controlTuples, *tuple, *results;
-    off_t oldpos, newpos, x, y, z;
-    Py_ssize_t i, j, numTuples;
+    Py_ssize_t diffRemaining, extraRemaining;
+    PyObject *controlTuples, *tuple, *result;
+    Py_ssize_t newpos, x, y, i, j, numTuples;
+    long long oldpos, z;
 
     if (!PyArg_ParseTuple(args, "s#nO!s#s#",
                           &origData, &origDataLength, &newDataLength,
@@ -441,77 +442,60 @@ patch(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    /* allocate the memory for the new data */
-    newData = PyMem_Malloc(newDataLength + 1);
-    if (!newData)
-        return PyErr_NoMemory();
+    result = PyBytes_FromStringAndSize(NULL, newDataLength);
+    if (!result)
+        return NULL;
+    newData = PyBytes_AS_STRING(result);
 
     oldpos = 0;
     newpos = 0;
-    diffPtr = diffBlock;
-    extraPtr = extraBlock;
+    diffRemaining = diffBlockLength;
+    extraRemaining = extraBlockLength;
     numTuples = PyList_GET_SIZE(controlTuples);
     for (i = 0; i < numTuples; i++) {
         tuple = PyList_GET_ITEM(controlTuples, i);
         if (!PyTuple_Check(tuple)) {
-            PyMem_Free(newData);
             PyErr_SetString(PyExc_TypeError, "expecting tuple");
-            return NULL;
-        }
-        if (PyTuple_GET_SIZE(tuple) != 3) {
-            PyMem_Free(newData);
-            PyErr_SetString(PyExc_TypeError, "expecting tuple of size 3");
-            return NULL;
-        }
-        x = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 0));
-        if (x == -1 && PyErr_Occurred())
             goto error;
-        y = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 1));
-        if (y == -1 && PyErr_Occurred())
-            goto error;
-        z = PyLong_AsLong(PyTuple_GET_ITEM(tuple, 2));
-        if (z == -1 && PyErr_Occurred())
+        }
+        if (!PyArg_ParseTuple(tuple, "nnL", &x, &y, &z))
             goto error;
         if (x < 0 || x > newDataLength - newpos ||
-                x > diffBlock + diffBlockLength - diffPtr) {
-            PyMem_Free(newData);
+                x > diffRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
-            return NULL;
+            goto error;
         }
-        memcpy(newData + newpos, diffPtr, x);
-        diffPtr += x;
+        memcpy(newData + newpos, diffBlock, x);
+        diffBlock += x;
+        diffRemaining -= x;
         for (j = 0; j < x; j++)
             if ((oldpos + j >= 0) && (oldpos + j < origDataLength))
                 newData[newpos + j] += origData[oldpos + j];
         newpos += x;
         oldpos += x;
         if (y < 0 || y > newDataLength - newpos ||
-                y > extraBlock + extraBlockLength - extraPtr) {
-            PyMem_Free(newData);
+                y > extraRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
-            return NULL;
+            goto error;
         }
-        memcpy(newData + newpos, extraPtr, y);
-        extraPtr += y;
+        memcpy(newData + newpos, extraBlock, y);
+        extraBlock += y;
+        extraRemaining -= y;
         newpos += y;
         oldpos += z;
     }
 
     /* confirm that a valid patch was applied */
     if (newpos != newDataLength ||
-            diffPtr != diffBlock + diffBlockLength ||
-            extraPtr != extraBlock + extraBlockLength) {
-        PyMem_Free(newData);
+            diffRemaining != 0 || extraRemaining != 0) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (underflow)");
-        return NULL;
+        goto error;
     }
 
-    results = PyBytes_FromStringAndSize(newData, newDataLength);
-    PyMem_Free(newData);
-    return results;
+    return result;
 
 error:
-    PyMem_Free(newData);
+    Py_DECREF(result);
     return NULL;
 }
 

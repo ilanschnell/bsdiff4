@@ -103,6 +103,20 @@ class TestFormat(unittest.TestCase):
             self.assertRaises(TypeError, core.patch,
                               b'', 0, [control], b'', b'')
 
+    def test_oldpos_overflow(self):
+        M = 1 << 63
+        for z in -M, M - 1:
+            self.assertEqual(
+                core.patch(b'', 0, [(0, 0, z)], b'', b''), b'')
+
+        for controls in [[(0, 0, M - 1), (0, 0, 1)],
+                         [(0, 0, -M), (0, 0, -1)]]:
+            self.assertRaises(ValueError, core.patch,
+                              b'', 0, controls, b'', b'')
+        self.assertRaises(
+            ValueError, core.patch, b'', 2,
+            [(0, 0, M - 1), (2, 0, 0)], 2 * b'\x00', b'')
+
 
 class TestFile(unittest.TestCase):
 

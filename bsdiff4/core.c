@@ -436,6 +436,18 @@ diff(PyObject *self, PyObject *args)
     return res;
 }
 
+static int
+update_oldpos(long long *oldpos, long long increment)
+{
+    /* check bounds without overflowing oldpos + increment */
+    if ((increment > 0 && *oldpos > PY_LLONG_MAX - increment) ||
+        (increment < 0 && *oldpos < PY_LLONG_MIN - increment)) {
+        PyErr_SetString(PyExc_ValueError, "corrupt patch (offset overflow)");
+        return -1;
+    }
+    *oldpos += increment;
+    return 0;
+}
 
 /* takes the original data and the control, diff and extra blocks produced
    by bsdiff and returns the new data
@@ -480,21 +492,21 @@ patch(PyObject *self, PyObject *args)
         }
         if (!PyArg_ParseTuple(tuple, "nnL", &x, &y, &z))
             goto error;
-        if (x < 0 || x > newDataLength - newpos ||
-                x > diffRemaining) {
+        if (x < 0 || x > newDataLength - newpos || x > diffRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
         memcpy(newData + newpos, diffBlock, x);
         diffBlock += x;
         diffRemaining -= x;
+        /* Check bounds without overflowing oldpos + j. */
         for (j = 0; j < x; j++)
-            if ((oldpos + j >= 0) && (oldpos + j < origDataLength))
+            if (oldpos >= -j && oldpos < origDataLength - j)
                 newData[newpos + j] += origData[oldpos + j];
         newpos += x;
-        oldpos += x;
-        if (y < 0 || y > newDataLength - newpos ||
-                y > extraRemaining) {
+        if (update_oldpos(&oldpos, x) < 0)
+            goto error;
+        if (y < 0 || y > newDataLength - newpos || y > extraRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
@@ -502,7 +514,8 @@ patch(PyObject *self, PyObject *args)
         extraBlock += y;
         extraRemaining -= y;
         newpos += y;
-        oldpos += z;
+        if (update_oldpos(&oldpos, z) < 0)
+            goto error;
     }
 
     /* confirm that a valid patch was applied */

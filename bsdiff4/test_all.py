@@ -32,6 +32,9 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
+        self.assertEqual(  # noncanonical "negative zero"
+            core.decode_int64(b'\x00\x00\x00\x00\x00\x00\x00\x80'), 0)
+
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
         M = 1 << 63

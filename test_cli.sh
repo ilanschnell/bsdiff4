@@ -20,6 +20,11 @@ cmp /bin/tail tail
 
 bspatch4 -v a.diff >verbose-info.txt
 
+# Apply patch in-place
+cp /bin/head foo
+bspatch4 -v foo foo a.diff
+cmp foo /bin/tail
+
 if bsdiff4 tail; then
     echo "bsdiff4 unexpectedly succeeded" >&2
     exit 1

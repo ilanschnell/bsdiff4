@@ -14,11 +14,11 @@ bsdiff4 --version
 bsdiff4 --help
 bspatch4 --version
 bspatch4 --help
-bsdiff4 -v /bin/ls /bin/mv diff.bin
-bspatch4 /bin/ls mv diff.bin
-bspatch4 -v /bin/ls mv diff.bin >verbose-info.txt
+bsdiff4 -v /bin/ls /bin/mv a.diff
+bspatch4 -v /bin/ls mv a.diff
 cmp /bin/mv mv
-bspatch4 -v diff.bin
+
+bspatch4 -v a.diff >verbose-info.txt
 
 if bsdiff4 mv; then
     echo "bsdiff4 unexpectedly succeeded" >&2
@@ -40,4 +40,4 @@ bsdiff4 /bin/ls /bin/mv python.diff
 bspatch /bin/ls from_python python.diff
 cmp /bin/mv from_python
 
-ls -l /bin
+ls -l /usr/bin

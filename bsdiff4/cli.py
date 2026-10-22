@@ -46,7 +46,7 @@ def main_bsdiff4():
         return
 
     if len(args) != 3:
-        p.error('requies 3 arguments, try -h')
+        p.error('requires 3 arguments, try -h')
 
     file_diff(*args)
     if opts.verbose:
@@ -79,7 +79,7 @@ def show_patch(patch_path, verbose=False):
 def main_bspatch4():
     p = OptionParser(
         usage="usage: %prog [options] SRC DST PATCH",
-        description=("genertaes DST, by applying the BSDIFF4-format PATCH "
+        description=("generates DST, by applying the BSDIFF4-format PATCH "
                      "file to SRC"))
 
     p.add_option('-v', "--verbose",
@@ -99,7 +99,7 @@ def main_bspatch4():
         return
 
     if len(args) != 3:
-        p.error('requies 3 arguments, try -h')
+        p.error('requires 3 arguments, try -h')
 
     file_patch(*args)
     if opts.verbose:

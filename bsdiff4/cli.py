@@ -51,20 +51,27 @@ def main_bsdiff4():
                                              100.0 * size[2] / size[1]))
 
 
-def show_patch(patch_path):
+def show_patch(patch_path, verbose=False):
     s_total = getsize(patch_path)
-    fi = open(patch_path, 'rb')
-    s_control, s_diff, s_dst, tcontrol = read_patch(fi, header_only=True)
-    fi.close()
+    with open(patch_path, 'rb') as fi:
+        s_control, s_diff, s_dst, tcontrol = read_patch(fi, header_only=True)
     s_extra = s_total - 32 - s_control - s_diff
 
-    for var_name in 'total', 'control', 'diff', 'extra', 'dst':
-        size = eval('s_' + var_name)
-        print('%s size: %d (%s)' % (var_name, size, human_bytes(size)))
+    for name, size in [
+            ('total', s_total),
+            ('control', s_control),
+            ('diff', s_diff),
+            ('extra', s_extra),
+            ('dst', s_dst),
+    ]:
+        print('%s size: %d (%s)' % (name, size, human_bytes(size)))
+
     print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
     print('number of control tuples: %d' % len(tcontrol))
-    #for t in tcontrol:
-    #    print('%20d %10d %10d' % t)
+    if verbose:
+        print('%20s %10s %10s' % ('x', 'y', 'z'))
+        for t in tcontrol:
+            print('%20d %10d %10d' % t)
 
 
 def main_bspatch4():
@@ -72,6 +79,9 @@ def main_bspatch4():
         usage="usage: %prog [options] SRC DST PATCH",
         description=("genertaes DST, by applying the BSDIFF4-format PATCH "
                      "file to SRC"))
+
+    p.add_option('-v', "--verbose",
+                 action="store_true")
 
     p.add_option("--version",
                  action="store_true")
@@ -83,7 +93,7 @@ def main_bspatch4():
         return
 
     if len(args) == 1:
-        show_patch(args[0])
+        show_patch(args[0], opts.verbose)
         return
 
     if len(args) != 3:

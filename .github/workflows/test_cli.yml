@@ -10,4 +10,3 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash test_cli.sh
-

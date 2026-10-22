@@ -10,11 +10,15 @@ def human_bytes(n):
     return the number of bytes 'n' in more human readable form
     """
     if n < 1024:
-        return '%i B' % n
-    k = (n - 1) / 1024 + 1
+        return '%d B' % n
+    k = n / 1024
     if k < 1024:
-        return '%i KB' % k
-    return '%.2f MB' % (float(n) / (2 ** 20))
+        return '%.1f K' % k
+    m = k / 1024
+    if m < 1024:
+        return '%.1f M' % m
+    g = m / 1024
+    return '%.2f G' % g
 
 
 def show_filesizes(*args):

@@ -21,6 +21,12 @@ def human_bytes(n):
     return '%.2f MB' % (float(n) / (2 ** 20))
 
 
+def show_filesizes(*args):
+    for i, name in enumerate(['src', 'dst', 'patch']):
+        size = getsize(args[i])
+        print('%s: %s (%s)' % (name, args[i], human_bytes(size)))
+
+
 def main_bsdiff4():
     p = OptionParser(
         usage="usage: %prog [options] SRC DST PATCH",
@@ -44,29 +50,25 @@ def main_bsdiff4():
 
     file_diff(*args)
     if opts.verbose:
-        size = [getsize(args[i]) for i in range(3)]
-        print('src: %s' % human_bytes(size[0]))
-        print('dst: %s' % human_bytes(size[1]))
-        print('patch: %s (%.2f%% of dst)' % (human_bytes(size[2]),
-                                             100.0 * size[2] / size[1]))
+        show_filesizes(*args)
 
 
 def show_patch(patch_path, verbose=False):
     s_total = getsize(patch_path)
     with open(patch_path, 'rb') as fi:
         s_control, s_diff, s_dst, tcontrol = read_patch(fi, header_only=True)
-    s_extra = s_total - 32 - s_control - s_diff
 
     for name, size in [
             ('total', s_total),
             ('control', s_control),
             ('diff', s_diff),
-            ('extra', s_extra),
+            ('extra', s_total - 32 - s_control - s_diff),
             ('dst', s_dst),
     ]:
         print('%s size: %d (%s)' % (name, size, human_bytes(size)))
 
-    print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
+    if s_dst:
+        print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
     print('number of control tuples: %d' % len(tcontrol))
     if verbose:
         print('%20s %10s %10s' % ('x', 'y', 'z'))
@@ -100,3 +102,5 @@ def main_bspatch4():
         p.error('requies 3 arguments, try -h')
 
     file_patch(*args)
+    if opts.verbose:
+        show_filesizes(*args)

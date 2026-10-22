@@ -46,5 +46,5 @@ bsdiff4 /bin/ls /bin/mv python.diff
 bspatch /bin/ls from_python python.diff
 cmp /bin/mv from_python
 
-md5 *.diff
+md5sum *.diff
 ls -l .

@@ -195,14 +195,34 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
 
+    # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
+    data = base64.b64decode(
+        b'QlNESUZGNDAqAAAAAAAAACUAAAAAAAAABAAAAAAAAABCWmg5MUFZJlNZ0BSaKQAA'
+        b'BMAAaAggADDNNBk/UglZPF3JFOFCQ0BSaKRCWmg5MUFZJlNZTFqfSAAAAEAAYAA'
+        b'gACEAgoxdyRThQkExan0gQlpoOTFBWSZTWS0V6xwAAAAQACAAIAAhGEaC7kinCh'
+        b'IFor1jgA==')
+
     def test_compatibility(self):
-        # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
-        data = base64.b64decode(
-            b'QlNESUZGNDAqAAAAAAAAACUAAAAAAAAABAAAAAAAAABCWmg5MUFZJlNZ0BSaKQAA'
-            b'BMAAaAggADDNNBk/UglZPF3JFOFCQ0BSaKRCWmg5MUFZJlNZTFqfSAAAAEAAYAA'
-            b'gACEAgoxdyRThQkExan0gQlpoOTFBWSZTWS0V6xwAAAAQACAAIAAhGEaC7kinCh'
-            b'IFor1jgA==')
-        self.assertEqual(patch(b'abc', data), b'abd!')
+        self.assertEqual(patch(b'abc', self.data), b'abd!')
+
+    def test_truncated_patch(self):
+        for i in range(len(self.data)):
+            # truncating patch
+            self.assertRaises(ValueError, patch, b'abc', self.data[:i])
+
+    def test_mutated_patch(self):
+        data = self.data
+        for i in range(len(data)):
+            mut = bytearray(data)
+            for j in range(8):
+                # mutate j-th bit in i-th byte
+                mut[i] = data[i] ^ (1 << j)
+                try:
+                    dst = patch(b'abc', bytes(mut))
+                except (ValueError, MemoryError, OSError):
+                    continue
+                # mutation could theoretically produce another valid patch
+                self.assertEqual(dst, b'abd!')
 
 
 class TestFile(unittest.TestCase):

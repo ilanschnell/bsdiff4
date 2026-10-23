@@ -23,14 +23,22 @@ def read_exact(fi, size):
     return data
 
 
+def encode_tuple(control):
+    if len(control) != 3:
+        raise ValueError("incorrect control tuple")
+    faux = BytesIO()
+    for x in control:
+        faux.write(core.encode_int64(x))
+    return faux.getvalue()
+
+
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     "write a BSDIFF4-format patch to stream 'fo'"
     fo.write(MAGIC)
     faux = BytesIO()
     # write control tuples as series of offsets
     for c in tcontrol:
-        for x in c:
-            faux.write(core.encode_int64(x))
+        faux.write(encode_tuple(c))
     # compress each block
     bcontrol = bz2.compress(faux.getvalue())
     bdiff = bz2.compress(bdiff)
@@ -57,16 +65,16 @@ def read_patch(fi, header_only=False):
     bcontrol = bz2.decompress(read_exact(fi, len_control))
     if len(bcontrol) % 24:
         raise ValueError("invalid control block")
-    tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
-                 core.decode_int64(bcontrol[i + 8:i + 16]),
-                 core.decode_int64(bcontrol[i + 16:i + 24]))
-                for i in range(0, len(bcontrol), 24)]
     if header_only:
+        tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
+                     core.decode_int64(bcontrol[i + 8:i + 16]),
+                     core.decode_int64(bcontrol[i + 16:i + 24]))
+                    for i in range(0, len(bcontrol), 24)]
         return len_control, len_diff, len_dst, tcontrol
     # read the diff and extra blocks
     bdiff = bz2.decompress(read_exact(fi, len_diff))
     bextra = bz2.decompress(fi.read())
-    return len_dst, tcontrol, bdiff, bextra
+    return len_dst, bcontrol, bdiff, bextra
 
 
 def read_data(path):

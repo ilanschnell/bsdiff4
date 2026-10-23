@@ -7,7 +7,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-
+#include <stdint.h>  /* for uint64_t */
 
 /* swap two suffix array entries */
 static inline void
@@ -472,6 +472,21 @@ diff(PyObject *self, PyObject *args)
     return res;
 }
 
+/* decode 8 bytes to long long */
+static long long
+decode_int64(const char *str)
+{
+    uint64_t value = 0;
+    long long magnitude;
+    int i;
+
+    for (i = 0; i < 8; i++)
+        value |= ((uint64_t) (unsigned char) str[i]) << (i * 8);
+
+    magnitude = value & PY_LLONG_MAX;
+    return value >> 63 ? -magnitude : magnitude;
+}
+
 /* update the source offset while checking for overflow */
 static int
 update_oldpos(long long *oldpos, long long increment)
@@ -489,16 +504,17 @@ update_oldpos(long long *oldpos, long long increment)
 static PyObject *
 patch(PyObject *self, PyObject *args)
 {
-    char *origData, *newData, *diffBlock, *extraBlock;
-    Py_ssize_t origDataLength, newDataLength, diffBlockLength, extraBlockLength;
+    char *origData, *newData, *controlBlock, *diffBlock, *extraBlock;
+    Py_ssize_t origDataLength, newDataLength, controlBlockLength;
+    Py_ssize_t diffBlockLength, extraBlockLength;
     Py_ssize_t diffRemaining, extraRemaining;
-    PyObject *controlTuples, *tuple, *result;
-    Py_ssize_t newpos, x, y, i, j, numTuples;
-    long long oldpos, z;
+    PyObject *result;
+    Py_ssize_t newpos = 0, i, j;
+    long long oldpos = 0, x, y, z;
 
-    if (!PyArg_ParseTuple(args, "s#nO!s#s#",
+    if (!PyArg_ParseTuple(args, "s#ns#s#s#",
                           &origData, &origDataLength, &newDataLength,
-                          &PyList_Type, &controlTuples,
+                          &controlBlock, &controlBlockLength,
                           &diffBlock, &diffBlockLength,
                           &extraBlock, &extraBlockLength))
         return NULL;
@@ -507,25 +523,22 @@ patch(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_ValueError, "negative new data length");
         return NULL;
     }
+    if (controlBlockLength % 24) {
+        PyErr_SetString(PyExc_ValueError, "incorrect control block");
+        return NULL;
+    }
 
     result = PyBytes_FromStringAndSize(NULL, newDataLength);
     if (result == NULL)
         return NULL;
     newData = PyBytes_AS_STRING(result);
 
-    oldpos = 0;
-    newpos = 0;
     diffRemaining = diffBlockLength;
     extraRemaining = extraBlockLength;
-    numTuples = PyList_GET_SIZE(controlTuples);
-    for (i = 0; i < numTuples; i++) {
-        tuple = PyList_GET_ITEM(controlTuples, i);
-        if (!PyTuple_Check(tuple)) {
-            PyErr_SetString(PyExc_TypeError, "expecting tuple");
-            goto error;
-        }
-        if (!PyArg_ParseTuple(tuple, "nnL", &x, &y, &z))
-            goto error;
+    for (i = 0; i < controlBlockLength; i += 24) {
+        x = decode_int64(controlBlock + i);
+        y = decode_int64(controlBlock + i + 8);
+        z = decode_int64(controlBlock + i + 16);
         if (x < 0 || x > newDataLength - newpos || x > diffRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
@@ -569,7 +582,7 @@ error:
 
 /* encode an integer as 8 bytes */
 static PyObject *
-encode_int64(PyObject *self, PyObject *value)
+mod_encode_int64(PyObject *module, PyObject *value)
 {
     PY_INT64_T x;
     char str[8], sign = 0x00;
@@ -598,13 +611,10 @@ encode_int64(PyObject *self, PyObject *value)
 
 /* decode an integer from 8 bytes */
 static PyObject *
-decode_int64(PyObject *self, PyObject *bytes)
+mod_decode_int64(PyObject *module, PyObject *bytes)
 {
-    PY_UINT64_T value = 0;
-    PY_INT64_T magnitude;
     Py_ssize_t size;
     char *str;
-    int i;
 
     if (PyBytes_AsStringAndSize(bytes, &str, &size) < 0)
         return NULL;
@@ -612,21 +622,16 @@ decode_int64(PyObject *self, PyObject *bytes)
         PyErr_SetString(PyExc_ValueError, "8 bytes expected");
         return NULL;
     }
-
-    for (i = 0; i < 8; i++)
-        value |= ((PY_UINT64_T) (unsigned char) str[i]) << (i * 8);
-
-    magnitude = value & PY_LLONG_MAX;
-    return PyLong_FromLongLong(value >> 63 ? -magnitude : magnitude);
+    return PyLong_FromLongLong(decode_int64(str));
 }
 
 
 /* declaration of methods supported by this module */
 static PyMethodDef module_functions[] = {
-    {"diff",         diff,         METH_VARARGS},
-    {"patch",        patch,        METH_VARARGS},
-    {"encode_int64", encode_int64, METH_O},
-    {"decode_int64", decode_int64, METH_O},
+    {"diff",         diff,             METH_VARARGS},
+    {"patch",        patch,            METH_VARARGS},
+    {"encode_int64", mod_encode_int64, METH_O},
+    {"decode_int64", mod_decode_int64, METH_O},
     {NULL}  /* Sentinel */
 };
 

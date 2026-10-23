@@ -10,6 +10,7 @@ from io import BytesIO
 
 import bsdiff4.core as core
 import bsdiff4.format as format
+from bsdiff4.format import encode_tuple
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -110,49 +111,49 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
     def test_corrupt(self):
-        for tcontrol in [(-1, 0, 0)], [(0, -1, 0)], [(5, 0, 0)], [(0, 5, 0)]:
+        for bcontrol in [encode_tuple((-1, 0, 0)),
+                         encode_tuple((0, -1, 0)),
+                         encode_tuple((5, 0, 0)),
+                         encode_tuple((0, 5, 0))]:
             self.assertRaises(ValueError, core.patch,
-                              b'abcd', 4, tcontrol, 4 * b'\x00', b'')
+                              b'abcd', 4, bcontrol, 4 * b'\x00', b'')
 
-        self.assertRaises(ValueError, core.patch, b'', -1, [], b'', b'')
-        for control in [('x', 0, 0), (0, 'x', 0), (0, 0, 'x')]:
-            self.assertRaises(TypeError, core.patch,
-                              b'', 0, [control], b'', b'')
-        for control in [None, (), (0, 0), (0, 0, 0, 0)]:
-            self.assertRaises(TypeError, core.patch,
-                              b'', 0, [control], b'', b'')
+        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
+        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+        self.assertRaises(ValueError, core.patch, b'', 0, b'A', b'', b'')
 
     def test_underflow(self):
         for args in [
-            (b'', 1, [], b'', b''),
-            (b'', 0, [], b'x', b''),
-            (b'', 0, [], b'', b'x'),
+            (b'', 1, b'', b'', b''),
+            (b'', 0, b'', b'x', b''),
+            (b'', 0, b'', b'', b'x'),
         ]:
             self.assertRaises(ValueError, core.patch, *args)
 
     def test_oldpos_out_of_range(self):
+        bcontrol = encode_tuple((0, 0, -1)) + encode_tuple((2, 0, 0))
         self.assertEqual(
-            core.patch(b'ab', 2, [(0, 0, -1), (2, 0, 0)],
-                       b'\x01\x01', b''),
-            b'\x01b')
+            core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
+
+        bcontrol = encode_tuple((0, 0, 2)) + encode_tuple((2, 0, 0))
         self.assertEqual(
-            core.patch(b'ab', 2, [(0, 0, 2), (2, 0, 0)],
-                       b'\x01\x02', b''),
-            b'\x01\x02')
+            core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
 
     def test_oldpos_overflow(self):
         M = 1 << 63
-        for z in -M, M - 1:
+        for z in -M + 1, M - 1:
             self.assertEqual(
-                core.patch(b'', 0, [(0, 0, z)], b'', b''), b'')
+                core.patch(b'', 0, encode_tuple((0, 0, z)), b'', b''), b'')
 
         for controls in [[(0, 0, M - 1), (0, 0, 1)],
-                         [(0, 0, -M), (0, 0, -1)]]:
+                         [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
+            bcontrol = b''.join(map(encode_tuple, controls))
             self.assertRaises(ValueError, core.patch,
-                              b'', 0, controls, b'', b'')
+                              b'', 0, bcontrol, b'', b'')
+        bcontrol = (encode_tuple((0, 0, M - 1)) +
+                    encode_tuple((2, 0, 0)))
         self.assertRaises(
-            ValueError, core.patch, b'', 2,
-            [(0, 0, M - 1), (2, 0, 0)], 2 * b'\x00', b'')
+            ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
     def test_malformed_patch(self):
         def header(len_control, len_diff, len_dst):

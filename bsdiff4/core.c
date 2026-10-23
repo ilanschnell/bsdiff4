@@ -212,7 +212,7 @@ search(Py_ssize_t *I,
 }
 
 typedef struct {
-    PyObject *controls;     /* list of control tuples */
+    PyObject *control;      /* control block as bytearray */
     unsigned char *diff;    /* difference block */
     unsigned char *extra;   /* extra block */
     Py_ssize_t diff_len;    /* length of difference block */
@@ -223,25 +223,59 @@ typedef struct {
 static void
 clear_diff_result(DiffResult *result)
 {
-    Py_XDECREF(result->controls);
+    Py_XDECREF(result->control);
     PyMem_Free(result->diff);
     PyMem_Free(result->extra);
 }
 
-/* append a control tuple */
+/* encode long long as 8 bytes */
 static int
-append_control(PyObject *controls, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
+encode_int64(char *str, long long value)
 {
-    PyObject *tuple;
-    int res;
+    uint64_t magnitude;
+    char sign = 0x00;
+    int i;
 
-    tuple = Py_BuildValue("(nnn)", x, y, z);
-    if (tuple == NULL)
+    if (value == PY_LLONG_MIN) {
+        PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
+        return -1;
+    }
+    if (value < 0) {
+        magnitude = (uint64_t) -value;
+        sign = 0x80;
+    }
+    else {
+        magnitude = (uint64_t) value;
+    }
+    for (i = 0; i < 8; i++) {
+        str[i] = magnitude & 0xff;
+        magnitude >>= 8;
+    }
+    str[7] |= sign;
+    return 0;
+}
+
+/* append tuple to control block */
+static int
+append_control(PyObject *control, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
+{
+    char *str;
+    Py_ssize_t size;
+
+    size = PyByteArray_GET_SIZE(control);
+    if (size > PY_SSIZE_T_MAX - 24) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    if (PyByteArray_Resize(control, size + 24) < 0)
         return -1;
 
-    res = PyList_Append(controls, tuple);
-    Py_DECREF(tuple);
-    return res;
+    str = (char *) PyByteArray_AS_STRING(control) + size;
+    if (encode_int64(str, x) < 0 ||
+        encode_int64(str + 8, y) < 0 ||
+        encode_int64(str + 16, z) < 0)
+        return -1;
+    return 0;
 }
 
 /* find the best forward match length */
@@ -320,8 +354,8 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
     Py_ssize_t *I = NULL, *V = NULL;
     Py_ssize_t scan, pos, len, lenf, lenb, i;
 
-    result->controls = PyList_New(0);
-    if (result->controls == NULL)
+    result->control = PyByteArray_FromStringAndSize(NULL, 0);
+    if (result->control == NULL)
         goto error;
 
     /* perform sort on original data */
@@ -404,7 +438,7 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
             result->diff_len += lenf;
             result->extra_len += (scan - lenb) - (lastscan + lenf);
 
-            if (append_control(result->controls,
+            if (append_control(result->control,
                                lenf,
                                (scan - lenb) - (lastscan + lenf),
                                (pos - lenb) - (lastpos + lenf)) < 0)
@@ -429,20 +463,28 @@ error:
 static PyObject *
 build_diff_result(DiffResult *result)
 {
-    PyObject *diff, *extra, *res;
+    PyObject *control, *diff, *extra, *res;
+
+    control = PyBytes_FromObject(result->control);
+    if (control == NULL)
+        return NULL;
 
     diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
-    if (diff == NULL)
+    if (diff == NULL) {
+        Py_DECREF(control);
         return NULL;
+    }
 
     extra = PyBytes_FromStringAndSize((char *) result->extra,
                                       result->extra_len);
     if (extra == NULL) {
+        Py_DECREF(control);
         Py_DECREF(diff);
         return NULL;
     }
 
-    res = PyTuple_Pack(3, result->controls, diff, extra);
+    res = PyTuple_Pack(3, control, diff, extra);
+    Py_DECREF(control);
     Py_DECREF(diff);
     Py_DECREF(extra);
     return res;
@@ -584,29 +626,15 @@ error:
 static PyObject *
 mod_encode_int64(PyObject *module, PyObject *value)
 {
-    PY_INT64_T x;
-    char str[8], sign = 0x00;
-    int i;
+    char str[8];
+    long long x;
 
     x = PyLong_AsLongLong(value);
     if (x == -1 && PyErr_Occurred())
         return NULL;
-
-    if (x == PY_LLONG_MIN) {
-        PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
+    if (encode_int64(str, x) < 0)
         return NULL;
-    }
-
-    if (x < 0) {
-        x = -x;
-        sign = 0x80;
-    }
-    for (i = 0; i < 8; i++) {
-        str[i] = x & 0xff;
-        x >>= 8;
-    }
-    str[7] |= sign;
-    return PyBytes_FromStringAndSize(str, 8);
+    return PyBytes_FromStringAndSize((char *) str, 8);
 }
 
 /* decode an integer from 8 bytes */

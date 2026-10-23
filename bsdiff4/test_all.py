@@ -10,7 +10,6 @@ from io import BytesIO
 
 import bsdiff4.core as core
 import bsdiff4.format as format
-from bsdiff4.format import encode_tuple
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -58,7 +57,17 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.decode_int64(b), n)
 
 
+def control_block(*controls):
+    return b''.join(core.encode_int64(x) for control in controls
+                    for x in control)
+
+
 class TestFormat(unittest.TestCase):
+
+    def test_control_block(self):
+        self.assertEqual(control_block((0, 0, -1), (2, 0, 0)),
+                         16 * b'\0' + b'\x01\x00\x00\x00\x00\x00\x00\x80' +
+                         b'\x02\x00\x00\x00\x00\x00\x00\x00' + 16 * b'\0')
 
     def round_trip(self, src, dst):
         p = diff(src, dst)
@@ -89,13 +98,21 @@ class TestFormat(unittest.TestCase):
         # Exercise both split_small() and partition_group().
         self.assertEqual(
             core.diff(b'banana', b'bandana'),
-            ([(3, 4, 2)], 3 * b'\x00', b'dana'))
+            (control_block((3, 4, 2)), 3 * b'\x00', b'dana'))
 
         src = 32 * b'a'
         dst = 16 * b'a' + b'b' + 16 * b'a'
         self.assertEqual(
             core.diff(src, dst),
-            ([(32, 1, -1)], 16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+            (control_block((32, 1, -1)),
+             16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+
+        src = 100 * b'a' + 100 * b'b'
+        dst = 100 * b'b' + 100 * b'a'
+        self.assertEqual(
+            core.diff(src, dst),
+            (control_block((0, 100, 0), (100, 0, -100)),
+             100 * b'\x00', 100 * b'b'))
 
     def test_random(self):
         for _ in range(100):
@@ -111,10 +128,10 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
     def test_corrupt(self):
-        for bcontrol in [encode_tuple((-1, 0, 0)),
-                         encode_tuple((0, -1, 0)),
-                         encode_tuple((5, 0, 0)),
-                         encode_tuple((0, 5, 0))]:
+        for bcontrol in [control_block((-1, 0, 0)),
+                         control_block((0, -1, 0)),
+                         control_block((5, 0, 0)),
+                         control_block((0, 5, 0))]:
             self.assertRaises(ValueError, core.patch,
                               b'abcd', 4, bcontrol, 4 * b'\x00', b'')
 
@@ -131,11 +148,11 @@ class TestFormat(unittest.TestCase):
             self.assertRaises(ValueError, core.patch, *args)
 
     def test_oldpos_out_of_range(self):
-        bcontrol = encode_tuple((0, 0, -1)) + encode_tuple((2, 0, 0))
+        bcontrol = control_block((0, 0, -1), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
 
-        bcontrol = encode_tuple((0, 0, 2)) + encode_tuple((2, 0, 0))
+        bcontrol = control_block((0, 0, 2), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
 
@@ -143,15 +160,14 @@ class TestFormat(unittest.TestCase):
         M = 1 << 63
         for z in -M + 1, M - 1:
             self.assertEqual(
-                core.patch(b'', 0, encode_tuple((0, 0, z)), b'', b''), b'')
+                core.patch(b'', 0, control_block((0, 0, z)), b'', b''), b'')
 
         for controls in [[(0, 0, M - 1), (0, 0, 1)],
                          [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
-            bcontrol = b''.join(map(encode_tuple, controls))
+            bcontrol = control_block(*controls)
             self.assertRaises(ValueError, core.patch,
                               b'', 0, bcontrol, b'', b'')
-        bcontrol = (encode_tuple((0, 0, M - 1)) +
-                    encode_tuple((2, 0, 0)))
+        bcontrol = control_block((0, 0, M - 1), (2, 0, 0))
         self.assertRaises(
             ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
@@ -188,11 +204,13 @@ class TestFormat(unittest.TestCase):
 
     def test_header_only(self):
         fi = BytesIO()
-        format.write_patch(fi, 4, [(3, 1, 0)], 3 * b'\x00', b'!')
+        format.write_patch(fi, 4, control_block((3, 1, 0)),
+                           3 * b'\x00', b'!')
         fi.seek(0)
-        len_control, len_diff, len_dst, controls = format.read_patch(
+        len_control, len_diff, len_dst, bcontrol = format.read_patch(
             fi, header_only=True)
-        self.assertEqual((len_dst, controls), (4, encode_tuple((3, 1, 0))))
+        self.assertEqual((len_dst, bcontrol),
+                         (4, control_block((3, 1, 0))))
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
 

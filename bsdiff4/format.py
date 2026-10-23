@@ -23,21 +23,11 @@ def read_exact(fi, size):
     return data
 
 
-def encode_tuple(control):
-    if len(control) != 3:
-        raise ValueError("incorrect control tuple")
-    return b''.join(core.encode_int64(x) for x in control)
-
-
-def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
+def write_patch(fo, len_dst, bcontrol, bdiff, bextra):
     "write a BSDIFF4-format patch to stream 'fo'"
     fo.write(MAGIC)
-    faux = BytesIO()
-    # write control tuples as series of offsets
-    for c in tcontrol:
-        faux.write(encode_tuple(c))
     # compress each block
-    bcontrol = bz2.compress(faux.getvalue())
+    bcontrol = bz2.compress(bcontrol)
     bdiff = bz2.compress(bdiff)
     bextra = bz2.compress(bextra)
     for n in len(bcontrol), len(bdiff), len_dst:

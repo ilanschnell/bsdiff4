@@ -174,11 +174,10 @@ static Py_ssize_t
 matchlen(unsigned char *old, Py_ssize_t oldsize,
          unsigned char *new, Py_ssize_t newsize)
 {
-    Py_ssize_t i;
+    Py_ssize_t i = 0;
 
-    for (i = 0; (i < oldsize) && (i < newsize); i++)
-        if (old[i] != new[i])
-            break;
+    while (i < oldsize && i < newsize && old[i] == new[i])
+        i++;
     return i;
 }
 
@@ -237,8 +236,9 @@ append_control(PyObject *controls, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
     int res;
 
     tuple = Py_BuildValue("(nnn)", x, y, z);
-    if (!tuple)
+    if (tuple == NULL)
         return -1;
+
     res = PyList_Append(controls, tuple);
     Py_DECREF(tuple);
     return res;
@@ -252,8 +252,7 @@ forward_match_length(const char *origData, Py_ssize_t origDataLength,
 {
     Py_ssize_t i, score = 0, best_score = 0, best_length = 0;
 
-    for (i = 0; (lastscan + i < scan) &&
-             (lastpos + i < origDataLength);) {
+    for (i = 0; lastscan + i < scan && lastpos + i < origDataLength;) {
         if (origData[lastpos + i] == newData[lastscan + i])
             score++;
         i++;
@@ -272,7 +271,7 @@ backward_match_length(const char *origData, const char *newData,
 {
     Py_ssize_t i, score = 0, best_score = 0, best_length = 0;
 
-    for (i = 1; (scan >= lastscan + i) && (pos >= i); i++) {
+    for (i = 1; scan >= lastscan + i && pos >= i; i++) {
         if (origData[pos - i] == newData[scan - i])
             score++;
         if (score * 2 - i > best_score * 2 - best_length) {
@@ -322,17 +321,17 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
     Py_ssize_t scan, pos, len, lenf, lenb, i;
 
     result->controls = PyList_New(0);
-    if (!result->controls)
+    if (result->controls == NULL)
         goto error;
 
     /* perform sort on original data */
     I = PyMem_Malloc((origDataLength + 1) * sizeof(Py_ssize_t));
-    if (!I) {
+    if (I == NULL) {
         PyErr_NoMemory();
         goto error;
     }
     V = PyMem_Malloc((origDataLength + 1) * sizeof(Py_ssize_t));
-    if (!V) {
+    if (V == NULL) {
         PyErr_NoMemory();
         goto error;
     }
@@ -344,12 +343,12 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
 
     /* allocate memory for the diff and extra blocks */
     result->diff = PyMem_Malloc(newDataLength + 1);
-    if (!result->diff) {
+    if (result->diff == NULL) {
         PyErr_NoMemory();
         goto error;
     }
     result->extra = PyMem_Malloc(newDataLength + 1);
-    if (!result->extra) {
+    if (result->extra == NULL) {
         PyErr_NoMemory();
         goto error;
     }
@@ -374,18 +373,18 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
                          (unsigned char *) newData + scan,
                          newDataLength - scan, 0, origDataLength, &pos);
             for (; scsc < scan + len; scsc++)
-                if ((scsc + lastoffset < origDataLength) &&
-                          (origData[scsc + lastoffset] == newData[scsc]))
+                if (scsc + lastoffset < origDataLength &&
+                          origData[scsc + lastoffset] == newData[scsc])
                     oldscore++;
-            if (((len == oldscore) && (len != 0)) || (len > oldscore + 8))
+            if ((len == oldscore && len != 0) || len > oldscore + 8)
                 break;
-            if ((scan + lastoffset < origDataLength) &&
-                      (origData[scan + lastoffset] == newData[scan]))
+            if (scan + lastoffset < origDataLength &&
+                      origData[scan + lastoffset] == newData[scan])
                 oldscore--;
         }
         Py_END_ALLOW_THREADS
 
-        if ((len != oldscore) || (scan == newDataLength)) {
+        if (len != oldscore || scan == newDataLength) {
             lenf = forward_match_length(origData, origDataLength, newData,
                                         lastscan, lastpos, scan);
             lenb = 0;
@@ -433,14 +432,16 @@ build_diff_result(DiffResult *result)
     PyObject *diff, *extra, *res;
 
     diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
-    if (!diff)
+    if (diff == NULL)
         return NULL;
+
     extra = PyBytes_FromStringAndSize((char *) result->extra,
                                       result->extra_len);
-    if (!extra) {
+    if (extra == NULL) {
         Py_DECREF(diff);
         return NULL;
     }
+
     res = PyTuple_Pack(3, result->controls, diff, extra);
     Py_DECREF(diff);
     Py_DECREF(extra);
@@ -466,6 +467,7 @@ diff(PyObject *self, PyObject *args)
         res = NULL;
     else
         res = build_diff_result(&result);
+
     clear_diff_result(&result);
     return res;
 }
@@ -507,7 +509,7 @@ patch(PyObject *self, PyObject *args)
     }
 
     result = PyBytes_FromStringAndSize(NULL, newDataLength);
-    if (!result)
+    if (result == NULL)
         return NULL;
     newData = PyBytes_AS_STRING(result);
 
@@ -551,8 +553,8 @@ patch(PyObject *self, PyObject *args)
     }
 
     /* confirm that a valid patch was applied */
-    if (newpos != newDataLength ||
-            diffRemaining != 0 || extraRemaining != 0) {
+    if (newpos != newDataLength || diffRemaining != 0 ||
+            extraRemaining != 0) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (underflow)");
         goto error;
     }

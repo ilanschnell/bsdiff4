@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from os.path import getsize
 
 from bsdiff4 import __version__
+from bsdiff4.core import decode_int64
 from bsdiff4.format import file_diff, file_patch, read_patch
 
 
@@ -49,7 +50,7 @@ def main_bsdiff4():
 def show_patch(patch_path, verbose=False):
     s_total = getsize(patch_path)
     with open(patch_path, 'rb') as fi:
-        s_control, s_diff, s_dst, tcontrol = read_patch(fi, header_only=True)
+        s_control, s_diff, s_dst, bcontrol = read_patch(fi, header_only=True)
 
     for name, size in [
             ('total', s_total),
@@ -62,11 +63,14 @@ def show_patch(patch_path, verbose=False):
 
     if s_dst:
         print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
-    print('number of control tuples: %d' % len(tcontrol))
+
+    print('number of control tuples: %d' % (len(bcontrol) // 24))
     if verbose:
         print('%20s %10s %10s' % ('x', 'y', 'z'))
-        for t in tcontrol:
-            print('%20d %10d %10d' % t)
+        for i in range(0, len(bcontrol), 24):
+            bt = bcontrol[i:i + 24]
+            print('%20d %10d %10d' % tuple(decode_int64(bt[j:j + 8])
+                                           for j in range(0, 24, 8)))
 
 
 def main_bspatch4():

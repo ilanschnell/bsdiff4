@@ -192,7 +192,7 @@ class TestFormat(unittest.TestCase):
         fi.seek(0)
         len_control, len_diff, len_dst, controls = format.read_patch(
             fi, header_only=True)
-        self.assertEqual((len_dst, controls), (4, [(3, 1, 0)]))
+        self.assertEqual((len_dst, controls), (4, encode_tuple((3, 1, 0))))
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
 

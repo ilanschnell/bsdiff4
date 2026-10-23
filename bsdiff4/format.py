@@ -26,10 +26,7 @@ def read_exact(fi, size):
 def encode_tuple(control):
     if len(control) != 3:
         raise ValueError("incorrect control tuple")
-    faux = BytesIO()
-    for x in control:
-        faux.write(core.encode_int64(x))
-    return faux.getvalue()
+    return b''.join(core.encode_int64(x) for x in control)
 
 
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
@@ -66,11 +63,7 @@ def read_patch(fi, header_only=False):
     if len(bcontrol) % 24:
         raise ValueError("invalid control block")
     if header_only:
-        tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
-                     core.decode_int64(bcontrol[i + 8:i + 16]),
-                     core.decode_int64(bcontrol[i + 16:i + 24]))
-                    for i in range(0, len(bcontrol), 24)]
-        return len_control, len_diff, len_dst, tcontrol
+        return len_control, len_diff, len_dst, bcontrol
     # read the diff and extra blocks
     bdiff = bz2.decompress(read_exact(fi, len_diff))
     bextra = bz2.decompress(fi.read())

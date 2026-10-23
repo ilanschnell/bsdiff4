@@ -219,7 +219,7 @@ class TestFormat(unittest.TestCase):
                 mut[i] = data[i] ^ (1 << j)
                 try:
                     dst = patch(b'abc', bytes(mut))
-                except (ValueError, MemoryError, OSError, OverflowError):
+                except (ValueError, MemoryError, OSError):
                     continue
                 # mutation could theoretically produce another valid patch
                 self.assertEqual(dst, b'abd!')

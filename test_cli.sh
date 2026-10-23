@@ -18,7 +18,9 @@ bsdiff4 -v /bin/head /bin/tail a.diff
 bspatch4 -v /bin/head tail a.diff
 cmp /bin/tail tail
 
-bspatch4 -v a.diff >verbose-info.txt
+bspatch4 -v a.diff >info.txt
+test -s info.txt
+head -n 20 info.txt
 
 # Apply patch in-place
 cp /bin/head foo

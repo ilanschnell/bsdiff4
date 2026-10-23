@@ -120,7 +120,8 @@ split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
 
 /* construct the suffix array for old */
 static void
-qsufsort(Py_ssize_t *I, Py_ssize_t *V, unsigned char *old, Py_ssize_t oldsize)
+qsufsort(Py_ssize_t *I, Py_ssize_t *V, const unsigned char *old,
+         Py_ssize_t oldsize)
 {
     Py_ssize_t buckets[256], i, h, len;
 
@@ -171,8 +172,8 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V, unsigned char *old, Py_ssize_t oldsize)
 
 /* return the length of the common prefix */
 static Py_ssize_t
-matchlen(unsigned char *old, Py_ssize_t oldsize,
-         unsigned char *new, Py_ssize_t newsize)
+matchlen(const unsigned char *old, Py_ssize_t oldsize,
+         const unsigned char *new, Py_ssize_t newsize)
 {
     Py_ssize_t i = 0;
 
@@ -183,9 +184,9 @@ matchlen(unsigned char *old, Py_ssize_t oldsize,
 
 /* find the suffix with the longest prefix match */
 static Py_ssize_t
-search(Py_ssize_t *I,
-       unsigned char *old, Py_ssize_t oldsize,
-       unsigned char *new, Py_ssize_t newsize,
+search(const Py_ssize_t *I,
+       const unsigned char *old, Py_ssize_t oldsize,
+       const unsigned char *new, Py_ssize_t newsize,
        Py_ssize_t st, Py_ssize_t en, Py_ssize_t *pos)
 {
     Py_ssize_t x, y;
@@ -240,6 +241,7 @@ encode_int64(char *str, long long value)
         PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
         return -1;
     }
+
     if (value < 0) {
         magnitude = (uint64_t) -value;
         sign = 0x80;
@@ -275,6 +277,7 @@ append_control(PyObject *control, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
         encode_int64(str + 8, y) < 0 ||
         encode_int64(str + 16, z) < 0)
         return -1;
+
     return 0;
 }
 
@@ -347,8 +350,9 @@ adjust_overlap(const char *origData, const char *newData,
 
 /* construct the control, diff and extra blocks */
 static int
-compute_diff(char *origData, Py_ssize_t origDataLength,
-             char *newData, Py_ssize_t newDataLength, DiffResult *result)
+compute_diff(const char *origData, Py_ssize_t origDataLength,
+             const char *newData, Py_ssize_t newDataLength,
+             DiffResult *result)
 {
     Py_ssize_t lastscan, lastpos, lastoffset, oldscore, scsc;
     Py_ssize_t *I = NULL, *V = NULL;
@@ -370,7 +374,7 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
         goto error;
     }
     Py_BEGIN_ALLOW_THREADS  /* release GIL */
-    qsufsort(I, V, (unsigned char *) origData, origDataLength);
+    qsufsort(I, V, (const unsigned char *) origData, origDataLength);
     Py_END_ALLOW_THREADS
     PyMem_Free(V);
     V = NULL;
@@ -403,8 +407,8 @@ compute_diff(char *origData, Py_ssize_t origDataLength,
 
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
         for (scsc = scan += len; scan < newDataLength; scan++) {
-            len = search(I, (unsigned char *) origData, origDataLength,
-                         (unsigned char *) newData + scan,
+            len = search(I, (const unsigned char *) origData, origDataLength,
+                         (const unsigned char *) newData + scan,
                          newDataLength - scan, 0, origDataLength, &pos);
             for (; scsc < scan + len; scsc++)
                 if (scsc + lastoffset < origDataLength &&
@@ -469,7 +473,8 @@ build_diff_result(DiffResult *result)
     if (control == NULL)
         return NULL;
 
-    diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
+    diff = PyBytes_FromStringAndSize((char *) result->diff,
+                                     result->diff_len);
     if (diff == NULL) {
         Py_DECREF(control);
         return NULL;
@@ -492,7 +497,7 @@ build_diff_result(DiffResult *result)
 
 /* return the control, diff and extra blocks for two byte strings */
 static PyObject *
-diff(PyObject *self, PyObject *args)
+mod_diff(PyObject *module, PyObject *args)
 {
     DiffResult result = {NULL, NULL, NULL, 0, 0};
     Py_ssize_t origDataLength, newDataLength;
@@ -529,6 +534,15 @@ decode_int64(const char *str)
     return value >> 63 ? -magnitude : magnitude;
 }
 
+/* decode a 24-byte control tuple */
+static void
+decode_tuple(const char *str, long long *x, long long *y, long long *z)
+{
+    *x = decode_int64(str);
+    *y = decode_int64(str + 8);
+    *z = decode_int64(str + 16);
+}
+
 /* update the source offset while checking for overflow */
 static int
 update_oldpos(long long *oldpos, long long increment)
@@ -544,7 +558,7 @@ update_oldpos(long long *oldpos, long long increment)
 
 /* apply control, diff and extra blocks to the original data */
 static PyObject *
-patch(PyObject *self, PyObject *args)
+mod_patch(PyObject *module, PyObject *args)
 {
     char *origData, *newData, *controlBlock, *diffBlock, *extraBlock;
     Py_ssize_t origDataLength, newDataLength, controlBlockLength;
@@ -578,9 +592,7 @@ patch(PyObject *self, PyObject *args)
     diffRemaining = diffBlockLength;
     extraRemaining = extraBlockLength;
     for (i = 0; i < controlBlockLength; i += 24) {
-        x = decode_int64(controlBlock + i);
-        y = decode_int64(controlBlock + i + 8);
-        z = decode_int64(controlBlock + i + 16);
+        decode_tuple(controlBlock + i, &x, &y, &z);
         if (x < 0 || x > newDataLength - newpos || x > diffRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
@@ -656,8 +668,8 @@ mod_decode_int64(PyObject *module, PyObject *bytes)
 
 /* declaration of methods supported by this module */
 static PyMethodDef module_functions[] = {
-    {"diff",         diff,             METH_VARARGS},
-    {"patch",        patch,            METH_VARARGS},
+    {"diff",         mod_diff,         METH_VARARGS},
+    {"patch",        mod_patch,        METH_VARARGS},
     {"encode_int64", mod_encode_int64, METH_O},
     {"decode_int64", mod_decode_int64, METH_O},
     {NULL}  /* Sentinel */

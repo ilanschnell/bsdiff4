@@ -63,16 +63,17 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
     jj += start;
     kk += jj;
 
-    j = 0;
-    k = 0;
+    j = k = 0;
     i = start;
     while (i < jj) {
         if (V[I[i] + h] < x) {
             i++;
-        } else if (V[I[i] + h] == x) {
+        }
+        else if (V[I[i] + h] == x) {
             swap_indices(&I[i], &I[jj + j]);
             j++;
-        } else {
+        }
+        else {
             swap_indices(&I[i], &I[kk + k]);
             k++;
         }
@@ -81,7 +82,8 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
     while (jj + j < kk) {
         if (V[I[jj + j] + h] == x) {
             j++;
-        } else {
+        }
+        else {
             swap_indices(&I[jj + j], &I[kk + k]);
             k++;
         }
@@ -149,7 +151,8 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V, unsigned char *old, Py_ssize_t oldsize)
             if (I[i] < 0) {
                 len -= I[i];
                 i -= I[i];
-            } else {
+            }
+            else {
                 if (len)
                     I[i - len] = -len;
                 len = V[I[i]] + 1 - i;
@@ -195,18 +198,18 @@ search(Py_ssize_t *I,
         if (x > y) {
             *pos = I[st];
             return x;
-        } else {
+        }
+        else {
             *pos = I[en];
             return y;
         }
     }
 
     x = st + (en - st) / 2;
-    if (memcmp(old + I[x], new, Py_MIN(oldsize - I[x], newsize)) < 0) {
+    if (memcmp(old + I[x], new, Py_MIN(oldsize - I[x], newsize)) < 0)
         return search(I, old, oldsize, new, newsize, x, en, pos);
-    } else {
+    else
         return search(I, old, oldsize, new, newsize, st, x, pos);
-    }
 }
 
 typedef struct {

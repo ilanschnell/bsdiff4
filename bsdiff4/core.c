@@ -7,7 +7,8 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <stdint.h>  /* for uint64_t */
+#include <stdint.h>
+
 
 /* swap two suffix array entries */
 static inline void
@@ -229,15 +230,15 @@ clear_diff_result(DiffResult *result)
     PyMem_Free(result->extra);
 }
 
-/* encode long long as 8 bytes */
+/* encode int64 as 8 bytes */
 static int
-encode_int64(char *str, long long value)
+encode_int64(char *str, int64_t value)
 {
     uint64_t magnitude;
     char sign = 0x00;
     int i;
 
-    if (value == PY_LLONG_MIN) {
+    if (value == INT64_MIN) {
         PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
         return -1;
     }
@@ -519,24 +520,24 @@ mod_diff(PyObject *module, PyObject *args)
     return res;
 }
 
-/* decode 8 bytes to long long */
-static long long
+/* decode 8 bytes to int64 */
+static int64_t
 decode_int64(const char *str)
 {
     uint64_t value = 0;
-    long long magnitude;
+    int64_t magnitude;
     int i;
 
     for (i = 0; i < 8; i++)
         value |= ((uint64_t) (unsigned char) str[i]) << (i * 8);
 
-    magnitude = value & PY_LLONG_MAX;
+    magnitude = value & INT64_MAX;
     return value >> 63 ? -magnitude : magnitude;
 }
 
 /* decode a 24-byte control tuple */
 static void
-decode_tuple(const char *str, long long *x, long long *y, long long *z)
+decode_tuple(const char *str, int64_t *x, int64_t *y, int64_t *z)
 {
     *x = decode_int64(str);
     *y = decode_int64(str + 8);
@@ -545,10 +546,10 @@ decode_tuple(const char *str, long long *x, long long *y, long long *z)
 
 /* update the source offset while checking for overflow */
 static int
-update_oldpos(long long *oldpos, long long increment)
+update_oldpos(int64_t *oldpos, int64_t increment)
 {
-    if ((increment > 0 && *oldpos > PY_LLONG_MAX - increment) ||
-        (increment < 0 && *oldpos < PY_LLONG_MIN - increment)) {
+    if ((increment > 0 && *oldpos > INT64_MAX - increment) ||
+        (increment < 0 && *oldpos < INT64_MIN - increment)) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (offset overflow)");
         return -1;
     }
@@ -566,7 +567,7 @@ mod_patch(PyObject *module, PyObject *args)
     Py_ssize_t diffRemaining, extraRemaining;
     PyObject *result;
     Py_ssize_t newpos = 0, i, j;
-    long long oldpos = 0, x, y, z;
+    int64_t oldpos = 0, x, y, z;
 
     if (!PyArg_ParseTuple(args, "s#ns#s#s#",
                           &origData, &origDataLength, &newDataLength,
@@ -639,7 +640,7 @@ static PyObject *
 mod_encode_int64(PyObject *module, PyObject *value)
 {
     char str[8];
-    long long x;
+    int64_t x;
 
     x = PyLong_AsLongLong(value);
     if (x == -1 && PyErr_Occurred())

@@ -62,16 +62,32 @@ def control_block(*controls):
                     for x in control)
 
 
-class TestFormat(unittest.TestCase):
+def header(len_control, len_diff, len_dst):
+    return (format.MAGIC +
+            core.encode_int64(len_control) +
+            core.encode_int64(len_diff) +
+            core.encode_int64(len_dst))
+
+
+class TestHelpers(unittest.TestCase):
 
     def test_control_block(self):
         self.assertEqual(control_block((0, 0, -1), (2, 0, 0)),
                          16 * b'\0' + b'\x01\x00\x00\x00\x00\x00\x00\x80' +
                          b'\x02\x00\x00\x00\x00\x00\x00\x00' + 16 * b'\0')
 
+    def test_header(self):
+        self.assertEqual(header(713, 1954, 135104),
+                         b'BSDIFF40'
+                         b'\xc9\x02\x00\x00\x00\x00\x00\x00'
+                         b'\xa2\x07\x00\x00\x00\x00\x00\x00'
+                         b'\xc0\x0f\x02\x00\x00\x00\x00\x00')
+
+
+class TestFormat(unittest.TestCase):
+
     def round_trip(self, src, dst):
         p = diff(src, dst)
-        #print(len(src), len(p))
         dst2 = patch(src, p)
         self.assertEqual(dst, dst2)
 
@@ -88,7 +104,7 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
-    def test_small(self): # issue #14
+    def test_small(self):  # issue #14
         src = b'123456789 987654321'
         dst = b'123456789000987654321'
         self.round_trip(src, dst)
@@ -172,10 +188,6 @@ class TestFormat(unittest.TestCase):
             ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
     def test_malformed_patch(self):
-        def header(len_control, len_diff, len_dst):
-            return (format.MAGIC + core.encode_int64(len_control) +
-                    core.encode_int64(len_diff) + core.encode_int64(len_dst))
-
         empty = bz2.compress(b'')
         self.assertRaises(ValueError, format.read_patch,
                           BytesIO(format.MAGIC))

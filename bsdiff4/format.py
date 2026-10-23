@@ -2,22 +2,21 @@ import bz2
 import sys
 from io import BytesIO
 
+import bsdiff4.core as core
+
 
 MAGIC = b'BSDIFF40'
 
 
-import bsdiff4.core as core
-
-
-def _check_size(size):
+def check_size(size):
     if size < 0:
         raise ValueError("negative size in bsdiff4 patch")
     if size > sys.maxsize:
         raise ValueError("size too large in bsdiff4 patch")
 
 
-def _read_exact(fi, size):
-    _check_size(size)
+def read_exact(fi, size):
+    check_size(size)
     data = fi.read(size)
     if len(data) != size:
         raise ValueError("truncated bsdiff4 patch")
@@ -53,9 +52,9 @@ def read_patch(fi, header_only=False):
     len_diff = core.decode_int64(fi.read(8))
     len_dst = core.decode_int64(fi.read(8))
     for size in len_control, len_diff, len_dst:
-        _check_size(size)
+        check_size(size)
     # read the control header
-    bcontrol = bz2.decompress(_read_exact(fi, len_control))
+    bcontrol = bz2.decompress(read_exact(fi, len_control))
     if len(bcontrol) % 24:
         raise ValueError("invalid control block")
     tcontrol = [(core.decode_int64(bcontrol[i:i + 8]),
@@ -65,7 +64,7 @@ def read_patch(fi, header_only=False):
     if header_only:
         return len_control, len_diff, len_dst, tcontrol
     # read the diff and extra blocks
-    bdiff = bz2.decompress(_read_exact(fi, len_diff))
+    bdiff = bz2.decompress(read_exact(fi, len_diff))
     bextra = bz2.decompress(fi.read())
     return len_dst, tcontrol, bdiff, bextra
 

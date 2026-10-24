@@ -348,22 +348,29 @@ adjust_overlap(const char *origData, const char *newData,
     *lenb -= best_length;
 }
 
-/* construct suffix array I using temporary rank storage */
-static int
-build_suffix_array(Py_ssize_t *I, const char *old, Py_ssize_t oldsize)
+/* construct suffix array */
+static Py_ssize_t *
+build_suffix_array(const char *old, Py_ssize_t oldsize)
 {
+    Py_ssize_t *I;  /* suffix array */
     Py_ssize_t *V;  /* temporary rank storage */
 
+    I = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
+    if (I == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
     V = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
     if (V == NULL) {
         PyErr_NoMemory();
-        return -1;
+        PyMem_Free(I);
+        return NULL;
     }
     Py_BEGIN_ALLOW_THREADS  /* release GIL */
     qsufsort(I, V, (const unsigned char *) old, oldsize);
     Py_END_ALLOW_THREADS
     PyMem_Free(V);
-    return 0;
+    return I;
 }
 
 /* construct the control, diff and extra blocks */
@@ -378,16 +385,12 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
 
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
-        goto error;
+        return -1;
 
     /* perform sort on original data */
-    I = PyMem_Malloc((origDataLength + 1) * sizeof(Py_ssize_t));
-    if (I == NULL) {
-        PyErr_NoMemory();
-        goto error;
-    }
-    if (build_suffix_array(I, origData, origDataLength) < 0)
-        goto error;
+    I = build_suffix_array(origData, origDataLength);
+    if (I == NULL)
+        return -1;
 
     /* allocate memory for the diff and extra blocks */
     result->diff = PyMem_Malloc(newDataLength + 1);

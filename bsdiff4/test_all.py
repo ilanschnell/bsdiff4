@@ -263,6 +263,24 @@ class TestFormat(unittest.TestCase):
                 self.assertEqual(dst, b'abd!')
 
 
+class TestSuffixArray(unittest.TestCase):
+
+    def test_two_element_group(self):
+        # A two-element group must not be mistaken for a singleton.
+        src = bytes.fromhex(
+            '02020101 02020200 02020202 01020002 01020202 0202')
+        self.assertEqual(
+            core.diff(src, b'\x03'),
+            (control_block((0, 1, 17)), b'', b'\x03'))
+
+    def test_adjust_overlap(self):
+        src = b'ccccdabcadcb'
+        dst = b'ccccdcdabcadcb'
+        self.assertEqual(
+            core.diff(src, dst),
+            (control_block((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
+
+
 class TestFile(unittest.TestCase):
 
     def setUp(self):

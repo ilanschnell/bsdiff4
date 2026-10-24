@@ -292,6 +292,17 @@ class TestSuffixArray(unittest.TestCase):
             core.diff(src, dst),
             (control_block((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
 
+    def test_suffix_array(self):
+        SA = core.suffix_array
+        self.assertEqual(SA(b''), [0])
+        self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
+        # randomized comparison
+        data = os.urandom(1000)
+        self.assertEqual(
+            SA(data),
+            sorted(range(len(data) + 1), key=lambda i: data[i:])
+        )
+
 
 class TestFile(unittest.TestCase):
 

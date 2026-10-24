@@ -384,7 +384,7 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
 {
     Py_ssize_t lastscan, lastpos, lastoffset;
     Py_ssize_t scan, pos, len;
-    Py_ssize_t *I = NULL;
+    Py_ssize_t *I;
 
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
@@ -679,6 +679,40 @@ mod_decode_int64(PyObject *module, PyObject *bytes)
     return PyLong_FromLongLong(decode_int64(str));
 }
 
+/* return the suffix array for a byte string */
+static PyObject *
+mod_suffix_array(PyObject *module, PyObject *bytes)
+{
+    Py_ssize_t *I;
+    PyObject *list;
+    Py_ssize_t size, i;
+    char *str;
+
+    if (PyBytes_AsStringAndSize(bytes, &str, &size) < 0)
+        return NULL;
+
+    I = build_suffix_array(str, size);
+    if (I == NULL)
+        return NULL;
+
+    list = PyList_New(size + 1);
+    if (list == NULL)
+        goto error;
+
+    for (i = 0; i <= size; i++) {
+        PyObject *item = PyLong_FromSsize_t(I[i]);
+        if (item == NULL)
+            goto error;
+        PyList_SET_ITEM(list, i, item);
+    }
+
+    PyMem_Free(I);
+    return list;
+ error:
+    Py_XDECREF(list);
+    PyMem_Free(I);
+    return NULL;
+}
 
 /* declaration of methods supported by this module */
 static PyMethodDef module_functions[] = {
@@ -686,6 +720,7 @@ static PyMethodDef module_functions[] = {
     {"patch",        mod_patch,        METH_VARARGS},
     {"encode_int64", mod_encode_int64, METH_O},
     {"decode_int64", mod_decode_int64, METH_O},
+    {"suffix_array", mod_suffix_array, METH_O},
     {NULL}  /* Sentinel */
 };
 

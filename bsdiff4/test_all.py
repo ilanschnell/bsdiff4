@@ -12,6 +12,9 @@ import bsdiff4.format as format
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
+UNDER_QEMU = os.environ.get('BSDIFF4_QEMU') == '1'
+
+
 class TestEncode(unittest.TestCase):
 
     def test_special_values(self):
@@ -88,6 +91,7 @@ class TestHelpers(unittest.TestCase):
 
 class TestFormat(unittest.TestCase):
 
+    @unittest.skipIf(UNDER_QEMU, "slow under QEMU")
     def test_example(self):
         a = 100_000 * b'a'
         b = bytearray(a)
@@ -253,6 +257,7 @@ class TestFormat(unittest.TestCase):
             # truncating patch
             self.assertRaises(ValueError, patch, b'abc', self.data[:i])
 
+    @unittest.skipIf(UNDER_QEMU, "slow under QEMU")
     def test_mutated_patch(self):
         data = self.data
         for i in range(len(data)):

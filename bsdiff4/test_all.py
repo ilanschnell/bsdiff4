@@ -12,7 +12,7 @@ import bsdiff4.format as format
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
-UNDER_QEMU = os.environ.get('BSDIFF4_QEMU') == '1'
+UNDER_QEMU = os.environ.get('UNDER_QEMU') == '1'
 
 
 class TestEncode(unittest.TestCase):
@@ -272,17 +272,6 @@ class TestFormat(unittest.TestCase):
                 # mutation could theoretically produce another valid patch
                 self.assertEqual(dst, b'abd!')
 
-
-class TestSuffixArray(unittest.TestCase):
-
-    def test_two_element_group(self):
-        # A two-element group must not be mistaken for a singleton.
-        src = bytes.fromhex(
-            '02020101 02020200 02020202 01020002 01020202 0202')
-        self.assertEqual(
-            core.diff(src, b'\x03'),
-            (control_block((0, 1, 17)), b'', b'\x03'))
-
     def test_adjust_overlap(self):
         # Ensure that an overlapping byte is assigned to the better
         # matching block.
@@ -292,16 +281,26 @@ class TestSuffixArray(unittest.TestCase):
             core.diff(src, dst),
             (control_block((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
 
-    def test_suffix_array(self):
+
+class TestSuffixArray(unittest.TestCase):
+
+    def test_basic(self):
         SA = core.suffix_array
         self.assertEqual(SA(b''), [0])
         self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
-        # randomized comparison
-        data = os.urandom(1000)
+
+    def check_data(self, data):
         self.assertEqual(
-            SA(data),
-            sorted(range(len(data) + 1), key=lambda i: data[i:])
-        )
+            core.suffix_array(data),
+            sorted(range(len(data) + 1), key=lambda i: data[i:]))
+
+    def test_two_element_group(self):
+        # A two-element group must not be mistaken for a singleton.
+        self.check_data(b'CCBBCCCACCCCBCACBCCCCC')
+
+    def test_random(self):
+        # randomized comparison
+        self.check_data(os.urandom(1000))
 
 
 class TestFile(unittest.TestCase):

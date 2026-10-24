@@ -1,4 +1,3 @@
-import base64
 import bz2
 import os
 import sys
@@ -17,21 +16,22 @@ class TestEncode(unittest.TestCase):
 
     def test_special_values(self):
         N = (1 << 63) - 1
-        for n, b in [
-            (  -N, b'\xff\xff\xff\xff\xff\xff\xff\xff'),
-            (-256, b'\x00\x01\x00\x00\x00\x00\x00\x80'),
-            (-128, b'\x80\x00\x00\x00\x00\x00\x00\x80'),
-            (  -1, b'\x01\x00\x00\x00\x00\x00\x00\x80'),
-            (   0, b'\x00\x00\x00\x00\x00\x00\x00\x00'),
-            (   1, b'\x01\x00\x00\x00\x00\x00\x00\x00'),
-            ( 127, b'\x7f\x00\x00\x00\x00\x00\x00\x00'),
-            ( 128, b'\x80\x00\x00\x00\x00\x00\x00\x00'),
-            ( 129, b'\x81\x00\x00\x00\x00\x00\x00\x00'),
-            ( 255, b'\xff\x00\x00\x00\x00\x00\x00\x00'),
-            ( 256, b'\x00\x01\x00\x00\x00\x00\x00\x00'),
-            ( 257, b'\x01\x01\x00\x00\x00\x00\x00\x00'),
-            (   N, b'\xff\xff\xff\xff\xff\xff\xff\x7f'),
+        for n, hex in [
+            (  -N, 'ff ff ff ff ff ff ff ff'),
+            (-256, '00 01 00 00 00 00 00 80'),
+            (-128, '80 00 00 00 00 00 00 80'),
+            (  -1, '01 00 00 00 00 00 00 80'),
+            (   0, '00 00 00 00 00 00 00 00'),
+            (   1, '01 00 00 00 00 00 00 00'),
+            ( 127, '7f 00 00 00 00 00 00 00'),
+            ( 128, '80 00 00 00 00 00 00 00'),
+            ( 129, '81 00 00 00 00 00 00 00'),
+            ( 255, 'ff 00 00 00 00 00 00 00'),
+            ( 256, '00 01 00 00 00 00 00 00'),
+            ( 257, '01 01 00 00 00 00 00 00'),
+            (   N, 'ff ff ff ff ff ff ff 7f'),
         ]:
+            b = bytes.fromhex(hex)
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
@@ -78,10 +78,10 @@ class TestHelpers(unittest.TestCase):
 
     def test_header(self):
         self.assertEqual(header(0x2c9, 0x7a2, 0x20fc0),
-                         b'BSDIFF40'
-                         b'\xc9\x02\x00\x00\x00\x00\x00\x00'
-                         b'\xa2\x07\x00\x00\x00\x00\x00\x00'
-                         b'\xc0\x0f\x02\x00\x00\x00\x00\x00')
+                         b'BSDIFF40' + bytes.fromhex("""
+                         c9 02 00 00 00 00 00 00
+                         a2 07 00 00 00 00 00 00
+                         c0 0f 02 00 00 00 00 00 """))
 
 
 class TestFormat(unittest.TestCase):
@@ -234,11 +234,14 @@ class TestFormat(unittest.TestCase):
         self.assertGreater(len_diff, 0)
 
     # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
-    data = base64.b64decode(
-        b'QlNESUZGNDAqAAAAAAAAACUAAAAAAAAABAAAAAAAAABCWmg5MUFZJlNZ0BSaKQAA'
-        b'BMAAaAggADDNNBk/UglZPF3JFOFCQ0BSaKRCWmg5MUFZJlNZTFqfSAAAAEAAYAA'
-        b'gACEAgoxdyRThQkExan0gQlpoOTFBWSZTWS0V6xwAAAAQACAAIAAhGEaC7kinCh'
-        b'IFor1jgA==')
+    # 42 5a 68 39 = BZh9
+    data = bytes.fromhex("""
+    42534449 46463430 2a000000 00000000 25000000 00000000 04000000 00000000
+    425a6839 31415926 5359d014 9a290000 04c00068 08200030 cd34193f 5209593c
+    5dc914e1 42434052 68a4425a 68393141 59265359 4c5a9f48 00000040 00600020
+    00210082 8c5dc914 e1424131 6a7d2042 5a683931 41592653 592d15eb 1c000000
+    10002000 20002118 4682ee48 a70a1205 a2bd6380
+    """)
 
     def test_compatibility(self):
         self.assertEqual(patch(b'abc', self.data), b'abd!')
@@ -274,6 +277,8 @@ class TestSuffixArray(unittest.TestCase):
             (control_block((0, 1, 17)), b'', b'\x03'))
 
     def test_adjust_overlap(self):
+        # Ensure that an overlapping byte is assigned to the better
+        # matching block.
         src = b'ccccdabcadcb'
         dst = b'ccccdcdabcadcb'
         self.assertEqual(

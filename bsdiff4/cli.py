@@ -6,6 +6,18 @@ from bsdiff4.core import decode_int64
 from bsdiff4.format import file_diff, file_patch, read_patch
 
 
+def unpack_control_block(bcontrol):
+    """
+    Unpack the binary control block and generate control tuples.
+    """
+    if len(bcontrol) % 24:
+        raise ValueError("invalid control block")
+
+    for i in range(0, len(bcontrol), 24):
+        bt = bcontrol[i:i + 24]
+        yield tuple(decode_int64(bt[j:j + 8]) for j in range(0, 24, 8))
+
+
 def human_bytes(n):
     """
     return the number of bytes 'n' in more human readable form
@@ -67,10 +79,8 @@ def show_patch(patch_path, verbose=False):
     print('number of control tuples: %d' % (len(bcontrol) // 24))
     if verbose:
         print('%20s %10s %10s' % ('x', 'y', 'z'))
-        for i in range(0, len(bcontrol), 24):
-            bt = bcontrol[i:i + 24]
-            print('%20d %10d %10d' % tuple(decode_int64(bt[j:j + 8])
-                                           for j in range(0, 24, 8)))
+        for ct in unpack_control_block(bcontrol):
+            print('%20d %10d %10d' % ct)
 
 
 def main_bspatch4():

@@ -121,8 +121,8 @@ split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
 
 /* construct the suffix array for old */
 static void
-qsufsort(Py_ssize_t *I, Py_ssize_t *V, const unsigned char *old,
-         Py_ssize_t oldsize)
+qsufsort(Py_ssize_t *I, Py_ssize_t *V,
+         const unsigned char *old, Py_ssize_t oldsize)
 {
     Py_ssize_t buckets[256], i, h, len;
 
@@ -232,27 +232,23 @@ clear_diff_result(DiffResult *result)
 
 /* encode int64 as 8 bytes */
 static int
-encode_int64(char *str, int64_t value)
+encode_int64(char *str, int64_t x)
 {
-    uint64_t magnitude;
     char sign = 0x00;
     int i;
 
-    if (value == INT64_MIN) {
+    if (x == INT64_MIN) {
         PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
         return -1;
     }
 
-    if (value < 0) {
-        magnitude = (uint64_t) -value;
+    if (x < 0) {
+        x = -x;
         sign = 0x80;
     }
-    else {
-        magnitude = (uint64_t) value;
-    }
     for (i = 0; i < 8; i++) {
-        str[i] = magnitude & 0xff;
-        magnitude >>= 8;
+        str[i] = x & 0xff;
+        x >>= 8;
     }
     str[7] |= sign;
     return 0;
@@ -356,8 +352,8 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
              DiffResult *result)
 {
     Py_ssize_t lastscan, lastpos, lastoffset, oldscore, scsc;
-    Py_ssize_t *I = NULL, *V = NULL;
     Py_ssize_t scan, pos, len, lenf, lenb, i;
+    Py_ssize_t *I = NULL, *V;
 
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
@@ -378,7 +374,6 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
     qsufsort(I, V, (const unsigned char *) origData, origDataLength);
     Py_END_ALLOW_THREADS
     PyMem_Free(V);
-    V = NULL;
 
     /* allocate memory for the diff and extra blocks */
     result->diff = PyMem_Malloc(newDataLength + 1);
@@ -395,12 +390,7 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
     result->extra_len = 0;
 
     /* perform the diff */
-    len = 0;
-    scan = 0;
-    lastscan = 0;
-    lastpos = 0;
-    lastoffset = 0;
-    pos = 0;
+    len = scan = lastscan = lastpos = lastoffset = pos = 0;
     while (scan < newDataLength) {
         if (PyErr_CheckSignals() < 0)
             goto error;
@@ -460,7 +450,6 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
 
 error:
     PyMem_Free(I);
-    PyMem_Free(V);
     return -1;
 }
 
@@ -500,10 +489,10 @@ build_diff_result(DiffResult *result)
 static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
-    DiffResult result = {NULL, NULL, NULL, 0, 0};
+    DiffResult diff = {NULL, NULL, NULL, 0, 0};
     Py_ssize_t origDataLength, newDataLength;
     char *origData, *newData;
-    PyObject *res;
+    PyObject *result;
 
     if (!PyArg_ParseTuple(args, "s#s#",
                           &origData, &origDataLength,
@@ -511,13 +500,13 @@ mod_diff(PyObject *module, PyObject *args)
         return NULL;
 
     if (compute_diff(origData, origDataLength,
-                     newData, newDataLength, &result) < 0)
-        res = NULL;
+                     newData, newDataLength, &diff) < 0)
+        result = NULL;
     else
-        res = build_diff_result(&result);
+        result = build_diff_result(&diff);
 
-    clear_diff_result(&result);
-    return res;
+    clear_diff_result(&diff);
+    return result;
 }
 
 /* decode 8 bytes to int64 */

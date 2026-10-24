@@ -2,15 +2,17 @@
 bsdiff4: binary diff and patch using the BSDIFF4-format
 =======================================================
 
-The code is mostly derived from cx_bsdiff (written by Anthony Tuininga,
-http://cx-bsdiff.sourceforge.net/).  The cx_bsdiff code in turn was derived
-from bsdiff, the standalone utility produced for BSD which can be found
-at http://www.daemonology.net/bsdiff.
+The code is mostly derived from ``cx_bsdiff`` (written by Anthony Tuininga,
+http://cx-bsdiff.sourceforge.net/).  The ``cx_bsdiff`` code in turn was
+derived from bsdiff, the standalone utility produced for BSD which can be
+found at http://www.daemonology.net/bsdiff.
 In addition to the two functions (diff and patch) cx_bsdiff provides, this
 package includes:
 
 * an interface to the BSDIFF4-format
-* command line interfaces: bsdiff4 and bspatch4
+* improved error handling for malformed patches
+* functions for creating and applying patches directly to files
+* command line interfaces: ``bsdiff4`` and ``bspatch4``
 * tests
 
 
@@ -42,7 +44,7 @@ Example:
 .. code-block:: python
 
    >>> import bsdiff4
-   >>> a = 100000 * b'a'
+   >>> a = 100_000 * b'a'
    >>> b = bytearray(a)
    >>> b[100:106] = b' diff '
    >>> p = bsdiff4.diff(a, bytes(b))

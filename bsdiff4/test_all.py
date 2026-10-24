@@ -77,7 +77,7 @@ class TestHelpers(unittest.TestCase):
                          b'\x02\x00\x00\x00\x00\x00\x00\x00' + 16 * b'\0')
 
     def test_header(self):
-        self.assertEqual(header(713, 1954, 135104),
+        self.assertEqual(header(0x2c9, 0x7a2, 0x20fc0),
                          b'BSDIFF40'
                          b'\xc9\x02\x00\x00\x00\x00\x00\x00'
                          b'\xa2\x07\x00\x00\x00\x00\x00\x00'
@@ -85,6 +85,13 @@ class TestHelpers(unittest.TestCase):
 
 
 class TestFormat(unittest.TestCase):
+
+    def test_example(self):
+        a = 100_000 * b'a'
+        b = bytearray(a)
+        b[100:106] = b' diff '
+        p = diff(a, bytes(b))
+        self.assertEqual(patch(a, p), b)
 
     def round_trip(self, src, dst):
         p = diff(src, dst)

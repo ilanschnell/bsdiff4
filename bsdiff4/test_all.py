@@ -16,7 +16,7 @@ class TestEncode(unittest.TestCase):
 
     def test_special_values(self):
         N = (1 << 63) - 1
-        for n, hex in [
+        for n, hexstr in [
             (  -N, 'ff ff ff ff ff ff ff ff'),
             (-256, '00 01 00 00 00 00 00 80'),
             (-128, '80 00 00 00 00 00 00 80'),
@@ -31,12 +31,12 @@ class TestEncode(unittest.TestCase):
             ( 257, '01 01 00 00 00 00 00 00'),
             (   N, 'ff ff ff ff ff ff ff 7f'),
         ]:
-            b = bytes.fromhex(hex)
+            b = bytes.fromhex(hexstr)
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
         self.assertEqual(  # noncanonical "negative zero"
-            core.decode_int64(b'\x00\x00\x00\x00\x00\x00\x00\x80'), 0)
+            core.decode_int64(bytes.fromhex('00 00 00 00 00 00 00 80')), 0)
 
     def test_errors(self):
         self.assertRaises(TypeError, core.encode_int64, 'x')
@@ -73,8 +73,10 @@ class TestHelpers(unittest.TestCase):
 
     def test_control_block(self):
         self.assertEqual(control_block((0, 0, -1), (2, 0, 0)),
-                         16 * b'\0' + b'\x01\x00\x00\x00\x00\x00\x00\x80' +
-                         b'\x02\x00\x00\x00\x00\x00\x00\x00' + 16 * b'\0')
+                         bytes.fromhex("""
+                         0000000000000000 0000000000000000 0100000000000080
+                         0200000000000000 0000000000000000 0000000000000000
+                         """))
 
     def test_header(self):
         self.assertEqual(header(0x2c9, 0x7a2, 0x20fc0),

@@ -24,9 +24,11 @@ static void
 split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
             Py_ssize_t len, Py_ssize_t h)
 {
-    Py_ssize_t i, j, k, x;
+    Py_ssize_t j, k;
 
     for (k = start; k < start + len; k += j) {
+        Py_ssize_t i, x;
+
         j = 1;
         x = V[I[k] + h];
         for (i = 1; k + i < start + len; i++) {
@@ -99,7 +101,7 @@ static void
 split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
       Py_ssize_t len, Py_ssize_t h)
 {
-    Py_ssize_t i, lower, upper;
+    Py_ssize_t lower, upper, i;
 
     if (len < 16) {
         split_small(I, V, start, len, h);
@@ -124,7 +126,7 @@ static void
 qsufsort(Py_ssize_t *I, Py_ssize_t *V,
          const unsigned char *old, Py_ssize_t oldsize)
 {
-    Py_ssize_t buckets[256], i, h, len;
+    Py_ssize_t buckets[256], i, h;
 
     for (i = 0; i < 256; i++)
         buckets[i] = 0;
@@ -148,7 +150,8 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V,
     I[0] = -1;
 
     for (h = 1; I[0] != -(oldsize + 1); h += h) {
-        len = 0;
+        Py_ssize_t len = 0;
+
         for (i = 0; i < oldsize + 1;) {
             if (I[i] < 0) {
                 len -= I[i];
@@ -322,7 +325,7 @@ adjust_overlap(const char *origData, const char *newData,
                Py_ssize_t lastscan, Py_ssize_t lastpos, Py_ssize_t scan,
                Py_ssize_t pos, Py_ssize_t *lenf, Py_ssize_t *lenb)
 {
-    Py_ssize_t i, score = 0, best_score = 0, best_length = 0;
+    Py_ssize_t score = 0, best_score = 0, best_length = 0, i;
     Py_ssize_t overlap;
 
     if (lastscan + *lenf <= scan - *lenb)
@@ -351,8 +354,8 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
              const char *newData, Py_ssize_t newDataLength,
              DiffResult *result)
 {
-    Py_ssize_t lastscan, lastpos, lastoffset, oldscore, scsc;
-    Py_ssize_t scan, pos, len, lenf, lenb, i;
+    Py_ssize_t lastscan, lastpos, lastoffset;
+    Py_ssize_t scan, pos, len;
     Py_ssize_t *I = NULL, *V;
 
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
@@ -392,9 +395,10 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
     /* perform the diff */
     len = scan = lastscan = lastpos = lastoffset = pos = 0;
     while (scan < newDataLength) {
+        Py_ssize_t oldscore = 0, scsc;
+
         if (PyErr_CheckSignals() < 0)
             goto error;
-        oldscore = 0;
 
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
         for (scsc = scan += len; scan < newDataLength; scan++) {
@@ -414,9 +418,10 @@ compute_diff(const char *origData, Py_ssize_t origDataLength,
         Py_END_ALLOW_THREADS
 
         if (len != oldscore || scan == newDataLength) {
+            Py_ssize_t lenb = 0, lenf, i;
+
             lenf = forward_match_length(origData, origDataLength, newData,
                                         lastscan, lastpos, scan);
-            lenb = 0;
             if (scan < newDataLength)
                 lenb = backward_match_length(origData, newData,
                                              lastscan, scan, pos);
@@ -555,8 +560,8 @@ mod_patch(PyObject *module, PyObject *args)
     Py_ssize_t diffBlockLength, extraBlockLength;
     Py_ssize_t diffRemaining, extraRemaining;
     PyObject *result;
-    Py_ssize_t newpos = 0, i, j;
-    int64_t oldpos = 0, x, y, z;
+    Py_ssize_t newpos = 0, i;
+    int64_t oldpos = 0;
 
     if (!PyArg_ParseTuple(args, "s#ns#s#s#",
                           &origData, &origDataLength, &newDataLength,
@@ -582,6 +587,8 @@ mod_patch(PyObject *module, PyObject *args)
     diffRemaining = diffBlockLength;
     extraRemaining = extraBlockLength;
     for (i = 0; i < controlBlockLength; i += 24) {
+        int64_t x, y, z, j;
+
         decode_tuple(controlBlock + i, &x, &y, &z);
         if (x < 0 || x > newDataLength - newpos || x > diffRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");

@@ -174,6 +174,34 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V,
         I[V[i]] = i;
 }
 
+/* construct suffix array */
+static Py_ssize_t *
+build_suffix_array(const char *old, Py_ssize_t oldsize)
+{
+    Py_ssize_t *I;  /* suffix array */
+    Py_ssize_t *V;  /* temporary rank storage */
+
+    I = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
+    if (I == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    V = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
+    if (V == NULL) {
+        PyErr_NoMemory();
+        PyMem_Free(I);
+        return NULL;
+    }
+
+    Py_BEGIN_ALLOW_THREADS  /* release GIL */
+    qsufsort(I, V, (const unsigned char *) old, oldsize);
+    Py_END_ALLOW_THREADS
+
+    PyMem_Free(V);
+    return I;
+}
+
 /* return the length of the common prefix */
 static Py_ssize_t
 matchlen(const unsigned char *old, Py_ssize_t oldsize,
@@ -346,31 +374,6 @@ adjust_overlap(const char *origData, const char *newData,
 
     *lenf += best_length - overlap;
     *lenb -= best_length;
-}
-
-/* construct suffix array */
-static Py_ssize_t *
-build_suffix_array(const char *old, Py_ssize_t oldsize)
-{
-    Py_ssize_t *I;  /* suffix array */
-    Py_ssize_t *V;  /* temporary rank storage */
-
-    I = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
-    if (I == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    V = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
-    if (V == NULL) {
-        PyErr_NoMemory();
-        PyMem_Free(I);
-        return NULL;
-    }
-    Py_BEGIN_ALLOW_THREADS  /* release GIL */
-    qsufsort(I, V, (const unsigned char *) old, oldsize);
-    Py_END_ALLOW_THREADS
-    PyMem_Free(V);
-    return I;
 }
 
 /* construct the control, diff and extra blocks */

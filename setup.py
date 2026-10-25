@@ -19,6 +19,7 @@ setup(
     author_email = "ilanschnell@gmail.com",
     url = "https://github.com/ilanschnell/bsdiff4",
     license = "BSD",
+    python_requires = ">=3.7",
     classifiers = [
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",

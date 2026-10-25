@@ -1,6 +1,7 @@
 """
 Additional tests and verifications for suffix_array() which are neither
 part of the regular test suite nor part of any bsdiff4 distributions.
+Unlike bsdiff4 itself, this test only supports Python 3.10 and higher.
 """
 import os
 import random
@@ -15,6 +16,17 @@ N_LARGE = 1_000_000
 
 
 class TestSuffixArray(unittest.TestCase):
+
+    def test_examples(self):
+        for word, sa in [
+                (b'banana', [6, 5, 3, 1, 0, 4, 2]),
+                (b'mississippi', [11, 10, 7, 4, 1, 0, 9, 8, 6, 3, 5, 2]),
+                (b'abracadabra', [11, 10, 7, 0, 3, 5, 8, 1, 4, 6, 9, 2]),
+        ]:
+            self.assertEqual(suffix_array(word), sa)
+            # Uppercasing preserves suffix order as words are all lowercase.
+            self.assertEqual(suffix_array(word.upper()), sa)
+            self.check_data(word)
 
     def check_data(self, data):
         n = len(data)

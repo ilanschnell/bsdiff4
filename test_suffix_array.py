@@ -4,9 +4,9 @@ part of the regular test suite nor part of any bsdiff4 distributions.
 Unlike bsdiff4 itself, this test only supports Python 3.10 and higher.
 """
 import os
-import random
 import unittest
 from itertools import pairwise
+from random import randrange
 
 from bsdiff4.core import suffix_array
 
@@ -33,9 +33,8 @@ class TestSuffixArray(unittest.TestCase):
         sa = suffix_array(data)
         self.assertEqual(len(sa), n + 1)
         self.assertEqual(sorted(sa), list(range(n + 1)))
-        # test against naive Python implementation
-        self.assertEqual(sa,
-                         sorted(range(n + 1), key=lambda i: data[i:]))
+        # compare with naive implementation
+        self.assertEqual(sa, sorted(range(n + 1), key=lambda i: data[i:]))
         # empty suffix is always first
         self.assertEqual(sa[0], n)
         # verify that every suffix is lexicographically smaller than
@@ -48,8 +47,7 @@ class TestSuffixArray(unittest.TestCase):
 
     def test_small_alphabets(self):
         for alphabet_size in range(1, 257):
-            data = bytes(random.randrange(alphabet_size)
-                         for _ in range(N_SMALL))
+            data = bytes(randrange(alphabet_size) for _ in range(N_SMALL))
             self.check_data(data)
 
     def test_random(self):
@@ -74,7 +72,14 @@ class TestSuffixArray(unittest.TestCase):
             self.assertEqual(rank[pos], -1)
             rank[pos] = r
 
+        # The rank is the inverse of the suffix array.
+        for i in range(n + 1):
+            self.assertEqual(sa[rank[i]], i)
+            self.assertEqual(rank[sa[i]], i)
+
         self.assertEqual(sa[0], n)
+        # A nonempty suffix is ordered by its first byte and
+        # the rank of its tail.
         for i, j in pairwise(sa[1:]):
             self.assertLess((data[i], rank[i + 1]),
                             (data[j], rank[j + 1]))

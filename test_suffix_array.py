@@ -5,6 +5,7 @@ part of the regular test suite nor part of any bsdiff4 distributions.
 import os
 import random
 import unittest
+from itertools import pairwise
 
 from bsdiff4.core import suffix_array
 
@@ -27,7 +28,7 @@ class TestSuffixArray(unittest.TestCase):
         self.assertEqual(sa[0], n)
         # verify that every suffix is lexicographically smaller than
         # the suffix following it
-        self.assertTrue(all(data[i:] < data[j:] for i, j in zip(sa, sa[1:])))
+        self.assertTrue(all(data[i:] < data[j:] for i, j in pairwise(sa)))
 
     def test_uniform(self):
         for n in range(N_SMALL):
@@ -62,7 +63,7 @@ class TestSuffixArray(unittest.TestCase):
             rank[pos] = r
 
         self.assertEqual(sa[0], n)
-        for i, j in zip(sa[1:], sa[2:]):
+        for i, j in pairwise(sa[1:]):
             self.assertLess((data[i], rank[i + 1]),
                             (data[j], rank[j + 1]))
 

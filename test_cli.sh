@@ -2,6 +2,7 @@
 set -ex
 
 python -m pip install .
+source_dir=$(pwd)
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
@@ -9,6 +10,7 @@ cd "$tmpdir"
 
 pwd
 python -c "import bsdiff4; assert bsdiff4.test().wasSuccessful()"
+python "$source_dir/test_suffix_array.py"
 
 bsdiff4 --version
 bsdiff4 --help

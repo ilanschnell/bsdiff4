@@ -574,7 +574,6 @@ mod_patch(PyObject *module, PyObject *args)
 {
     char *origData, *newData, *controlBlock, *diffBlock, *extraBlock;
     Py_ssize_t origDataLength, newDataLength, controlBlockLength;
-    Py_ssize_t diffBlockLength, extraBlockLength;
     Py_ssize_t diffRemaining, extraRemaining;
     PyObject *result;
     Py_ssize_t newpos = 0, i;
@@ -583,8 +582,8 @@ mod_patch(PyObject *module, PyObject *args)
     if (!PyArg_ParseTuple(args, "s#ns#s#s#",
                           &origData, &origDataLength, &newDataLength,
                           &controlBlock, &controlBlockLength,
-                          &diffBlock, &diffBlockLength,
-                          &extraBlock, &extraBlockLength))
+                          &diffBlock, &diffRemaining,
+                          &extraBlock, &extraRemaining))
         return NULL;
 
     if (newDataLength < 0) {
@@ -601,8 +600,6 @@ mod_patch(PyObject *module, PyObject *args)
         return NULL;
     newData = PyBytes_AS_STRING(result);
 
-    diffRemaining = diffBlockLength;
-    extraRemaining = extraBlockLength;
     for (i = 0; i < controlBlockLength; i += 24) {
         int64_t x, y, z, j;
 

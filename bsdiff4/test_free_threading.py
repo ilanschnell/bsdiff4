@@ -5,7 +5,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-import bsdiff4.core as core
+import bsdiff4.core as core  # type: ignore
 from bsdiff4 import diff, patch
 
 

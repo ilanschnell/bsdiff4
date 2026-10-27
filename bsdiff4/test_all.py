@@ -7,7 +7,7 @@ import unittest
 import tempfile
 from io import BytesIO
 
-import bsdiff4.core as core
+import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
                             MAGIC, write_patch, read_patch, read_data)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace

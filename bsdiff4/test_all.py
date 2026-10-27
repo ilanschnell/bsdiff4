@@ -8,7 +8,8 @@ import tempfile
 from io import BytesIO
 
 import bsdiff4.core as core
-import bsdiff4.format as format
+from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
+                            MAGIC, write_patch, read_patch, read_data)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -60,13 +61,8 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.decode_int64(b), n)
 
 
-def control_block(*controls):
-    return b''.join(core.encode_int64(x) for control in controls
-                    for x in control)
-
-
 def header(len_control, len_diff, len_dst):
-    return (format.MAGIC +
+    return (MAGIC +
             core.encode_int64(len_control) +
             core.encode_int64(len_diff) +
             core.encode_int64(len_dst))
@@ -74,19 +70,23 @@ def header(len_control, len_diff, len_dst):
 
 class TestHelpers(unittest.TestCase):
 
-    def test_control_block(self):
-        self.assertEqual(control_block((0, 0, -1), (2, 0, 0)),
-                         bytes.fromhex("""
-                         0000000000000000 0000000000000000 0100000000000080
-                         0200000000000000 0000000000000000 0000000000000000
-                         """))
-
     def test_header(self):
         self.assertEqual(header(0x2c9, 0x7a2, 0x20fc0),
                          b'BSDIFF40' + bytes.fromhex("""
                          c9 02 00 00 00 00 00 00
                          a2 07 00 00 00 00 00 00
                          c0 0f 02 00 00 00 00 00 """))
+
+    def test_control_block(self):
+        bcontrol = bytes.fromhex("""
+        0000000000000000 0000000000000000 0100000000000080
+        0200000000000000 0000000000000000 0000000000000000
+        """)
+        controls = [(0, 0, -1), (2, 0, 0)]
+
+        self.assertEqual(PCB(*controls), bcontrol)
+        self.assertEqual(list(unpack_control_block(bcontrol)),
+                         controls)
 
 
 class TestFormat(unittest.TestCase):
@@ -125,23 +125,20 @@ class TestFormat(unittest.TestCase):
 
     def test_diff_blocks(self):
         # Exercise both split_small() and partition_group().
-        self.assertEqual(
-            core.diff(b'banana', b'bandana'),
-            (control_block((3, 4, 2)), 3 * b'\x00', b'dana'))
+        self.assertEqual(core.diff(b'banana', b'bandana'),
+                         (PCB((3, 4, 2)), 3 * b'\x00', b'dana'))
 
         src = 32 * b'a'
         dst = 16 * b'a' + b'b' + 16 * b'a'
-        self.assertEqual(
-            core.diff(src, dst),
-            (control_block((32, 1, -1)),
-             16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+        self.assertEqual(core.diff(src, dst),
+                         (PCB((32, 1, -1)),
+                          16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
 
         src = 100 * b'a' + 100 * b'b'
         dst = 100 * b'b' + 100 * b'a'
-        self.assertEqual(
-            core.diff(src, dst),
-            (control_block((0, 100, 0), (100, 0, -100)),
-             100 * b'\x00', 100 * b'b'))
+        self.assertEqual(core.diff(src, dst),
+                         (PCB((0, 100, 0), (100, 0, -100)),
+                          100 * b'\x00', 100 * b'b'))
 
     def test_random(self):
         for _ in range(100):
@@ -157,10 +154,10 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
     def test_corrupt(self):
-        for bcontrol in [control_block((-1, 0, 0)),
-                         control_block((0, -1, 0)),
-                         control_block((5, 0, 0)),
-                         control_block((0, 5, 0))]:
+        for bcontrol in [PCB((-1, 0, 0)),
+                         PCB((0, -1, 0)),
+                         PCB((5, 0, 0)),
+                         PCB((0, 5, 0))]:
             self.assertRaises(ValueError, core.patch,
                               b'abcd', 4, bcontrol, 4 * b'\x00', b'')
 
@@ -177,37 +174,35 @@ class TestFormat(unittest.TestCase):
             self.assertRaises(ValueError, core.patch, *args)
 
     def test_oldpos_out_of_range(self):
-        bcontrol = control_block((0, 0, -1), (2, 0, 0))
+        bcontrol = PCB((0, 0, -1), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
 
-        bcontrol = control_block((0, 0, 2), (2, 0, 0))
+        bcontrol = PCB((0, 0, 2), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
 
     def test_oldpos_overflow(self):
         M = 1 << 63
         for z in -M + 1, M - 1:
-            self.assertEqual(
-                core.patch(b'', 0, control_block((0, 0, z)), b'', b''), b'')
+            self.assertEqual(core.patch(b'', 0, PCB((0, 0, z)), b'', b''),
+                             b'')
 
         for controls in [[(0, 0, M - 1), (0, 0, 1)],
                          [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
-            bcontrol = control_block(*controls)
             self.assertRaises(ValueError, core.patch,
-                              b'', 0, bcontrol, b'', b'')
-        bcontrol = control_block((0, 0, M - 1), (2, 0, 0))
+                              b'', 0, PCB(*controls), b'', b'')
+        bcontrol = PCB((0, 0, M - 1), (2, 0, 0))
         self.assertRaises(
             ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
     def test_malformed_patch(self):
         empty = bz2.compress(b'')
-        self.assertRaises(ValueError, format.read_patch,
-                          BytesIO(format.MAGIC))
+        self.assertRaises(ValueError, read_patch, BytesIO(MAGIC))
 
         for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
             data = header(*lengths) + 3 * empty
-            self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+            self.assertRaises(ValueError, read_patch, BytesIO(data))
 
         invalid_blocks = [
             header(1, len(empty), 0) + b'x' + empty + empty,
@@ -215,27 +210,25 @@ class TestFormat(unittest.TestCase):
             header(len(empty), len(empty), 0) + empty + empty + b'x',
         ]
         for data in invalid_blocks:
-            self.assertRaises(OSError, format.read_patch, BytesIO(data))
+            self.assertRaises(OSError, read_patch, BytesIO(data))
 
         control = bz2.compress(b'\x00')
         data = header(len(control), len(empty), 0) + control + 2 * empty
-        self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+        self.assertRaises(ValueError, read_patch, BytesIO(data))
 
         for data in [
             header(len(empty) + 1, 0, 0) + empty,
             header(len(empty), len(empty) + 1, 0) + 2 * empty,
         ]:
-            self.assertRaises(ValueError, format.read_patch, BytesIO(data))
+            self.assertRaises(ValueError, read_patch, BytesIO(data))
 
     def test_header_only(self):
         fi = BytesIO()
-        format.write_patch(fi, 4, control_block((3, 1, 0)),
-                           3 * b'\x00', b'!')
+        write_patch(fi, 4, PCB((3, 1, 0)), 3 * b'\x00', b'!')
         fi.seek(0)
-        len_control, len_diff, len_dst, bcontrol = format.read_patch(
+        len_control, len_diff, len_dst, bcontrol = read_patch(
             fi, header_only=True)
-        self.assertEqual((len_dst, bcontrol),
-                         (4, control_block((3, 1, 0))))
+        self.assertEqual((len_dst, bcontrol), (4, PCB((3, 1, 0))))
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
 
@@ -277,9 +270,8 @@ class TestFormat(unittest.TestCase):
         # matching block.
         src = b'ccccdabcadcb'
         dst = b'ccccdcdabcadcb'
-        self.assertEqual(
-            core.diff(src, dst),
-            (control_block((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
+        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
+                                               14 * b'\0', b''))
 
 
 class TestSuffixArray(unittest.TestCase):
@@ -315,8 +307,8 @@ class TestFile(unittest.TestCase):
         return os.path.join(self.tmpdir, fn)
 
     def assert_same_file_content(self, fn1, fn2):
-        data1 = format.read_data(self.path(fn1))
-        data2 = format.read_data(self.path(fn2))
+        data1 = read_data(self.path(fn1))
+        data2 = read_data(self.path(fn2))
         self.assertEqual(data1, data2)
 
     def round_trip(self):
@@ -338,7 +330,7 @@ class TestFile(unittest.TestCase):
         path = self.path('foo')
         self.write_data(path, b"WRONG_HEADER")
         with open(path, "rb") as fi:
-            self.assertRaises(ValueError, format.read_patch, fi)
+            self.assertRaises(ValueError, read_patch, fi)
 
     def test_1(self):
         a = 1000 * b'ABCDE'

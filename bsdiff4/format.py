@@ -8,6 +8,22 @@ import bsdiff4.core as core
 MAGIC = b'BSDIFF40'
 
 
+def pack_control_block(*controls):
+    "pack binary control block from control tuples"
+    return b''.join(core.encode_int64(x) for control in controls
+                    for x in control)
+
+
+def unpack_control_block(bcontrol):
+    "unpack the binary control block and generate control tuples"
+    if len(bcontrol) % 24:
+        raise ValueError("invalid control block")
+
+    for i in range(0, len(bcontrol), 24):
+        bt = bcontrol[i:i + 24]
+        yield tuple(core.decode_int64(bt[j:j + 8]) for j in range(0, 24, 8))
+
+
 def check_size(size):
     if size < 0:
         raise ValueError("negative size in bsdiff4 patch")

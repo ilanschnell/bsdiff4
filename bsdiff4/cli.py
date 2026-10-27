@@ -2,20 +2,8 @@ from argparse import ArgumentParser
 from os.path import getsize
 
 from bsdiff4 import __version__
-from bsdiff4.core import decode_int64
-from bsdiff4.format import file_diff, file_patch, read_patch
-
-
-def unpack_control_block(bcontrol):
-    """
-    Unpack the binary control block and generate control tuples.
-    """
-    if len(bcontrol) % 24:
-        raise ValueError("invalid control block")
-
-    for i in range(0, len(bcontrol), 24):
-        bt = bcontrol[i:i + 24]
-        yield tuple(decode_int64(bt[j:j + 8]) for j in range(0, 24, 8))
+from bsdiff4.format import (file_diff, file_patch, read_patch,
+                            unpack_control_block)
 
 
 def human_bytes(n):

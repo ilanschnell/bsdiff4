@@ -52,17 +52,6 @@ from bsdiff4.format import pack_control_block, diff, write_patch
 
 class TestPatch(unittest.TestCase):
 
-    def make_patch(self, len_dst, controls, bdiff=b'', bextra=b''):
-        bcontrol = pack_control_block(*controls)
-        f = BytesIO()
-        write_patch(f, len_dst, bcontrol, bdiff, bextra)
-        return f.getvalue()
-
-    def assert_corrupt(self, len_dst, controls, bdiff=b'', bextra=b''):
-        p = self.make_patch(len_dst, controls, bdiff, bextra)
-        with self.assertRaisesRegex(ValueError, "corrupt patch"):
-            patch(b'', p)
-
     def test_example(self):
         a = 1000 * b'a'
         b = bytearray(a)
@@ -98,6 +87,13 @@ class TestPatch(unittest.TestCase):
             n1 = random.randint(0, 1000)
             n2 = random.randint(0, 1000)
             self.round_trip(os.urandom(n1), os.urandom(n2))
+
+    def assert_corrupt(self, len_dst, controls, bdiff=b'', bextra=b''):
+        f = BytesIO()
+        write_patch(f, len_dst, pack_control_block(*controls), bdiff, bextra)
+        p = f.getvalue()
+        with self.assertRaisesRegex(ValueError, "corrupt patch"):
+            patch(b'', p)
 
     def test_malformed(self):
         # Negative diff and extra lengths.

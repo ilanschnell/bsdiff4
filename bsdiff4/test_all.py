@@ -128,7 +128,7 @@ class TestFormat(unittest.TestCase):
         self.round_trip(dst, src)
 
     def test_diff_blocks(self):
-        # Exercise both split_small() and partition_group().
+        # Check construction of control, diff and extra blocks.
         self.assertEqual(core.diff(b'banana', b'bandana'),
                          (PCB((3, 4, 2)), 3 * b'\x00', b'dana'))
 
@@ -285,10 +285,19 @@ class TestSuffixArray(unittest.TestCase):
         self.assertEqual(SA(b''), [0])
         self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
 
+    def test_equal_bytes(self):
+        n = 10_000
+        self.assertEqual(core.suffix_array(n * b'a'),
+                         list(range(n, -1, -1)))
+
     def check_data(self, data):
         self.assertEqual(
             core.suffix_array(data),
             sorted(range(len(data) + 1), key=lambda i: data[i:]))
+
+    def test_repeated_groups(self):
+        self.check_data(32 * b'a')
+        self.check_data(100 * b'a' + 100 * b'b')
 
     def test_two_element_group(self):
         # A two-element group must not be mistaken for a singleton.

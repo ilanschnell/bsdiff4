@@ -1,13 +1,9 @@
 """
 Pure Python implementation of BSDIFF4's patch function.
 """
-import os
-import random
-import unittest
 from io import BytesIO
 
-from bsdiff4.format import (pack_control_block, unpack_control_block,
-                            diff, read_patch, write_patch)
+from bsdiff4.format import unpack_control_block, read_patch
 
 
 def patch(bsrc, bpatch) -> bytes:
@@ -41,6 +37,14 @@ def patch(bsrc, bpatch) -> bytes:
         raise ValueError("corrupt patch")
 
     return bytes(bdst)
+
+# ------------------------------- tests -----------------------------------
+
+import os
+import random
+import unittest
+
+from bsdiff4.format import pack_control_block, diff, write_patch
 
 
 class TestPatch(unittest.TestCase):

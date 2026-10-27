@@ -1,0 +1,13 @@
+This directory contains files that are relevant for development,
+as well as additional tests and verifications.
+While bsdiff4 itself supports Python 3.7+, some of these programs
+may require higher Python versions.
+
+
+patch.py
+    Pure Python implementation of `patch()`.
+
+
+test_suffix_array.py
+    Additional tests and verifications for suffix_array() which are neither
+    part of the regular test suite nor part of any bsdiff4 distributions.

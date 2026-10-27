@@ -15,7 +15,7 @@ data = open('bsdiff4/__init__.py').read()
 kwds['version'] = pat.search(data).group(1)
 
 macros = []
-if get_config_var("Py_GIL_DISABLED"):
+if get_config_var("Py_GIL_DISABLED") in (1, "1"):
     macros.append(("Py_GIL_DISABLED", "1"))
 
 setup(

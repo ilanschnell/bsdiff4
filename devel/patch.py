@@ -1,5 +1,8 @@
 """
-Pure Python implementation of BSDIFF4's patch function.
+Reference implementation of bsdiff4.patch().
+
+Here, the patch-application loop is implemented in Python; patch parsing
+uses helpers from bsdiff4.format.
 """
 from io import BytesIO
 

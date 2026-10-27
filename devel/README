@@ -5,7 +5,7 @@ may require higher Python versions.
 
 
 patch.py
-    Pure Python implementation of `patch()`.
+    Pure Python implementation of the BSDIFF4 patch-application loop.
 
 
 test_suffix_array.py

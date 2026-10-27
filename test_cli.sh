@@ -11,6 +11,7 @@ cd "$tmpdir"
 pwd
 python -c "import bsdiff4; assert bsdiff4.test().wasSuccessful()"
 python "$source_dir/devel/test_suffix_array.py"
+python "$source_dir/devel/patch.py"
 
 bsdiff4 --version
 bsdiff4 --help

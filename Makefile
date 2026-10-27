@@ -7,7 +7,12 @@ test: bsdiff4/core.so
 	python -m doctest README.rst
 
 
+mypy:
+	mypy bsdiff4/*.py
+
+
 clean:
 	rm -rf build dist
 	rm -f bsdiff4/*.o bsdiff4/*.so bsdiff4/*.pyc
 	rm -rf bsdiff4/__pycache__ *.egg-info
+	rm -rf .mypy_cache

@@ -7,6 +7,8 @@ import unittest
 import tempfile
 from io import BytesIO
 from sysconfig import get_config_var
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
@@ -356,27 +358,80 @@ class TestFile(unittest.TestCase):
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')
 
+# ----------------------- test free threading ------------------------------
 
-class TestConfig(unittest.TestCase):
+NTHREADS = 4
 
-    @unittest.skipUnless(GIL_DISABLED, "requires free-threaded Python")
+
+def run_concurrently(func):
+    """Call func simultaneously in several threads and return the results."""
+    barrier = Barrier(NTHREADS)
+
+    def worker():
+        barrier.wait()
+        return func()
+
+    with ThreadPoolExecutor(max_workers=NTHREADS) as executor:
+        futures = [executor.submit(worker) for _ in range(NTHREADS)]
+        return [future.result() for future in futures]
+
+
+@unittest.skipUnless(GIL_DISABLED, "requires free-threaded Python")
+class TestFreeThreading(unittest.TestCase):
+
     def test_gil_disabled(self):
         self.assertFalse(sys._is_gil_enabled())
 
+    def test_core_functions(self):
+        src = bytes(range(256)) * 4
+        dst = src[:400] + b"free-threading" + src[414:]
+        expected_blocks = core.diff(src, dst)
+        expected_sa = core.suffix_array(src)
+        values = (-2**63 + 1, -1, 0, 1, 2**63 - 1)
+
+        def work():
+            for _ in range(5):
+                blocks = core.diff(src, dst)
+                if blocks != expected_blocks:
+                    return False
+                if core.patch(src, len(dst), *blocks) != dst:
+                    return False
+                if core.suffix_array(src) != expected_sa:
+                    return False
+                for value in values:
+                    if core.decode_int64(core.encode_int64(value)) != value:
+                        return False
+            return True
+
+        self.assertEqual(run_concurrently(work), NTHREADS * [True])
+
+    def test_format_functions(self):
+        src = bytes(range(256)) * 4
+        dst = src[:400] + b"free-threading" + src[414:]
+        patch_data = diff(src, dst)
+
+        def work():
+            for _ in range(5):
+                if patch(src, patch_data) != dst:
+                    return False
+                if patch(src, diff(src, dst)) != dst:
+                    return False
+            return True
+
+        self.assertEqual(run_concurrently(work), NTHREADS * [True])
+
 
 def run(verbosity=1):
-    from . import __version__
+    from bsdiff4 import __version__
     print('Python version: %s' % sys.version)
     print('bsdiff4 is installed in: %s' % os.path.dirname(__file__))
     print('bsdiff4 version: %s' % __version__)
+    print('UNDER_QEMU: %s' % UNDER_QEMU)
+    print('GIL_DISABLED: %s' % GIL_DISABLED)
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromModule(sys.modules[__name__]))
-    if GIL_DISABLED:
-        from bsdiff4 import test_free_threading
-        suite.addTests(loader.loadTestsFromModule(test_free_threading))
-
     runner = unittest.TextTestRunner(verbosity=verbosity)
     return runner.run(suite)
 

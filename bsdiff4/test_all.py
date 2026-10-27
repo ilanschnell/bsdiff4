@@ -6,6 +6,7 @@ import shutil
 import unittest
 import tempfile
 from io import BytesIO
+from sysconfig import get_config_var
 
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
@@ -14,6 +15,7 @@ from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
 UNDER_QEMU = os.environ.get('UNDER_QEMU') == '1'
+GIL_DISABLED = get_config_var("Py_GIL_DISABLED") in (1, "1")
 
 
 class TestEncode(unittest.TestCase):
@@ -355,6 +357,13 @@ class TestFile(unittest.TestCase):
         self.assert_same_file_content('src', 'dst')
 
 
+class TestConfig(unittest.TestCase):
+
+    @unittest.skipUnless(GIL_DISABLED, "requires free-threaded Python")
+    def test_gil_disabled(self):
+        self.assertFalse(sys._is_gil_enabled())
+
+
 def run(verbosity=1):
     from . import __version__
     print('Python version: %s' % sys.version)
@@ -364,6 +373,10 @@ def run(verbosity=1):
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromModule(sys.modules[__name__]))
+    if GIL_DISABLED:
+        from bsdiff4 import test_free_threading
+        suite.addTests(loader.loadTestsFromModule(test_free_threading))
+
     runner = unittest.TextTestRunner(verbosity=verbosity)
     return runner.run(suite)
 

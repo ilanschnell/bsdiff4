@@ -1,4 +1,5 @@
 import re
+from sysconfig import get_config_var
 try:
     from setuptools import setup, Extension
 except ImportError:
@@ -12,6 +13,10 @@ kwds['long_description'] = open('README.rst').read()
 pat = re.compile(r'__version__\s*=\s*"(\S+)"', re.M)
 data = open('bsdiff4/__init__.py').read()
 kwds['version'] = pat.search(data).group(1)
+
+macros = []
+if get_config_var("Py_GIL_DISABLED"):
+    macros.append(("Py_GIL_DISABLED", "1"))
 
 setup(
     name = "bsdiff4",
@@ -35,12 +40,15 @@ setup(
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: 3.15",
+        "Programming Language :: Python :: Free Threading :: 2 - Beta",
         "Topic :: Utilities",
     ],
     description = "binary diff and patch using the BSDIFF4-format",
     packages = ["bsdiff4"],
     ext_modules = [Extension(name = "bsdiff4.core",
-                             sources = ["bsdiff4/core.c"])],
+                             sources = ["bsdiff4/core.c"],
+                             define_macros = macros,
+                             )],
     entry_points = {
         'console_scripts': [
             'bsdiff4 = bsdiff4.cli:main_bsdiff4',

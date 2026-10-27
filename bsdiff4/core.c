@@ -616,8 +616,6 @@ mod_patch(PyObject *module, PyObject *args)
             if (oldpos >= -j && oldpos < origDataLength - j)
                 newData[newpos + j] += origData[oldpos + j];
         newpos += x;
-        if (update_oldpos(&oldpos, x) < 0)
-            goto error;
         if (y < 0 || y > newDataLength - newpos || y > extraRemaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
@@ -626,7 +624,8 @@ mod_patch(PyObject *module, PyObject *args)
         extraBlock += y;
         extraRemaining -= y;
         newpos += y;
-        if (update_oldpos(&oldpos, z) < 0)
+        if (update_oldpos(&oldpos, x) < 0 ||
+            update_oldpos(&oldpos, z) < 0)
             goto error;
     }
 

@@ -15,4 +15,4 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bsdiff
 
-      - run: bash test_cli.sh
+      - run: bash devel/test_cli.sh

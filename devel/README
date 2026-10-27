@@ -8,6 +8,10 @@ patch.py
     Pure Python implementation of the BSDIFF4 patch-application loop.
 
 
+test_cli.sh
+    Integration tests for the command-line tools and BSDIFF4 compatibility.
+
+
 test_suffix_array.py
     Additional tests and verifications for suffix_array() which are neither
     part of the regular test suite nor part of any bsdiff4 distributions.

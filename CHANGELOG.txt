@@ -1,4 +1,4 @@
-2026-10-XX   1.4.0:
+2026-10-28   1.4.0:
 -------------------
   * add free threading support
   * add type annotations to public functions

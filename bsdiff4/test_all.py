@@ -19,6 +19,7 @@ from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 UNDER_QEMU = os.environ.get('UNDER_QEMU') == '1'
 GIL_DISABLED = get_config_var("Py_GIL_DISABLED") in (1, "1")
 
+# ---------------------------- core layer --------------------------------
 
 class TestCoreInt64(unittest.TestCase):
 
@@ -190,6 +191,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         self.assertRaises(
             ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
+# ----------------------- BSDIFF4 format layer ---------------------------
 
 def header(len_control, len_diff, len_dst):
     return (MAGIC +
@@ -333,6 +335,7 @@ class TestCompatibility(unittest.TestCase):
                 # mutation could theoretically produce another valid patch
                 self.assertEqual(dst, b'abd!')
 
+# ----------------------------- file layer -------------------------------
 
 class TestFile(unittest.TestCase):
 
@@ -399,7 +402,7 @@ class TestFile(unittest.TestCase):
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')
 
-# ----------------------- test free threading ------------------------------
+# -------------------------- free threading ------------------------------
 
 NTHREADS = 4
 

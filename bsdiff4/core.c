@@ -121,38 +121,38 @@ split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
         split(I, V, upper, start + len - upper, h);
 }
 
-/* construct the suffix array for old */
+/* construct suffix array for a byte string */
 static void
 qsufsort(Py_ssize_t *I, Py_ssize_t *V,
-         const unsigned char *old, Py_ssize_t oldsize)
+         const unsigned char *str, Py_ssize_t size)
 {
     Py_ssize_t buckets[256], i, h;
 
     for (i = 0; i < 256; i++)
         buckets[i] = 0;
-    for (i = 0; i < oldsize; i++)
-        buckets[old[i]]++;
+    for (i = 0; i < size; i++)
+        buckets[str[i]]++;
     for (i = 1; i < 256; i++)
         buckets[i] += buckets[i - 1];
     for (i = 255; i > 0; i--)
         buckets[i] = buckets[i - 1];
     buckets[0] = 0;
 
-    for (i = 0; i < oldsize; i++)
-        I[++buckets[old[i]]] = i;
-    I[0] = oldsize;
-    for (i = 0; i < oldsize; i++)
-        V[i] = buckets[old[i]];
-    V[oldsize] = 0;
+    for (i = 0; i < size; i++)
+        I[++buckets[str[i]]] = i;
+    I[0] = size;
+    for (i = 0; i < size; i++)
+        V[i] = buckets[str[i]];
+    V[size] = 0;
     for (i = 1; i < 256; i++)
         if (buckets[i] == buckets[i - 1] + 1)
             I[buckets[i]] = -1;
     I[0] = -1;
 
-    for (h = 1; I[0] != -(oldsize + 1); h += h) {
+    for (h = 1; I[0] != -(size + 1); h += h) {
         Py_ssize_t len = 0;
 
-        for (i = 0; i < oldsize + 1;) {
+        for (i = 0; i < size + 1;) {
             if (I[i] < 0) {
                 len -= I[i];
                 i -= I[i];
@@ -170,24 +170,24 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V,
             I[i - len] = -len;
     }
 
-    for (i = 0; i < oldsize + 1; i++)
+    for (i = 0; i < size + 1; i++)
         I[V[i]] = i;
 }
 
 /* construct suffix array */
 static Py_ssize_t *
-build_suffix_array(const char *old, Py_ssize_t oldsize)
+build_suffix_array(const char *str, Py_ssize_t size)
 {
     Py_ssize_t *I;  /* suffix array */
     Py_ssize_t *V;  /* temporary rank storage */
 
-    I = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
+    I = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
     if (I == NULL) {
         PyErr_NoMemory();
         return NULL;
     }
 
-    V = PyMem_Malloc((oldsize + 1) * sizeof(Py_ssize_t));
+    V = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
     if (V == NULL) {
         PyErr_NoMemory();
         PyMem_Free(I);
@@ -195,7 +195,7 @@ build_suffix_array(const char *old, Py_ssize_t oldsize)
     }
 
     Py_BEGIN_ALLOW_THREADS  /* release GIL */
-    qsufsort(I, V, (const unsigned char *) old, oldsize);
+    qsufsort(I, V, (const unsigned char *) str, size);
     Py_END_ALLOW_THREADS
 
     PyMem_Free(V);
@@ -204,12 +204,12 @@ build_suffix_array(const char *old, Py_ssize_t oldsize)
 
 /* return the length of the common prefix */
 static Py_ssize_t
-matchlen(const unsigned char *old, Py_ssize_t oldsize,
-         const unsigned char *new, Py_ssize_t newsize)
+matchlen(const unsigned char *a, Py_ssize_t size_a,
+         const unsigned char *b, Py_ssize_t size_b)
 {
     Py_ssize_t i = 0;
 
-    while (i < oldsize && i < newsize && old[i] == new[i])
+    while (i < size_a && i < size_b && a[i] == b[i])
         i++;
     return i;
 }
@@ -217,15 +217,15 @@ matchlen(const unsigned char *old, Py_ssize_t oldsize,
 /* find the suffix with the longest prefix match */
 static Py_ssize_t
 search(const Py_ssize_t *I,
-       const unsigned char *old, Py_ssize_t oldsize,
-       const unsigned char *new, Py_ssize_t newsize,
+       const unsigned char *a, Py_ssize_t size_a,
+       const unsigned char *b, Py_ssize_t size_b,
        Py_ssize_t st, Py_ssize_t en, Py_ssize_t *pos)
 {
     Py_ssize_t x, y;
 
     if (en - st < 2) {
-        x = matchlen(old + I[st], oldsize - I[st], new, newsize);
-        y = matchlen(old + I[en], oldsize - I[en], new, newsize);
+        x = matchlen(a + I[st], size_a - I[st], b, size_b);
+        y = matchlen(a + I[en], size_a - I[en], b, size_b);
 
         if (x > y) {
             *pos = I[st];
@@ -238,10 +238,10 @@ search(const Py_ssize_t *I,
     }
 
     x = st + (en - st) / 2;
-    if (memcmp(old + I[x], new, Py_MIN(oldsize - I[x], newsize)) < 0)
-        return search(I, old, oldsize, new, newsize, x, en, pos);
+    if (memcmp(a + I[x], b, Py_MIN(size_a - I[x], size_b)) < 0)
+        return search(I, a, size_a, b, size_b, x, en, pos);
     else
-        return search(I, old, oldsize, new, newsize, st, x, pos);
+        return search(I, a, size_a, b, size_b, st, x, pos);
 }
 
 typedef struct {

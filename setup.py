@@ -45,6 +45,7 @@ setup(
     ],
     description = "binary diff and patch using the BSDIFF4-format",
     packages = ["bsdiff4"],
+    package_data = {"bsdiff4": ["py.typed"]},  # see PEP 561
     ext_modules = [Extension(name = "bsdiff4.core",
                              sources = ["bsdiff4/core.c"],
                              define_macros = macros,

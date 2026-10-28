@@ -417,6 +417,7 @@ compute_diff(const char *origData, Py_ssize_t origLength,
         if (PyErr_CheckSignals() < 0)
             goto error;
 
+        /* find a match worth switching to from the previous source offset */
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
         for (scsc = scan += len; scan < newLength; scan++) {
             len = search(I, (const unsigned char *) origData, origLength,
@@ -434,6 +435,7 @@ compute_diff(const char *origData, Py_ssize_t origLength,
         }
         Py_END_ALLOW_THREADS
 
+        /* emit data preceding the new match, or all remaining data at EOF */
         if (len != oldscore || scan == newLength) {
             Py_ssize_t lenb = 0, lenf, i;
 

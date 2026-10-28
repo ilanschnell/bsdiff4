@@ -204,28 +204,28 @@ build_suffix_array(const char *str, Py_ssize_t size)
 
 /* return the length of the common prefix */
 static Py_ssize_t
-matchlen(const unsigned char *a, Py_ssize_t size_a,
-         const unsigned char *b, Py_ssize_t size_b)
+matchlen(const unsigned char *a, Py_ssize_t a_len,
+         const unsigned char *b, Py_ssize_t b_len)
 {
     Py_ssize_t i = 0;
 
-    while (i < size_a && i < size_b && a[i] == b[i])
+    while (i < a_len && i < b_len && a[i] == b[i])
         i++;
     return i;
 }
 
-/* find the suffix with the longest prefix match */
+/* return the longest prefix-match length and store its position in *pos */
 static Py_ssize_t
 search(const Py_ssize_t *I,
-       const unsigned char *a, Py_ssize_t size_a,
-       const unsigned char *b, Py_ssize_t size_b,
+       const unsigned char *a, Py_ssize_t a_len,
+       const unsigned char *b, Py_ssize_t b_len,
        Py_ssize_t st, Py_ssize_t en, Py_ssize_t *pos)
 {
     Py_ssize_t x, y;
 
     if (en - st < 2) {
-        x = matchlen(a + I[st], size_a - I[st], b, size_b);
-        y = matchlen(a + I[en], size_a - I[en], b, size_b);
+        x = matchlen(a + I[st], a_len - I[st], b, b_len);
+        y = matchlen(a + I[en], a_len - I[en], b, b_len);
 
         if (x > y) {
             *pos = I[st];
@@ -238,10 +238,10 @@ search(const Py_ssize_t *I,
     }
 
     x = st + (en - st) / 2;
-    if (memcmp(a + I[x], b, Py_MIN(size_a - I[x], size_b)) < 0)
-        return search(I, a, size_a, b, size_b, x, en, pos);
+    if (memcmp(a + I[x], b, Py_MIN(a_len - I[x], b_len)) < 0)
+        return search(I, a, a_len, b, b_len, x, en, pos);
     else
-        return search(I, a, size_a, b, size_b, st, x, pos);
+        return search(I, a, a_len, b, b_len, st, x, pos);
 }
 
 typedef struct {
@@ -311,17 +311,17 @@ append_control(PyObject *control, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
 
 /* find the best forward match length */
 static Py_ssize_t
-forward_match_length(const char *origData, Py_ssize_t origLength,
-                     const char *newData, Py_ssize_t lastscan,
+forward_match_length(const char *src, Py_ssize_t src_len,
+                     const char *dst, Py_ssize_t lastscan,
                      Py_ssize_t lastpos, Py_ssize_t scan)
 {
     Py_ssize_t i, score = 0, best_score = 0, best_length = 0;
 
-    for (i = 0; lastscan + i < scan && lastpos + i < origLength;) {
-        if (origData[lastpos + i] == newData[lastscan + i])
+    for (i = 0; lastscan + i < scan && lastpos + i < src_len;) {
+        if (src[lastpos + i] == dst[lastscan + i])
             score++;
         i++;
-        if (score * 2 - i > best_score * 2 - best_length) {
+        if (2 * score - i > 2 * best_score - best_length) {
             best_score = score;
             best_length = i;
         }
@@ -331,15 +331,15 @@ forward_match_length(const char *origData, Py_ssize_t origLength,
 
 /* find the best backward match length */
 static Py_ssize_t
-backward_match_length(const char *origData, const char *newData,
+backward_match_length(const char *src, const char *dst,
                       Py_ssize_t lastscan, Py_ssize_t scan, Py_ssize_t pos)
 {
     Py_ssize_t i, score = 0, best_score = 0, best_length = 0;
 
     for (i = 1; scan >= lastscan + i && pos >= i; i++) {
-        if (origData[pos - i] == newData[scan - i])
+        if (src[pos - i] == dst[scan - i])
             score++;
-        if (score * 2 - i > best_score * 2 - best_length) {
+        if (2 * score - i > 2 * best_score - best_length) {
             best_score = score;
             best_length = i;
         }
@@ -349,7 +349,7 @@ backward_match_length(const char *origData, const char *newData,
 
 /* resolve overlap between forward and backward matches */
 static void
-adjust_overlap(const char *origData, const char *newData,
+adjust_overlap(const char *src, const char *dst,
                Py_ssize_t lastscan, Py_ssize_t lastpos, Py_ssize_t scan,
                Py_ssize_t pos, Py_ssize_t *lenf, Py_ssize_t *lenb)
 {
@@ -361,10 +361,10 @@ adjust_overlap(const char *origData, const char *newData,
     overlap = (lastscan + *lenf) - (scan - *lenb);
 
     for (i = 0; i < overlap; i++) {
-        if (newData[lastscan + *lenf - overlap + i] ==
-                origData[lastpos + *lenf - overlap + i])
+        if (dst[lastscan + *lenf - overlap + i] ==
+            src[lastpos + *lenf - overlap + i])
             score++;
-        if (newData[scan - *lenb + i] == origData[pos - *lenb + i])
+        if (dst[scan - *lenb + i] == src[pos - *lenb + i])
             score--;
         if (score > best_score) {
             best_score = score;
@@ -378,9 +378,8 @@ adjust_overlap(const char *origData, const char *newData,
 
 /* construct the control, diff and extra blocks */
 static int
-compute_diff(const char *origData, Py_ssize_t origLength,
-             const char *newData, Py_ssize_t newLength,
-             DiffResult *result)
+compute_diff(const char *src, Py_ssize_t src_len,
+             const char *dst, Py_ssize_t dst_len, DiffResult *result)
 {
     Py_ssize_t lastscan, lastpos, lastoffset;
     Py_ssize_t scan, pos, len;
@@ -390,18 +389,18 @@ compute_diff(const char *origData, Py_ssize_t origLength,
     if (result->control == NULL)
         return -1;
 
-    /* perform suffix sort on original data */
-    I = build_suffix_array(origData, origLength);
+    /* perform suffix sort on source data */
+    I = build_suffix_array(src, src_len);
     if (I == NULL)
         return -1;
 
     /* allocate memory for the diff and extra blocks */
-    result->diff = PyMem_Malloc(newLength + 1);
+    result->diff = PyMem_Malloc(dst_len + 1);
     if (result->diff == NULL) {
         PyErr_NoMemory();
         goto error;
     }
-    result->extra = PyMem_Malloc(newLength + 1);
+    result->extra = PyMem_Malloc(dst_len + 1);
     if (result->extra == NULL) {
         PyErr_NoMemory();
         goto error;
@@ -411,7 +410,7 @@ compute_diff(const char *origData, Py_ssize_t origLength,
 
     /* perform diff */
     len = scan = lastscan = lastpos = lastoffset = pos = 0;
-    while (scan < newLength) {
+    while (scan < dst_len) {
         Py_ssize_t oldscore = 0, scsc;
 
         if (PyErr_CheckSignals() < 0)
@@ -419,40 +418,40 @@ compute_diff(const char *origData, Py_ssize_t origLength,
 
         /* find a match worth switching to from the previous source offset */
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
-        for (scsc = scan += len; scan < newLength; scan++) {
-            len = search(I, (const unsigned char *) origData, origLength,
-                         (const unsigned char *) newData + scan,
-                         newLength - scan, 0, origLength, &pos);
+        scan += len;
+        for (scsc = scan; scan < dst_len; scan++) {
+            len = search(I, (const unsigned char *) src, src_len,
+                         (const unsigned char *) dst + scan, dst_len - scan,
+                         0, src_len, &pos);
             for (; scsc < scan + len; scsc++)
-                if (scsc + lastoffset < origLength &&
-                          origData[scsc + lastoffset] == newData[scsc])
+                if (scsc + lastoffset < src_len &&
+                          src[scsc + lastoffset] == dst[scsc])
                     oldscore++;
             if ((len == oldscore && len != 0) || len > oldscore + 8)
                 break;
-            if (scan + lastoffset < origLength &&
-                      origData[scan + lastoffset] == newData[scan])
+            if (scan + lastoffset < src_len &&
+                      src[scan + lastoffset] == dst[scan])
                 oldscore--;
         }
         Py_END_ALLOW_THREADS
 
         /* emit data preceding the new match, or all remaining data at EOF */
-        if (len != oldscore || scan == newLength) {
+        if (len != oldscore || scan == dst_len) {
             Py_ssize_t lenb = 0, lenf, i;
 
-            lenf = forward_match_length(origData, origLength, newData,
+            lenf = forward_match_length(src, src_len, dst,
                                         lastscan, lastpos, scan);
-            if (scan < newLength)
-                lenb = backward_match_length(origData, newData,
-                                             lastscan, scan, pos);
-            adjust_overlap(origData, newData, lastscan, lastpos, scan, pos,
+            if (scan < dst_len)
+                lenb = backward_match_length(src, dst, lastscan, scan, pos);
+            adjust_overlap(src, dst, lastscan, lastpos, scan, pos,
                            &lenf, &lenb);
 
             for (i = 0; i < lenf; i++)
                 result->diff[result->diff_len + i] =
-                    newData[lastscan + i] - origData[lastpos + i];
+                    dst[lastscan + i] - src[lastpos + i];
             for (i = 0; i < (scan - lenb) - (lastscan + lenf); i++)
                 result->extra[result->extra_len + i] =
-                    newData[lastscan + lenf + i];
+                    dst[lastscan + lenf + i];
 
             result->diff_len += lenf;
             result->extra_len += (scan - lenb) - (lastscan + lenf);
@@ -513,17 +512,14 @@ static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
     DiffResult diff = {NULL, NULL, NULL, 0, 0};
-    Py_ssize_t origLength, newLength;
-    char *origData, *newData;
+    Py_ssize_t src_len, dst_len;
+    char *src, *dst;
     PyObject *result;
 
-    if (!PyArg_ParseTuple(args, "s#s#",
-                          &origData, &origLength,
-                          &newData, &newLength))
+    if (!PyArg_ParseTuple(args, "s#s#", &src, &src_len, &dst, &dst_len))
         return NULL;
 
-    if (compute_diff(origData, origLength,
-                     newData, newLength, &diff) < 0)
+    if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
         result = NULL;
     else
         result = build_diff_result(&diff);
@@ -558,37 +554,37 @@ decode_tuple(const char *str, int64_t *x, int64_t *y, int64_t *z)
 
 /* update the source offset while checking for overflow */
 static int
-update_oldpos(int64_t *oldpos, int64_t increment)
+update_src_pos(int64_t *src_pos, int64_t increment)
 {
-    if ((increment > 0 && *oldpos > INT64_MAX - increment) ||
-        (increment < 0 && *oldpos < INT64_MIN - increment)) {
+    if ((increment > 0 && *src_pos > INT64_MAX - increment) ||
+        (increment < 0 && *src_pos < INT64_MIN - increment)) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (offset overflow)");
         return -1;
     }
-    *oldpos += increment;
+    *src_pos += increment;
     return 0;
 }
 
-/* apply control, diff and extra blocks to the original data */
+/* apply control, diff and extra blocks to the source data */
 static PyObject *
 mod_patch(PyObject *module, PyObject *args)
 {
-    char *origData, *newData, *controlBlock, *diffBlock, *extraBlock;
-    Py_ssize_t origLength, newLength, controlBlockLength;
+    char *src, *dst, *controlBlock, *diffBlock, *extraBlock;
+    Py_ssize_t src_len, dst_len, controlBlockLength;
     Py_ssize_t diffRemain, extraRemain;
     PyObject *result;
-    Py_ssize_t newpos = 0, i;
-    int64_t oldpos = 0;
+    Py_ssize_t dst_pos = 0, i;
+    int64_t src_pos = 0;
 
     if (!PyArg_ParseTuple(args, "s#ns#s#s#",
-                          &origData, &origLength, &newLength,
+                          &src, &src_len, &dst_len,
                           &controlBlock, &controlBlockLength,
                           &diffBlock, &diffRemain,
                           &extraBlock, &extraRemain))
         return NULL;
 
-    if (newLength < 0) {
-        PyErr_SetString(PyExc_ValueError, "negative new data length");
+    if (dst_len < 0) {
+        PyErr_SetString(PyExc_ValueError, "negative destination length");
         return NULL;
     }
     if (controlBlockLength % 24) {
@@ -596,42 +592,42 @@ mod_patch(PyObject *module, PyObject *args)
         return NULL;
     }
 
-    result = PyBytes_FromStringAndSize(NULL, newLength);
+    result = PyBytes_FromStringAndSize(NULL, dst_len);
     if (result == NULL)
         return NULL;
-    newData = PyBytes_AS_STRING(result);
+    dst = PyBytes_AS_STRING(result);
 
     for (i = 0; i < controlBlockLength; i += 24) {
         int64_t x, y, z, j;
 
         decode_tuple(controlBlock + i, &x, &y, &z);
-        if (x < 0 || x > newLength - newpos || x > diffRemain) {
+        if (x < 0 || x > dst_len - dst_pos || x > diffRemain) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
-        memcpy(newData + newpos, diffBlock, x);
+        memcpy(dst + dst_pos, diffBlock, x);
         diffBlock += x;
         diffRemain -= x;
-        /* Check bounds without overflowing oldpos + j. */
+        /* Check bounds without overflowing src_pos + j. */
         for (j = 0; j < x; j++)
-            if (oldpos >= -j && oldpos < origLength - j)
-                newData[newpos + j] += origData[oldpos + j];
-        newpos += x;
-        if (y < 0 || y > newLength - newpos || y > extraRemain) {
+            if (src_pos >= -j && src_pos < src_len - j)
+                dst[dst_pos + j] += src[src_pos + j];
+        dst_pos += x;
+        if (y < 0 || y > dst_len - dst_pos || y > extraRemain) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
-        memcpy(newData + newpos, extraBlock, y);
+        memcpy(dst + dst_pos, extraBlock, y);
         extraBlock += y;
         extraRemain -= y;
-        newpos += y;
-        if (update_oldpos(&oldpos, x) < 0 ||
-            update_oldpos(&oldpos, z) < 0)
+        dst_pos += y;
+        if (update_src_pos(&src_pos, x) < 0 ||
+            update_src_pos(&src_pos, z) < 0)
             goto error;
     }
 
     /* confirm that a valid patch was applied */
-    if (newpos != newLength || diffRemain != 0 || extraRemain != 0) {
+    if (dst_pos != dst_len || diffRemain != 0 || extraRemain != 0) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (underflow)");
         goto error;
     }

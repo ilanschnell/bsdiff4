@@ -65,6 +65,34 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.decode_int64(b), n)
 
 
+ROUND_TRIP_CASES = [
+    (b'', b''),
+    (b'', b'x'),
+    (b'abc', b'abc'),
+    (b'abc', b'abx'),
+    (b'abc', b'abxy'),
+    (b'abc', b'xbc'),
+    (b'abc', b'xybc'),
+    (b'123456789 987654321', b'123456789000987654321'),  # issue #14
+]
+
+
+class TestCoreDiffPatch(unittest.TestCase):
+
+    def round_trip(self, src, dst):
+        bcontrol, bdiff, bextra = core.diff(src, dst)
+        for b in bcontrol, bdiff, bextra:
+            self.assertIs(type(b), bytes)
+        dst2 = core.patch(src, len(dst), bcontrol, bdiff, bextra)
+        self.assertIs(type(dst2), bytes)
+        self.assertEqual(dst2, dst)
+
+    def test_cases(self):
+        for a, b in ROUND_TRIP_CASES:
+            self.round_trip(a, b)
+            self.round_trip(b, a)
+
+
 def header(len_control, len_diff, len_dst):
     return (MAGIC +
             core.encode_int64(len_control) +
@@ -108,22 +136,14 @@ class TestFormat(unittest.TestCase):
         dst2 = patch(src, p)
         self.assertEqual(dst, dst2)
 
-    def test_zero(self):
-        self.round_trip(b'', b'')
-
-    def test_edge_cases(self):
-        for src, dst in [(b'', b'x'), (b'x', b''), (b'abc', b'abc')]:
-            self.round_trip(src, dst)
+    def test_cases(self):
+        for a, b in ROUND_TRIP_CASES:
+            self.round_trip(a, b)
+            self.round_trip(b, a)
 
     def test_extra(self):
         src = os.urandom(1000)
         dst = src + os.urandom(10)
-        self.round_trip(src, dst)
-        self.round_trip(dst, src)
-
-    def test_small(self):  # issue #14
-        src = b'123456789 987654321'
-        dst = b'123456789000987654321'
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
@@ -350,6 +370,12 @@ class TestFile(unittest.TestCase):
         self.write_data(path, b"WRONG_HEADER")
         with open(path, "rb") as fi:
             self.assertRaises(ValueError, read_patch, fi)
+
+    def test_cases(self):
+        for a, b in ROUND_TRIP_CASES:
+            self.write_data('src', a)
+            self.write_data('dst', b)
+            self.round_trip()
 
     def test_1(self):
         a = 1000 * b'ABCDE'

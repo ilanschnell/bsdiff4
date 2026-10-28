@@ -20,7 +20,7 @@ UNDER_QEMU = os.environ.get('UNDER_QEMU') == '1'
 GIL_DISABLED = get_config_var("Py_GIL_DISABLED") in (1, "1")
 
 
-class TestEncode(unittest.TestCase):
+class TestCoreInt64(unittest.TestCase):
 
     def test_special_values(self):
         N = (1 << 63) - 1
@@ -65,6 +65,36 @@ class TestEncode(unittest.TestCase):
             self.assertEqual(core.decode_int64(b), n)
 
 
+class TestSuffixArray(unittest.TestCase):
+
+    def test_basic(self):
+        SA = core.suffix_array
+        self.assertEqual(SA(b''), [0])
+        self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
+
+    def test_equal_bytes(self):
+        n = 10_000
+        self.assertEqual(core.suffix_array(n * b'a'),
+                         list(range(n, -1, -1)))
+
+    def check_data(self, data):
+        self.assertEqual(
+            core.suffix_array(data),
+            sorted(range(len(data) + 1), key=lambda i: data[i:]))
+
+    def test_repeated_groups(self):
+        self.check_data(32 * b'a')
+        self.check_data(100 * b'a' + 100 * b'b')
+
+    def test_two_element_group(self):
+        # A two-element group must not be mistaken for a singleton.
+        self.check_data(b'CCBBCCCACCCCBCACBCCCCC')
+
+    def test_random(self):
+        # randomized comparison
+        self.check_data(os.urandom(1000))
+
+
 ROUND_TRIP_CASES = [
     (b'', b''),
     (b'', b'x'),
@@ -91,6 +121,74 @@ class TestCoreDiffPatch(unittest.TestCase):
         for a, b in ROUND_TRIP_CASES:
             self.round_trip(a, b)
             self.round_trip(b, a)
+
+    def test_diff_blocks(self):
+        # Check construction of control, diff and extra blocks.
+        self.assertEqual(core.diff(b'banana', b'bandana'),
+                         (PCB((3, 4, 2)), 3 * b'\x00', b'dana'))
+
+        src = 32 * b'a'
+        dst = 16 * b'a' + b'b' + 16 * b'a'
+        self.assertEqual(core.diff(src, dst),
+                         (PCB((32, 1, -1)),
+                          16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+
+        src = 100 * b'a' + 100 * b'b'
+        dst = 100 * b'b' + 100 * b'a'
+        self.assertEqual(core.diff(src, dst),
+                         (PCB((0, 100, 0), (100, 0, -100)),
+                          100 * b'\x00', 100 * b'b'))
+
+    def test_diff_adjust_overlap(self):
+        # Ensure that an overlapping byte is assigned to the better
+        # matching block.
+        src = b'ccccdabcadcb'
+        dst = b'ccccdcdabcadcb'
+        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
+                                               14 * b'\0', b''))
+
+    def test_patch_corrupt(self):
+        for bcontrol in [PCB((-1, 0, 0)),
+                         PCB((0, -1, 0)),
+                         PCB((5, 0, 0)),
+                         PCB((0, 5, 0))]:
+            self.assertRaises(ValueError, core.patch,
+                              b'abcd', 4, bcontrol, 4 * b'\x00', b'')
+
+        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
+        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+        self.assertRaises(ValueError, core.patch, b'', 0, b'A', b'', b'')
+
+    def test_patch_underflow(self):
+        for args in [
+            (b'', 1, b'', b'', b''),
+            (b'', 0, b'', b'x', b''),
+            (b'', 0, b'', b'', b'x'),
+        ]:
+            self.assertRaises(ValueError, core.patch, *args)
+
+    def test_oldpos_out_of_range(self):
+        bcontrol = PCB((0, 0, -1), (2, 0, 0))
+        self.assertEqual(
+            core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
+
+        bcontrol = PCB((0, 0, 2), (2, 0, 0))
+        self.assertEqual(
+            core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
+
+    def test_oldpos_overflow(self):
+        M = 1 << 63
+        for z in -M + 1, M - 1:
+            self.assertEqual(core.patch(b'', 0, PCB((0, 0, z)), b'', b''),
+                             b'')
+
+        for controls in [[(0, 0, M - 1), (0, 0, 1)],
+                         [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
+            self.assertRaises(ValueError, core.patch,
+                              b'', 0, PCB(*controls), b'', b'')
+        bcontrol = PCB((0, 0, M - 1), (2, 0, 0))
+        self.assertRaises(
+            ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
 
 def header(len_control, len_diff, len_dst):
@@ -147,23 +245,6 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
         self.round_trip(dst, src)
 
-    def test_diff_blocks(self):
-        # Check construction of control, diff and extra blocks.
-        self.assertEqual(core.diff(b'banana', b'bandana'),
-                         (PCB((3, 4, 2)), 3 * b'\x00', b'dana'))
-
-        src = 32 * b'a'
-        dst = 16 * b'a' + b'b' + 16 * b'a'
-        self.assertEqual(core.diff(src, dst),
-                         (PCB((32, 1, -1)),
-                          16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
-
-        src = 100 * b'a' + 100 * b'b'
-        dst = 100 * b'b' + 100 * b'a'
-        self.assertEqual(core.diff(src, dst),
-                         (PCB((0, 100, 0), (100, 0, -100)),
-                          100 * b'\x00', 100 * b'b'))
-
     def test_random(self):
         for _ in range(100):
             n1 = random.randint(0, 1000)
@@ -176,49 +257,6 @@ class TestFormat(unittest.TestCase):
         src = a + os.urandom(100) + b
         dst = a + os.urandom(100) + b
         self.round_trip(src, dst)
-
-    def test_corrupt(self):
-        for bcontrol in [PCB((-1, 0, 0)),
-                         PCB((0, -1, 0)),
-                         PCB((5, 0, 0)),
-                         PCB((0, 5, 0))]:
-            self.assertRaises(ValueError, core.patch,
-                              b'abcd', 4, bcontrol, 4 * b'\x00', b'')
-
-        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
-        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
-        self.assertRaises(ValueError, core.patch, b'', 0, b'A', b'', b'')
-
-    def test_underflow(self):
-        for args in [
-            (b'', 1, b'', b'', b''),
-            (b'', 0, b'', b'x', b''),
-            (b'', 0, b'', b'', b'x'),
-        ]:
-            self.assertRaises(ValueError, core.patch, *args)
-
-    def test_oldpos_out_of_range(self):
-        bcontrol = PCB((0, 0, -1), (2, 0, 0))
-        self.assertEqual(
-            core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
-
-        bcontrol = PCB((0, 0, 2), (2, 0, 0))
-        self.assertEqual(
-            core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
-
-    def test_oldpos_overflow(self):
-        M = 1 << 63
-        for z in -M + 1, M - 1:
-            self.assertEqual(core.patch(b'', 0, PCB((0, 0, z)), b'', b''),
-                             b'')
-
-        for controls in [[(0, 0, M - 1), (0, 0, 1)],
-                         [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
-            self.assertRaises(ValueError, core.patch,
-                              b'', 0, PCB(*controls), b'', b'')
-        bcontrol = PCB((0, 0, M - 1), (2, 0, 0))
-        self.assertRaises(
-            ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
     def test_malformed_patch(self):
         empty = bz2.compress(b'')
@@ -255,14 +293,6 @@ class TestFormat(unittest.TestCase):
         self.assertEqual((len_dst, bcontrol), (4, PCB((3, 1, 0))))
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
-
-    def test_adjust_overlap(self):
-        # Ensure that an overlapping byte is assigned to the better
-        # matching block.
-        src = b'ccccdabcadcb'
-        dst = b'ccccdcdabcadcb'
-        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
-                                               14 * b'\0', b''))
 
 
 class TestCompatibility(unittest.TestCase):
@@ -302,36 +332,6 @@ class TestCompatibility(unittest.TestCase):
                     continue
                 # mutation could theoretically produce another valid patch
                 self.assertEqual(dst, b'abd!')
-
-
-class TestSuffixArray(unittest.TestCase):
-
-    def test_basic(self):
-        SA = core.suffix_array
-        self.assertEqual(SA(b''), [0])
-        self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
-
-    def test_equal_bytes(self):
-        n = 10_000
-        self.assertEqual(core.suffix_array(n * b'a'),
-                         list(range(n, -1, -1)))
-
-    def check_data(self, data):
-        self.assertEqual(
-            core.suffix_array(data),
-            sorted(range(len(data) + 1), key=lambda i: data[i:]))
-
-    def test_repeated_groups(self):
-        self.check_data(32 * b'a')
-        self.check_data(100 * b'a' + 100 * b'b')
-
-    def test_two_element_group(self):
-        # A two-element group must not be mistaken for a singleton.
-        self.check_data(b'CCBBCCCACCCCBCACBCCCCC')
-
-    def test_random(self):
-        # randomized comparison
-        self.check_data(os.urandom(1000))
 
 
 class TestFile(unittest.TestCase):

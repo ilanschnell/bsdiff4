@@ -236,6 +236,17 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(fi.tell(), 32 + len_control)
         self.assertGreater(len_diff, 0)
 
+    def test_adjust_overlap(self):
+        # Ensure that an overlapping byte is assigned to the better
+        # matching block.
+        src = b'ccccdabcadcb'
+        dst = b'ccccdcdabcadcb'
+        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
+                                               14 * b'\0', b''))
+
+
+class TestCompatibility(unittest.TestCase):
+
     # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
     # 42 5a 68 39 = BZh9
     data = bytes.fromhex("""
@@ -248,6 +259,9 @@ class TestFormat(unittest.TestCase):
 
     def test_compatibility(self):
         self.assertEqual(patch(b'abc', self.data), b'abd!')
+
+    def test_header(self):
+        self.assertEqual(header(0x2a, 0x25, 0x04), self.data[:32])
 
     def test_truncated_patch(self):
         for i in range(len(self.data)):
@@ -268,14 +282,6 @@ class TestFormat(unittest.TestCase):
                     continue
                 # mutation could theoretically produce another valid patch
                 self.assertEqual(dst, b'abd!')
-
-    def test_adjust_overlap(self):
-        # Ensure that an overlapping byte is assigned to the better
-        # matching block.
-        src = b'ccccdabcadcb'
-        dst = b'ccccdcdabcadcb'
-        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
-                                               14 * b'\0', b''))
 
 
 class TestSuffixArray(unittest.TestCase):

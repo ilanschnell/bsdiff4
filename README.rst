@@ -6,6 +6,7 @@ The code is mostly derived from ``cx_bsdiff`` (written by Anthony Tuininga,
 http://cx-bsdiff.sourceforge.net/).  The ``cx_bsdiff`` code in turn was
 derived from bsdiff, the standalone utility produced for BSD which can be
 found at http://www.daemonology.net/bsdiff.
+
 Key features of this package include:
 
 * high-level ``diff`` and ``patch`` functions
@@ -13,6 +14,8 @@ Key features of this package include:
 * improved error handling for malformed patches
 * functions for creating patches from files and applying them to files
 * command-line interfaces: ``bsdiff4`` and ``bspatch4``
+* support for free-threaded Python
+* type hints
 * extensive tests
 
 

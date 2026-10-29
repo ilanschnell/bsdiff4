@@ -8,6 +8,21 @@ import bsdiff4.core as core  # type: ignore
 MAGIC = b'BSDIFF40'
 
 
+def pack_header(control_len, diff_len, dst_len):
+    return (MAGIC +
+            core.encode_int64(control_len) +
+            core.encode_int64(diff_len) +
+            core.encode_int64(dst_len))
+
+
+def unpack_header(header):
+    if len(header) != 32:
+        raise ValueError("invalid header size")
+    if header[:7] != MAGIC[:7]:
+        raise ValueError("invalid magic bsdiff4 header")
+    return tuple(core.decode_int64(header[i:i + 8]) for i in range(8, 32, 8))
+
+
 def pack_control_block(*controls):
     "pack binary control block from control tuples"
     return b''.join(core.encode_int64(value)
@@ -21,8 +36,8 @@ def unpack_control_block(control_block):
         raise ValueError("invalid control block")
 
     for i in range(0, len(control_block), 24):
-        bt = control_block[i:i + 24]
-        yield tuple(core.decode_int64(bt[j:j + 8]) for j in range(0, 24, 8))
+        yield tuple(core.decode_int64(control_block[j:j + 8])
+                    for j in range(i, i + 24, 8))
 
 
 def check_size(size):
@@ -42,15 +57,10 @@ def read_exact(fi, size):
 
 def read_patch(fi, header_only=False):
     "read a BSDIFF4-format patch from stream 'fi'"
-    magic = fi.read(8)
-    if magic[:7] != MAGIC[:7]:
-        raise ValueError("invalid magic bsdiff4 header")
-    # length headers
-    control_len = core.decode_int64(fi.read(8))
-    diff_len = core.decode_int64(fi.read(8))
-    dst_len = core.decode_int64(fi.read(8))
-    for size in control_len, diff_len, dst_len:
+    sizes = unpack_header(read_exact(fi, 32))
+    for size in sizes:
         check_size(size)
+    control_len, diff_len, dst_len = sizes
     # read the control header
     control_block = bz2.decompress(read_exact(fi, control_len))
     if len(control_block) % 24:
@@ -61,13 +71,6 @@ def read_patch(fi, header_only=False):
     diff_block = bz2.decompress(read_exact(fi, diff_len))
     extra_block = bz2.decompress(fi.read())
     return dst_len, control_block, diff_block, extra_block
-
-
-def pack_header(control_len, diff_len, dst_len):
-    return (MAGIC +
-            core.encode_int64(control_len) +
-            core.encode_int64(diff_len) +
-            core.encode_int64(dst_len))
 
 
 def write_patch(fo, dst_len, control_block, diff_block, extra_block):

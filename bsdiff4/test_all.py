@@ -12,7 +12,7 @@ from threading import Barrier
 
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
-                            pack_header as header,
+                            pack_header, unpack_header,
                             MAGIC, write_patch, read_patch, read_data)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
@@ -202,11 +202,19 @@ class TestCoreDiffPatch(unittest.TestCase):
 class TestHelpers(unittest.TestCase):
 
     def test_header(self):
-        self.assertEqual(header(0x2c9, 0x7a2, 0x20fc0),
-                         b'BSDIFF40' + bytes.fromhex("""
-                         c9 02 00 00 00 00 00 00
-                         a2 07 00 00 00 00 00 00
-                         c0 0f 02 00 00 00 00 00 """))
+        bheader = b'BSDIFF40' + bytes.fromhex("""
+        c9 02 00 00 00 00 00 00
+        a2 07 00 00 00 00 00 00
+        c0 0f 02 00 00 00 00 00 """)
+        sizes = (0x2c9, 0x7a2, 0x20fc0)
+
+        self.assertEqual(pack_header(*sizes), bheader)
+        self.assertEqual(unpack_header(bheader), sizes)
+        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
+                               unpack_header, 32 * b'\x00')
+        for n in 0, 1, 31, 33:
+            self.assertRaisesRegex(ValueError, "invalid header size",
+                                   unpack_header, n * b'\x00')
 
     def test_control_block(self):
         bcontrol = bytes.fromhex("""
@@ -266,35 +274,36 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
     def test_malformed_patch(self):
-        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
-                               read_patch, BytesIO(b"BSDIFF30"))
-
-        self.assertRaisesRegex(ValueError, "8 bytes expected",
+        self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
                                read_patch, BytesIO(MAGIC))
+
+        p = b"BSDIFF30" + 24 * b'\x00'
+        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
+                               read_patch, BytesIO(p))
 
         empty = bz2.compress(b'')
         for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
-            data = header(*lengths) + 3 * empty
+            data = pack_header(*lengths) + 3 * empty
             self.assertRaisesRegex(ValueError,
                                    "negative size in bsdiff4 patch",
                                    read_patch, BytesIO(data))
 
         invalid_blocks = [
-            header(1, len(empty), 0) + b'x' + empty + empty,
-            header(len(empty), 1, 0) + empty + b'x' + empty,
-            header(len(empty), len(empty), 0) + empty + empty + b'x',
+            pack_header(1, len(empty), 0) + b'x' + empty + empty,
+            pack_header(len(empty), 1, 0) + empty + b'x' + empty,
+            pack_header(len(empty), len(empty), 0) + empty + empty + b'x',
         ]
         for data in invalid_blocks:
             self.assertRaises(OSError, read_patch, BytesIO(data))
 
         control = bz2.compress(b'\x00')
-        data = header(len(control), len(empty), 0) + control + 2 * empty
+        data = pack_header(len(control), len(empty), 0) + control + 2 * empty
         self.assertRaisesRegex(ValueError, "invalid control block",
                                read_patch, BytesIO(data))
 
         for data in [
-            header(len(empty) + 1, 0, 0) + empty,
-            header(len(empty), len(empty) + 1, 0) + 2 * empty,
+            pack_header(len(empty) + 1, 0, 0) + empty,
+            pack_header(len(empty), len(empty) + 1, 0) + 2 * empty,
         ]:
             self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
                                    read_patch, BytesIO(data))
@@ -303,7 +312,7 @@ class TestFormat(unittest.TestCase):
     def test_header_overflow(self):
         M = 1 << 31
         for lengths in [(M, 0, 0), (0, M, 0), (0, 0, M)]:
-            data = header(*lengths) + 3 * bz2.compress(b'')
+            data = pack_header(*lengths) + 3 * bz2.compress(b'')
             self.assertRaisesRegex(ValueError,
                                    "size too large in bsdiff4 patch",
                                    read_patch, BytesIO(data))
@@ -335,7 +344,7 @@ class TestCompatibility(unittest.TestCase):
         self.assertEqual(patch(b'abc', self.data), b'abd!')
 
     def test_header(self):
-        self.assertEqual(header(0x2a, 0x25, 0x04), self.data[:32])
+        self.assertEqual(unpack_header(self.data[:32]), (0x2a, 0x25, 0x04))
 
     def test_truncated_patch(self):
         for i in range(len(self.data)):

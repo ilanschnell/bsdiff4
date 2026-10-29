@@ -39,25 +39,11 @@ def read_exact(fi, size):
     return data
 
 
-def write_patch(fo, dst_len, control_block, diff_block, extra_block):
-    "write a BSDIFF4-format patch to stream 'fo'"
-    fo.write(MAGIC)
-    # compress each block
-    control_block = bz2.compress(control_block)
-    diff_block = bz2.compress(diff_block)
-    extra_block = bz2.compress(extra_block)
-    for n in len(control_block), len(diff_block), dst_len:
-        fo.write(core.encode_int64(n))
-    fo.write(control_block)
-    fo.write(diff_block)
-    fo.write(extra_block)
-
-
 def read_patch(fi, header_only=False):
     "read a BSDIFF4-format patch from stream 'fi'"
     magic = fi.read(8)
     if magic[:7] != MAGIC[:7]:
-        raise ValueError("incorrect magic bsdiff4 header")
+        raise ValueError("invalid magic bsdiff4 header")
     # length headers
     control_len = core.decode_int64(fi.read(8))
     diff_len = core.decode_int64(fi.read(8))
@@ -74,6 +60,20 @@ def read_patch(fi, header_only=False):
     diff_block = bz2.decompress(read_exact(fi, diff_len))
     extra_block = bz2.decompress(fi.read())
     return dst_len, control_block, diff_block, extra_block
+
+
+def write_patch(fo, dst_len, control_block, diff_block, extra_block):
+    "write a BSDIFF4-format patch to stream 'fo'"
+    fo.write(MAGIC)
+    # compress each block
+    control_block = bz2.compress(control_block)
+    diff_block = bz2.compress(diff_block)
+    extra_block = bz2.compress(extra_block)
+    for n in len(control_block), len(diff_block), dst_len:
+        fo.write(core.encode_int64(n))
+    fo.write(control_block)
+    fo.write(diff_block)
+    fo.write(extra_block)
 
 
 def read_data(path):

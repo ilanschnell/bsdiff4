@@ -54,8 +54,9 @@ class TestCoreInt64(unittest.TestCase):
             self.assertRaises(OverflowError, core.encode_int64, n)
 
         self.assertRaises(TypeError, core.decode_int64, 12345)
-        self.assertRaises(ValueError, core.decode_int64, 7 * b'a')
-        self.assertRaises(ValueError, core.decode_int64, 9 * b'b')
+        for n in 0, 1, 7, 9, 16:
+            self.assertRaisesRegex(ValueError, "8 bytes expected",
+                                   core.decode_int64, n * b'\x00')
 
     def test_random(self):
         N = (1 << 63) - 1
@@ -149,12 +150,15 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch_corrupt(self):
         for control in (-1, 0, 0), (0, -1, 0), (5, 0, 0), (0, 5, 0):
-            self.assertRaises(ValueError, core.patch,
-                              b'abcd', 4, PCB(control), 4 * b'\x00', b'')
+            self.assertRaisesRegex(ValueError, r"corrupt patch \(overflow\)",
+                                   core.patch,
+                                   b'abcd', 4, PCB(control), 4 * b'\x00', b'')
 
         self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
-        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
-        self.assertRaises(ValueError, core.patch, b'', 0, b'A', b'', b'')
+        self.assertRaisesRegex(ValueError, "negative destination length",
+                               core.patch, b'', -1, b'', b'', b'')
+        self.assertRaisesRegex(ValueError, "invalid control block",
+                               core.patch, b'', 0, b'A', b'', b'')
 
     def test_patch_underflow(self):
         for args in [
@@ -162,7 +166,8 @@ class TestCoreDiffPatch(unittest.TestCase):
             (b'', 0, b'', b'x', b''),
             (b'', 0, b'', b'', b'x'),
         ]:
-            self.assertRaises(ValueError, core.patch, *args)
+            self.assertRaisesRegex(ValueError, r"corrupt patch \(underflow\)",
+                                   core.patch, *args)
 
     def test_src_pos_out_of_range(self):
         bcontrol = PCB((0, 0, -1), (2, 0, 0))
@@ -181,11 +186,14 @@ class TestCoreDiffPatch(unittest.TestCase):
 
         for controls in [[(0, 0, M - 1), (0, 0, 1)],
                          [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
-            self.assertRaises(ValueError, core.patch,
-                              b'', 0, PCB(*controls), b'', b'')
+            self.assertRaisesRegex(ValueError,
+                                   r"corrupt patch \(offset overflow\)",
+                                   core.patch,
+                                   b'', 0, PCB(*controls), b'', b'')
         bcontrol = PCB((0, 0, M - 1), (2, 0, 0))
-        self.assertRaises(
-            ValueError, core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
+        self.assertRaisesRegex(ValueError,
+                               r"corrupt patch \(offset overflow\)",
+                               core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 
@@ -257,12 +265,18 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
     def test_malformed_patch(self):
-        empty = bz2.compress(b'')
-        self.assertRaises(ValueError, read_patch, BytesIO(MAGIC))
+        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
+                               read_patch, BytesIO(b"BSDIFF30"))
 
+        self.assertRaisesRegex(ValueError, "8 bytes expected",
+                               read_patch, BytesIO(MAGIC))
+
+        empty = bz2.compress(b'')
         for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
             data = header(*lengths) + 3 * empty
-            self.assertRaises(ValueError, read_patch, BytesIO(data))
+            self.assertRaisesRegex(ValueError,
+                                   "negative size in bsdiff4 patch",
+                                   read_patch, BytesIO(data))
 
         invalid_blocks = [
             header(1, len(empty), 0) + b'x' + empty + empty,
@@ -274,13 +288,15 @@ class TestFormat(unittest.TestCase):
 
         control = bz2.compress(b'\x00')
         data = header(len(control), len(empty), 0) + control + 2 * empty
-        self.assertRaises(ValueError, read_patch, BytesIO(data))
+        self.assertRaisesRegex(ValueError, "invalid control block",
+                               read_patch, BytesIO(data))
 
         for data in [
             header(len(empty) + 1, 0, 0) + empty,
             header(len(empty), len(empty) + 1, 0) + 2 * empty,
         ]:
-            self.assertRaises(ValueError, read_patch, BytesIO(data))
+            self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
+                                   read_patch, BytesIO(data))
 
     def test_header_only(self):
         fi = BytesIO()
@@ -363,12 +379,6 @@ class TestFile(unittest.TestCase):
     def write_data(self, fn, data):
         with open(self.path(fn), 'wb') as fo:
             fo.write(data)
-
-    def test_wrong_header(self):
-        path = self.path('foo')
-        self.write_data(path, b"WRONG_HEADER")
-        with open(path, "rb") as fi:
-            self.assertRaises(ValueError, read_patch, fi)
 
     def test_cases(self):
         for a, b in ROUND_TRIP_CASES:

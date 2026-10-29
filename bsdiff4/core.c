@@ -586,7 +586,7 @@ mod_patch(PyObject *module, PyObject *args)
         return NULL;
     }
     if (control_len % 24) {
-        PyErr_SetString(PyExc_ValueError, "incorrect control block");
+        PyErr_SetString(PyExc_ValueError, "invalid control block");
         return NULL;
     }
 

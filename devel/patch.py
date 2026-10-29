@@ -9,37 +9,38 @@ from io import BytesIO
 from bsdiff4.format import unpack_control_block, read_patch
 
 
-def patch(bsrc, bpatch) -> bytes:
-    len_src = len(bsrc)
-    len_dst, bcontrol, bdiff, bextra = read_patch(BytesIO(bpatch))
-    bdst = bytearray(len_dst)
-    newpos = oldpos = diffpos = extrapos = 0
+def patch(src, patch_bytes) -> bytes:
+    src_len = len(src)
+    dst_len, bcontrol, bdiff, bextra = read_patch(BytesIO(patch_bytes))
+    dst = bytearray(dst_len)
+    src_pos = dst_pos = diff_pos = extra_pos = 0
 
     for x, y, z in unpack_control_block(bcontrol):
-        if x < 0 or x > len_dst - newpos or x > len(bdiff) - diffpos:
+        if x < 0 or x > dst_len - dst_pos or x > len(bdiff) - diff_pos:
             raise ValueError("corrupt patch")
 
-        bdst[newpos:newpos + x] = bdiff[diffpos:diffpos + x]
-        diffpos += x
+        dst[dst_pos:dst_pos + x] = bdiff[diff_pos:diff_pos + x]
+        diff_pos += x
 
         # Add source bytes where the diff range overlaps the source.
-        for j in range(max(0, -oldpos), min(x, len_src - oldpos)):
-            bdst[newpos + j] = (bdst[newpos + j] + bsrc[oldpos + j]) % 256
+        for j in range(max(0, -src_pos), min(x, src_len - src_pos)):
+            dst[dst_pos + j] = (dst[dst_pos + j] + src[src_pos + j]) % 256
 
-        newpos += x
+        dst_pos += x
 
-        if y < 0 or y > len_dst - newpos or y > len(bextra) - extrapos:
+        if y < 0 or y > dst_len - dst_pos or y > len(bextra) - extra_pos:
             raise ValueError("corrupt patch")
 
-        bdst[newpos:newpos + y] = bextra[extrapos:extrapos + y]
-        extrapos += y
-        newpos += y
-        oldpos += x + z
+        dst[dst_pos:dst_pos + y] = bextra[extra_pos:extra_pos + y]
+        extra_pos += y
+        dst_pos += y
+        src_pos += x + z
 
-    if newpos != len_dst or diffpos != len(bdiff) or extrapos != len(bextra):
+    if (dst_pos != dst_len or diff_pos != len(bdiff) or
+        extra_pos != len(bextra)):
         raise ValueError("corrupt patch")
 
-    return bytes(bdst)
+    return bytes(dst)
 
 # ------------------------------- tests -----------------------------------
 

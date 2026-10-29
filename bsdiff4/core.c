@@ -569,25 +569,25 @@ update_src_pos(int64_t *src_pos, int64_t increment)
 static PyObject *
 mod_patch(PyObject *module, PyObject *args)
 {
-    char *src, *dst, *controlBlock, *diffBlock, *extraBlock;
-    Py_ssize_t src_len, dst_len, controlBlockLength;
-    Py_ssize_t diffRemain, extraRemain;
+    char *src, *dst, *control_block, *diff_block, *extra_block;
+    Py_ssize_t src_len, dst_len, control_len;
+    Py_ssize_t diff_remaining, extra_remaining;
     PyObject *result;
     Py_ssize_t dst_pos = 0, i;
     int64_t src_pos = 0;
 
     if (!PyArg_ParseTuple(args, "s#ns#s#s#",
                           &src, &src_len, &dst_len,
-                          &controlBlock, &controlBlockLength,
-                          &diffBlock, &diffRemain,
-                          &extraBlock, &extraRemain))
+                          &control_block, &control_len,
+                          &diff_block, &diff_remaining,
+                          &extra_block, &extra_remaining))
         return NULL;
 
     if (dst_len < 0) {
         PyErr_SetString(PyExc_ValueError, "negative destination length");
         return NULL;
     }
-    if (controlBlockLength % 24) {
+    if (control_len % 24) {
         PyErr_SetString(PyExc_ValueError, "incorrect control block");
         return NULL;
     }
@@ -597,29 +597,29 @@ mod_patch(PyObject *module, PyObject *args)
         return NULL;
     dst = PyBytes_AS_STRING(result);
 
-    for (i = 0; i < controlBlockLength; i += 24) {
+    for (i = 0; i < control_len; i += 24) {
         int64_t x, y, z, j;
 
-        decode_tuple(controlBlock + i, &x, &y, &z);
-        if (x < 0 || x > dst_len - dst_pos || x > diffRemain) {
+        decode_tuple(control_block + i, &x, &y, &z);
+        if (x < 0 || x > dst_len - dst_pos || x > diff_remaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
-        memcpy(dst + dst_pos, diffBlock, x);
-        diffBlock += x;
-        diffRemain -= x;
+        memcpy(dst + dst_pos, diff_block, x);
+        diff_block += x;
+        diff_remaining -= x;
         /* Check bounds without overflowing src_pos + j. */
         for (j = 0; j < x; j++)
             if (src_pos >= -j && src_pos < src_len - j)
                 dst[dst_pos + j] += src[src_pos + j];
         dst_pos += x;
-        if (y < 0 || y > dst_len - dst_pos || y > extraRemain) {
+        if (y < 0 || y > dst_len - dst_pos || y > extra_remaining) {
             PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
             goto error;
         }
-        memcpy(dst + dst_pos, extraBlock, y);
-        extraBlock += y;
-        extraRemain -= y;
+        memcpy(dst + dst_pos, extra_block, y);
+        extra_block += y;
+        extra_remaining -= y;
         dst_pos += y;
         if (update_src_pos(&src_pos, x) < 0 ||
             update_src_pos(&src_pos, z) < 0)
@@ -627,7 +627,7 @@ mod_patch(PyObject *module, PyObject *args)
     }
 
     /* confirm that a valid patch was applied */
-    if (dst_pos != dst_len || diffRemain != 0 || extraRemain != 0) {
+    if (dst_pos != dst_len || diff_remaining != 0 || extra_remaining != 0) {
         PyErr_SetString(PyExc_ValueError, "corrupt patch (underflow)");
         goto error;
     }

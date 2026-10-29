@@ -63,15 +63,20 @@ def read_patch(fi, header_only=False):
     return dst_len, control_block, diff_block, extra_block
 
 
+def pack_header(control_len, diff_len, dst_len):
+    return (MAGIC +
+            core.encode_int64(control_len) +
+            core.encode_int64(diff_len) +
+            core.encode_int64(dst_len))
+
+
 def write_patch(fo, dst_len, control_block, diff_block, extra_block):
     "write a BSDIFF4-format patch to stream 'fo'"
-    fo.write(MAGIC)
     # compress each block
     control_block = bz2.compress(control_block)
     diff_block = bz2.compress(diff_block)
     extra_block = bz2.compress(extra_block)
-    for n in len(control_block), len(diff_block), dst_len:
-        fo.write(core.encode_int64(n))
+    fo.write(pack_header(len(control_block), len(diff_block), dst_len))
     fo.write(control_block)
     fo.write(diff_block)
     fo.write(extra_block)

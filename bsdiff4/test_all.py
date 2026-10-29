@@ -12,6 +12,7 @@ from threading import Barrier
 
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
+                            pack_header as header,
                             MAGIC, write_patch, read_patch, read_data)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
@@ -197,13 +198,6 @@ class TestCoreDiffPatch(unittest.TestCase):
                                core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
-
-def header(control_len, diff_len, dst_len):
-    return (MAGIC +
-            core.encode_int64(control_len) +
-            core.encode_int64(diff_len) +
-            core.encode_int64(dst_len))
-
 
 class TestHelpers(unittest.TestCase):
 

@@ -219,29 +219,29 @@ static Py_ssize_t
 search(const Py_ssize_t *I,
        const char *a, Py_ssize_t a_len,
        const char *b, Py_ssize_t b_len,
-       Py_ssize_t st, Py_ssize_t en, Py_ssize_t *pos)
+       Py_ssize_t lo, Py_ssize_t hi, Py_ssize_t *pos)
 {
     Py_ssize_t x, y;
 
-    if (en - st < 2) {
-        x = matchlen(a + I[st], a_len - I[st], b, b_len);
-        y = matchlen(a + I[en], a_len - I[en], b, b_len);
+    if (hi - lo < 2) {
+        x = matchlen(a + I[lo], a_len - I[lo], b, b_len);
+        y = matchlen(a + I[hi], a_len - I[hi], b, b_len);
 
         if (x > y) {
-            *pos = I[st];
+            *pos = I[lo];
             return x;
         }
         else {
-            *pos = I[en];
+            *pos = I[hi];
             return y;
         }
     }
 
-    x = st + (en - st) / 2;
+    x = lo + (hi - lo) / 2;
     if (memcmp(a + I[x], b, Py_MIN(a_len - I[x], b_len)) < 0)
-        return search(I, a, a_len, b, b_len, x, en, pos);
+        return search(I, a, a_len, b, b_len, x, hi, pos);
     else
-        return search(I, a, a_len, b, b_len, st, x, pos);
+        return search(I, a, a_len, b, b_len, lo, x, pos);
 }
 
 typedef struct {

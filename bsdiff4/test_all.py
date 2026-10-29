@@ -164,7 +164,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         ]:
             self.assertRaises(ValueError, core.patch, *args)
 
-    def test_oldpos_out_of_range(self):
+    def test_src_pos_out_of_range(self):
         bcontrol = PCB((0, 0, -1), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
@@ -173,7 +173,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
 
-    def test_oldpos_overflow(self):
+    def test_src_pos_overflow(self):
         M = 1 << 63
         for z in -M + 1, M - 1:
             self.assertEqual(core.patch(b'', 0, PCB((0, 0, z)), b'', b''),

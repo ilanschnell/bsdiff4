@@ -437,7 +437,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
         /* emit data preceding the new match, or all remaining data at EOF */
         if (len != oldscore || scan == dst_len) {
-            Py_ssize_t lenb = 0, lenf, extra_len, i;
+            Py_ssize_t lenb = 0, lenf, extra_len, z, i;
 
             lenf = forward_match_length(src, src_len, dst,
                                         lastscan, lastpos, scan);
@@ -457,8 +457,8 @@ compute_diff(const char *src, Py_ssize_t src_len,
             result->diff_len += lenf;
             result->extra_len += extra_len;
 
-            if (append_control(result->control, lenf, extra_len,
-                               (pos - lenb) - (lastpos + lenf)) < 0)
+            z = (pos - lenb) - (lastpos + lenf);
+            if (append_control(result->control, lenf, extra_len, z) < 0)
                 goto error;
 
             lastscan = scan - lenb;

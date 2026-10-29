@@ -21,7 +21,7 @@ swap(Py_ssize_t *a, Py_ssize_t *b)
 
 /* sort and rank a small suffix group */
 static void
-split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
+split_small(Py_ssize_t *sa, Py_ssize_t *rank, Py_ssize_t start,
             Py_ssize_t len, Py_ssize_t h)
 {
     Py_ssize_t j, k;
@@ -30,37 +30,37 @@ split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
         Py_ssize_t i, x;
 
         j = 1;
-        x = V[I[k] + h];
+        x = rank[sa[k] + h];
         for (i = 1; k + i < start + len; i++) {
-            if (V[I[k + i] + h] < x) {
-                x = V[I[k + i] + h];
+            if (rank[sa[k + i] + h] < x) {
+                x = rank[sa[k + i] + h];
                 j = 0;
             }
-            if (V[I[k + i] + h] == x) {
-                swap(&I[k + j], &I[k + i]);
+            if (rank[sa[k + i] + h] == x) {
+                swap(&sa[k + j], &sa[k + i]);
                 j++;
             }
         }
         for (i = 0; i < j; i++)
-            V[I[k + i]] = k + j - 1;
+            rank[sa[k + i]] = k + j - 1;
         if (j == 1)
-            I[k] = -1;
+            sa[k] = -1;
     }
 }
 
 /* partition a suffix group around a pivot rank */
 static void
-partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
+partition_group(Py_ssize_t *sa, Py_ssize_t *rank, Py_ssize_t start,
                 Py_ssize_t len, Py_ssize_t h,
                 Py_ssize_t *lower, Py_ssize_t *upper)
 {
     Py_ssize_t i, j, k, x, jj = 0, kk = 0;
 
-    x = V[I[start + len / 2] + h];
+    x = rank[sa[start + len / 2] + h];
     for (i = start; i < start + len; i++) {
-        if (V[I[i] + h] < x)
+        if (rank[sa[i] + h] < x)
             jj++;
-        if (V[I[i] + h] == x)
+        if (rank[sa[i] + h] == x)
             kk++;
     }
     jj += start;
@@ -69,25 +69,25 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
     j = k = 0;
     i = start;
     while (i < jj) {
-        if (V[I[i] + h] < x) {
+        if (rank[sa[i] + h] < x) {
             i++;
         }
-        else if (V[I[i] + h] == x) {
-            swap(&I[i], &I[jj + j]);
+        else if (rank[sa[i] + h] == x) {
+            swap(&sa[i], &sa[jj + j]);
             j++;
         }
         else {
-            swap(&I[i], &I[kk + k]);
+            swap(&sa[i], &sa[kk + k]);
             k++;
         }
     }
 
     while (jj + j < kk) {
-        if (V[I[jj + j] + h] == x) {
+        if (rank[sa[jj + j] + h] == x) {
             j++;
         }
         else {
-            swap(&I[jj + j], &I[kk + k]);
+            swap(&sa[jj + j], &sa[kk + k]);
             k++;
         }
     }
@@ -98,32 +98,32 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
 
 /* recursively split and rank a suffix group */
 static void
-split(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
+split(Py_ssize_t *sa, Py_ssize_t *rank, Py_ssize_t start,
       Py_ssize_t len, Py_ssize_t h)
 {
     Py_ssize_t lower, upper, i;
 
     if (len < 16) {
-        split_small(I, V, start, len, h);
+        split_small(sa, rank, start, len, h);
         return;
     }
 
-    partition_group(I, V, start, len, h, &lower, &upper);
+    partition_group(sa, rank, start, len, h, &lower, &upper);
 
     if (lower > start)
-        split(I, V, start, lower - start, h);
+        split(sa, rank, start, lower - start, h);
 
     for (i = lower; i < upper; i++)
-        V[I[i]] = upper - 1;
+        rank[sa[i]] = upper - 1;
     if (upper - lower == 1)
-        I[lower] = -1;
+        sa[lower] = -1;
     if (start + len > upper)
-        split(I, V, upper, start + len - upper, h);
+        split(sa, rank, upper, start + len - upper, h);
 }
 
 /* construct suffix array for a byte string */
 static void
-qsufsort(Py_ssize_t *I, Py_ssize_t *V,
+qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
          const unsigned char *str, Py_ssize_t size)
 {
     Py_ssize_t buckets[256], i, h;
@@ -139,67 +139,67 @@ qsufsort(Py_ssize_t *I, Py_ssize_t *V,
     buckets[0] = 0;
 
     for (i = 0; i < size; i++)
-        I[++buckets[str[i]]] = i;
-    I[0] = size;
+        sa[++buckets[str[i]]] = i;
+    sa[0] = size;
     for (i = 0; i < size; i++)
-        V[i] = buckets[str[i]];
-    V[size] = 0;
+        rank[i] = buckets[str[i]];
+    rank[size] = 0;
     for (i = 1; i < 256; i++)
         if (buckets[i] == buckets[i - 1] + 1)
-            I[buckets[i]] = -1;
-    I[0] = -1;
+            sa[buckets[i]] = -1;
+    sa[0] = -1;
 
-    for (h = 1; I[0] != -(size + 1); h += h) {
+    for (h = 1; sa[0] != -(size + 1); h += h) {
         Py_ssize_t len = 0;
 
         for (i = 0; i < size + 1;) {
-            if (I[i] < 0) {
-                len -= I[i];
-                i -= I[i];
+            if (sa[i] < 0) {
+                len -= sa[i];
+                i -= sa[i];
             }
             else {
                 if (len)
-                    I[i - len] = -len;
-                len = V[I[i]] + 1 - i;
-                split(I, V, i, len, h);
+                    sa[i - len] = -len;
+                len = rank[sa[i]] + 1 - i;
+                split(sa, rank, i, len, h);
                 i += len;
                 len=0;
             }
         }
         if (len)
-            I[i - len] = -len;
+            sa[i - len] = -len;
     }
 
     for (i = 0; i < size + 1; i++)
-        I[V[i]] = i;
+        sa[rank[i]] = i;
 }
 
 /* construct suffix array */
 static Py_ssize_t *
 build_suffix_array(const char *str, Py_ssize_t size)
 {
-    Py_ssize_t *I;  /* suffix array */
-    Py_ssize_t *V;  /* temporary rank storage */
+    Py_ssize_t *sa;    /* suffix array */
+    Py_ssize_t *rank;  /* temporary rank storage */
 
-    I = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
-    if (I == NULL) {
+    sa = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
+    if (sa == NULL) {
         PyErr_NoMemory();
         return NULL;
     }
 
-    V = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
-    if (V == NULL) {
+    rank = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
+    if (rank == NULL) {
         PyErr_NoMemory();
-        PyMem_Free(I);
+        PyMem_Free(sa);
         return NULL;
     }
 
     Py_BEGIN_ALLOW_THREADS  /* release GIL */
-    qsufsort(I, V, (const unsigned char *) str, size);
+    qsufsort(sa, rank, (const unsigned char *) str, size);
     Py_END_ALLOW_THREADS
 
-    PyMem_Free(V);
-    return I;
+    PyMem_Free(rank);
+    return sa;
 }
 
 /* return the length of the common prefix */
@@ -216,7 +216,7 @@ matchlen(const char *a, Py_ssize_t a_len,
 
 /* return the longest prefix-match length and store its position in *pos */
 static Py_ssize_t
-search(const Py_ssize_t *I,
+search(const Py_ssize_t *sa,
        const char *a, Py_ssize_t a_len,
        const char *b, Py_ssize_t b_len,
        Py_ssize_t lo, Py_ssize_t hi, Py_ssize_t *pos)
@@ -224,24 +224,24 @@ search(const Py_ssize_t *I,
     Py_ssize_t x, y;
 
     if (hi - lo < 2) {
-        x = matchlen(a + I[lo], a_len - I[lo], b, b_len);
-        y = matchlen(a + I[hi], a_len - I[hi], b, b_len);
+        x = matchlen(a + sa[lo], a_len - sa[lo], b, b_len);
+        y = matchlen(a + sa[hi], a_len - sa[hi], b, b_len);
 
         if (x > y) {
-            *pos = I[lo];
+            *pos = sa[lo];
             return x;
         }
         else {
-            *pos = I[hi];
+            *pos = sa[hi];
             return y;
         }
     }
 
     x = lo + (hi - lo) / 2;
-    if (memcmp(a + I[x], b, Py_MIN(a_len - I[x], b_len)) < 0)
-        return search(I, a, a_len, b, b_len, x, hi, pos);
+    if (memcmp(a + sa[x], b, Py_MIN(a_len - sa[x], b_len)) < 0)
+        return search(sa, a, a_len, b, b_len, x, hi, pos);
     else
-        return search(I, a, a_len, b, b_len, lo, x, pos);
+        return search(sa, a, a_len, b, b_len, lo, x, pos);
 }
 
 typedef struct {
@@ -383,15 +383,15 @@ compute_diff(const char *src, Py_ssize_t src_len,
 {
     Py_ssize_t lastscan, lastpos, lastoffset;
     Py_ssize_t scan, pos, len;
-    Py_ssize_t *I;
+    Py_ssize_t *sa;
 
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
         return -1;
 
     /* perform suffix sort on source data */
-    I = build_suffix_array(src, src_len);
-    if (I == NULL)
+    sa = build_suffix_array(src, src_len);
+    if (sa == NULL)
         return -1;
 
     /* allocate memory for the diff and extra blocks */
@@ -420,7 +420,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
         scan += len;
         for (scsc = scan; scan < dst_len; scan++) {
-            len = search(I, src, src_len,
+            len = search(sa, src, src_len,
                          dst + scan, dst_len - scan,
                          0, src_len, &pos);
             for (; scsc < scan + len; scsc++)
@@ -467,11 +467,11 @@ compute_diff(const char *src, Py_ssize_t src_len,
         }
     }
 
-    PyMem_Free(I);
+    PyMem_Free(sa);
     return 0;
 
 error:
-    PyMem_Free(I);
+    PyMem_Free(sa);
     return -1;
 }
 
@@ -673,7 +673,7 @@ mod_decode_int64(PyObject *module, PyObject *bytes)
 static PyObject *
 mod_suffix_array(PyObject *module, PyObject *bytes)
 {
-    Py_ssize_t *I;
+    Py_ssize_t *sa;
     PyObject *list;
     Py_ssize_t size, i;
     char *str;
@@ -681,8 +681,8 @@ mod_suffix_array(PyObject *module, PyObject *bytes)
     if (PyBytes_AsStringAndSize(bytes, &str, &size) < 0)
         return NULL;
 
-    I = build_suffix_array(str, size);
-    if (I == NULL)
+    sa = build_suffix_array(str, size);
+    if (sa == NULL)
         return NULL;
 
     list = PyList_New(size + 1);
@@ -690,17 +690,17 @@ mod_suffix_array(PyObject *module, PyObject *bytes)
         goto error;
 
     for (i = 0; i <= size; i++) {
-        PyObject *item = PyLong_FromSsize_t(I[i]);
+        PyObject *item = PyLong_FromSsize_t(sa[i]);
         if (item == NULL)
             goto error;
         PyList_SET_ITEM(list, i, item);
     }
 
-    PyMem_Free(I);
+    PyMem_Free(sa);
     return list;
  error:
     Py_XDECREF(list);
-    PyMem_Free(I);
+    PyMem_Free(sa);
     return NULL;
 }
 

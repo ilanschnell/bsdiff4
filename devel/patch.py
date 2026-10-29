@@ -11,15 +11,16 @@ from bsdiff4.format import unpack_control_block, read_patch
 
 def patch(src, patch_bytes) -> bytes:
     src_len = len(src)
-    dst_len, bcontrol, bdiff, bextra = read_patch(BytesIO(patch_bytes))
+    dst_len, control_block, diff_block, extra_block = \
+        read_patch(BytesIO(patch_bytes))
     dst = bytearray(dst_len)
     src_pos = dst_pos = diff_pos = extra_pos = 0
 
-    for x, y, z in unpack_control_block(bcontrol):
-        if x < 0 or x > dst_len - dst_pos or x > len(bdiff) - diff_pos:
+    for x, y, z in unpack_control_block(control_block):
+        if x < 0 or x > dst_len - dst_pos or x > len(diff_block) - diff_pos:
             raise ValueError("corrupt patch")
 
-        dst[dst_pos:dst_pos + x] = bdiff[diff_pos:diff_pos + x]
+        dst[dst_pos:dst_pos + x] = diff_block[diff_pos:diff_pos + x]
         diff_pos += x
 
         # Add source bytes where the diff range overlaps the source.
@@ -28,16 +29,16 @@ def patch(src, patch_bytes) -> bytes:
 
         dst_pos += x
 
-        if y < 0 or y > dst_len - dst_pos or y > len(bextra) - extra_pos:
+        if y < 0 or y > dst_len - dst_pos or y > len(extra_block) - extra_pos:
             raise ValueError("corrupt patch")
 
-        dst[dst_pos:dst_pos + y] = bextra[extra_pos:extra_pos + y]
+        dst[dst_pos:dst_pos + y] = extra_block[extra_pos:extra_pos + y]
         extra_pos += y
         dst_pos += y
         src_pos += x + z
 
-    if (dst_pos != dst_len or diff_pos != len(bdiff) or
-        extra_pos != len(bextra)):
+    if (dst_pos != dst_len or diff_pos != len(diff_block) or
+        extra_pos != len(extra_block)):
         raise ValueError("corrupt patch")
 
     return bytes(dst)
@@ -89,9 +90,9 @@ class TestPatch(unittest.TestCase):
             n2 = random.randint(0, 1000)
             self.round_trip(os.urandom(n1), os.urandom(n2))
 
-    def assert_corrupt(self, len_dst, controls, bdiff=b'', bextra=b''):
+    def assert_corrupt(self, dst_len, controls, bdiff=b'', bextra=b''):
         f = BytesIO()
-        write_patch(f, len_dst, pack_control_block(*controls), bdiff, bextra)
+        write_patch(f, dst_len, pack_control_block(*controls), bdiff, bextra)
         p = f.getvalue()
         with self.assertRaisesRegex(ValueError, "corrupt patch"):
             patch(b'', p)

@@ -111,10 +111,11 @@ ROUND_TRIP_CASES = [
 class TestCoreDiffPatch(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        bcontrol, bdiff, bextra = core.diff(src, dst)
-        for b in bcontrol, bdiff, bextra:
+        control_block, diff_block, extra_block = core.diff(src, dst)
+        for b in control_block, diff_block, extra_block:
             self.assertIs(type(b), bytes)
-        dst2 = core.patch(src, len(dst), bcontrol, bdiff, bextra)
+        dst2 = core.patch(src, len(dst),
+                          control_block, diff_block, extra_block)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)
 
@@ -188,11 +189,11 @@ class TestCoreDiffPatch(unittest.TestCase):
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 
-def header(len_control, len_diff, len_dst):
+def header(control_len, diff_len, dst_len):
     return (MAGIC +
-            core.encode_int64(len_control) +
-            core.encode_int64(len_diff) +
-            core.encode_int64(len_dst))
+            core.encode_int64(control_len) +
+            core.encode_int64(diff_len) +
+            core.encode_int64(dst_len))
 
 
 class TestHelpers(unittest.TestCase):
@@ -285,11 +286,11 @@ class TestFormat(unittest.TestCase):
         fi = BytesIO()
         write_patch(fi, 4, PCB((3, 1, 0)), 3 * b'\x00', b'!')
         fi.seek(0)
-        len_control, len_diff, len_dst, bcontrol = read_patch(
+        control_len, diff_len, dst_len, control_block = read_patch(
             fi, header_only=True)
-        self.assertEqual((len_dst, bcontrol), (4, PCB((3, 1, 0))))
-        self.assertEqual(fi.tell(), 32 + len_control)
-        self.assertGreater(len_diff, 0)
+        self.assertEqual((dst_len, control_block), (4, PCB((3, 1, 0))))
+        self.assertEqual(fi.tell(), 32 + control_len)
+        self.assertGreater(diff_len, 0)
 
 
 class TestCompatibility(unittest.TestCase):

@@ -48,26 +48,27 @@ def main_bsdiff4():
 
 
 def show_patch(patch_path, verbose=False):
-    s_total = getsize(patch_path)
+    total_len = getsize(patch_path)
     with open(patch_path, 'rb') as fi:
-        s_control, s_diff, s_dst, bcontrol = read_patch(fi, header_only=True)
+        control_len, diff_len, dst_len, control_block = \
+            read_patch(fi, header_only=True)
 
     for name, size in [
-            ('total', s_total),
-            ('control', s_control),
-            ('diff', s_diff),
-            ('extra', s_total - 32 - s_control - s_diff),
-            ('dst', s_dst),
+            ('total', total_len),
+            ('control', control_len),
+            ('diff', diff_len),
+            ('extra', total_len - 32 - control_len - diff_len),
+            ('dst', dst_len),
     ]:
         print('%s size: %d (%s)' % (name, size, human_bytes(size)))
 
-    if s_dst:
-        print('total / dst = %.2f%%' % (100.0 * s_total / s_dst))
+    if dst_len:
+        print('total / dst = %.2f%%' % (100.0 * total_len / dst_len))
 
-    print('number of control tuples: %d' % (len(bcontrol) // 24))
+    print('number of control tuples: %d' % (len(control_block) // 24))
     if verbose:
         print('%20s %10s %10s' % ('x', 'y', 'z'))
-        for ct in unpack_control_block(bcontrol):
+        for ct in unpack_control_block(control_block):
             print('%20d %10d %10d' % ct)
 
 

@@ -10,8 +10,9 @@ MAGIC = b'BSDIFF40'
 
 def pack_control_block(*controls):
     "pack binary control block from control tuples"
-    return b''.join(core.encode_int64(x) for control in controls
-                    for x in control)
+    return b''.join(core.encode_int64(value)
+                    for x, y, z in controls
+                    for value in (x, y, z))
 
 
 def unpack_control_block(control_block):

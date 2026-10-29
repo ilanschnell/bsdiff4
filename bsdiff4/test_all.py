@@ -222,8 +222,10 @@ class TestHelpers(unittest.TestCase):
         controls = [(0, 0, -1), (2, 0, 0)]
 
         self.assertEqual(PCB(*controls), bcontrol)
-        self.assertEqual(list(unpack_control_block(bcontrol)),
-                         controls)
+        for control in (1, 2), (1, 2, 3, 4):
+            self.assertRaises(ValueError, PCB, control)
+
+        self.assertEqual(list(unpack_control_block(bcontrol)), controls)
         for n in 1, 23, 25, 47, 49:
             bcontrol = unpack_control_block(n * b'\x00')
             self.assertRaisesRegex(ValueError, "invalid control block",

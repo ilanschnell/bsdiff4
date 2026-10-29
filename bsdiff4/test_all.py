@@ -298,6 +298,15 @@ class TestFormat(unittest.TestCase):
             self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
                                    read_patch, BytesIO(data))
 
+    @unittest.skipUnless(sys.maxsize < (1 << 31), "requires 32-bit Python")
+    def test_header_overflow(self):
+        M = 1 << 31
+        for lengths in [(M, 0, 0), (0, M, 0), (0, 0, M)]:
+            data = header(*lengths) + 3 * bz2.compress(b'')
+            self.assertRaisesRegex(ValueError,
+                                   "size too large in bsdiff4 patch",
+                                   read_patch, BytesIO(data))
+
     def test_header_only(self):
         fi = BytesIO()
         write_patch(fi, 4, PCB((3, 1, 0)), 3 * b'\x00', b'!')

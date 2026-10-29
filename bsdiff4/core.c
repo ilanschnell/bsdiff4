@@ -247,7 +247,7 @@ search(const Py_ssize_t *I,
 typedef struct {
     PyObject *control;      /* control block as bytearray */
     unsigned char *diff;    /* difference block */
-    unsigned char *extra;   /* extra block */
+    char *extra;            /* extra block */
     Py_ssize_t diff_len;    /* length of difference block */
     Py_ssize_t extra_len;   /* length of extra block */
 } DiffResult;
@@ -485,15 +485,13 @@ build_diff_result(DiffResult *result)
     if (control == NULL)
         return NULL;
 
-    diff = PyBytes_FromStringAndSize((char *) result->diff,
-                                     result->diff_len);
+    diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
     if (diff == NULL) {
         Py_DECREF(control);
         return NULL;
     }
 
-    extra = PyBytes_FromStringAndSize((char *) result->extra,
-                                      result->extra_len);
+    extra = PyBytes_FromStringAndSize(result->extra, result->extra_len);
     if (extra == NULL) {
         Py_DECREF(control);
         Py_DECREF(diff);

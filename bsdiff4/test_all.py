@@ -11,9 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import bsdiff4.core as core  # type: ignore
-from bsdiff4.format import (pack_control_block as PCB, unpack_control_block,
-                            pack_header, unpack_header,
-                            MAGIC, write_patch, read_patch, read_data)
+from bsdiff4.format import (MAGIC, pack_header, unpack_header,
+                            pack_control_block, unpack_control_block,
+                            write_patch, read_patch, read_data)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -129,31 +129,34 @@ class TestCoreDiffPatch(unittest.TestCase):
     def test_diff_blocks(self):
         # Check construction of control, diff and extra blocks.
         self.assertEqual(core.diff(b'banana', b'bandana'),
-                         (PCB((3, 4, 2)), 3 * b'\x00', b'dana'))
+                         (pack_control_block((3, 4, 2)),
+                          3 * b'\x00', b'dana'))
 
         src = 32 * b'a'
         dst = 16 * b'a' + b'b' + 16 * b'a'
         self.assertEqual(core.diff(src, dst),
-                         (PCB((32, 1, -1)),
+                         (pack_control_block((32, 1, -1)),
                           16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
 
         src = 100 * b'a' + 100 * b'b'
         dst = 100 * b'b' + 100 * b'a'
         self.assertEqual(core.diff(src, dst),
-                         (PCB((0, 100, 0), (100, 0, -100)),
+                         (pack_control_block((0, 100, 0), (100, 0, -100)),
                           100 * b'\x00', 100 * b'b'))
 
     def test_diff_adjust_overlap(self):
         # Ensure that an overlapping byte is assigned to the better
         # matching block.
         self.assertEqual(core.diff(b'ccccdabcadcb', b'ccccdcdabcadcb'),
-                         (PCB((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
+                         (pack_control_block((5, 0, -2), (9, 0, -9)),
+                          14 * b'\0', b''))
 
     def test_patch_corrupt(self):
         for control in (-1, 0, 0), (0, -1, 0), (5, 0, 0), (0, 5, 0):
+            bcontrol = pack_control_block(control)
             self.assertRaisesRegex(ValueError, r"corrupt patch \(overflow\)",
-                                   core.patch,
-                                   b'abcd', 4, PCB(control), 4 * b'\x00', b'')
+                                   core.patch, b'abcd',
+                                   4, bcontrol, 4 * b'\x00', b'')
 
         self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
         self.assertRaisesRegex(ValueError, "negative destination length",
@@ -172,27 +175,28 @@ class TestCoreDiffPatch(unittest.TestCase):
                                    core.patch, *args)
 
     def test_src_pos_out_of_range(self):
-        bcontrol = PCB((0, 0, -1), (2, 0, 0))
+        bcontrol = pack_control_block((0, 0, -1), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
 
-        bcontrol = PCB((0, 0, 2), (2, 0, 0))
+        bcontrol = pack_control_block((0, 0, 2), (2, 0, 0))
         self.assertEqual(
             core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
 
     def test_src_pos_overflow(self):
         M = 1 << 63
         for z in -M + 1, M - 1:
-            self.assertEqual(core.patch(b'', 0, PCB((0, 0, z)), b'', b''),
-                             b'')
+            bcontrol = pack_control_block((0, 0, z))
+            self.assertEqual(core.patch(b'', 0, bcontrol, b'', b''), b'')
 
         for controls in [[(0, 0, M - 1), (0, 0, 1)],
                          [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
+            bcontrol = pack_control_block(*controls)
             self.assertRaisesRegex(ValueError,
                                    r"corrupt patch \(offset overflow\)",
-                                   core.patch,
-                                   b'', 0, PCB(*controls), b'', b'')
-        bcontrol = PCB((0, 0, M - 1), (2, 0, 0))
+                                   core.patch, b'', 0, bcontrol, b'', b'')
+
+        bcontrol = pack_control_block((0, 0, M - 1), (2, 0, 0))
         self.assertRaisesRegex(ValueError,
                                r"corrupt patch \(offset overflow\)",
                                core.patch, b'', 2, bcontrol, 2 * b'\x00', b'')
@@ -223,9 +227,9 @@ class TestHelpers(unittest.TestCase):
         """)
         controls = [(0, 0, -1), (2, 0, 0)]
 
-        self.assertEqual(PCB(*controls), bcontrol)
+        self.assertEqual(pack_control_block(*controls), bcontrol)
         for control in (1, 2), (1, 2, 3, 4):
-            self.assertRaises(ValueError, PCB, control)
+            self.assertRaises(ValueError, pack_control_block, control)
 
         self.assertEqual(list(unpack_control_block(bcontrol)), controls)
         for n in 1, 23, 25, 47, 49:
@@ -318,12 +322,13 @@ class TestFormat(unittest.TestCase):
                                    read_patch, BytesIO(data))
 
     def test_header_only(self):
+        bcontrol = pack_control_block((3, 1, 0))
         fi = BytesIO()
-        write_patch(fi, 4, PCB((3, 1, 0)), 3 * b'\x00', b'!')
+        write_patch(fi, 4, bcontrol, 3 * b'\x00', b'!')
         fi.seek(0)
         control_len, diff_len, dst_len, control_block = read_patch(
             fi, header_only=True)
-        self.assertEqual((dst_len, control_block), (4, PCB((3, 1, 0))))
+        self.assertEqual((dst_len, control_block), (4, bcontrol))
         self.assertEqual(fi.tell(), 32 + control_len)
         self.assertGreater(diff_len, 0)
 

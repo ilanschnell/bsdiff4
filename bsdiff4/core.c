@@ -204,8 +204,8 @@ build_suffix_array(const char *str, Py_ssize_t size)
 
 /* return the length of the common prefix */
 static Py_ssize_t
-matchlen(const unsigned char *a, Py_ssize_t a_len,
-         const unsigned char *b, Py_ssize_t b_len)
+matchlen(const char *a, Py_ssize_t a_len,
+         const char *b, Py_ssize_t b_len)
 {
     Py_ssize_t i = 0;
 
@@ -217,8 +217,8 @@ matchlen(const unsigned char *a, Py_ssize_t a_len,
 /* return the longest prefix-match length and store its position in *pos */
 static Py_ssize_t
 search(const Py_ssize_t *I,
-       const unsigned char *a, Py_ssize_t a_len,
-       const unsigned char *b, Py_ssize_t b_len,
+       const char *a, Py_ssize_t a_len,
+       const char *b, Py_ssize_t b_len,
        Py_ssize_t st, Py_ssize_t en, Py_ssize_t *pos)
 {
     Py_ssize_t x, y;
@@ -420,8 +420,8 @@ compute_diff(const char *src, Py_ssize_t src_len,
         Py_BEGIN_ALLOW_THREADS  /* release GIL */
         scan += len;
         for (scsc = scan; scan < dst_len; scan++) {
-            len = search(I, (const unsigned char *) src, src_len,
-                         (const unsigned char *) dst + scan, dst_len - scan,
+            len = search(I, src, src_len,
+                         dst + scan, dst_len - scan,
                          0, src_len, &pos);
             for (; scsc < scan + len; scsc++)
                 if (scsc + lastoffset < src_len &&

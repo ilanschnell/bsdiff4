@@ -157,8 +157,9 @@ class TestCoreDiffPatch(unittest.TestCase):
         self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
         self.assertRaisesRegex(ValueError, "negative destination length",
                                core.patch, b'', -1, b'', b'', b'')
-        self.assertRaisesRegex(ValueError, "invalid control block",
-                               core.patch, b'', 0, b'A', b'', b'')
+        for n in 1, 23, 25, 47, 49:
+            self.assertRaisesRegex(ValueError, "invalid control block",
+                                   core.patch, b'', 0, n * b'\x00', b'', b'')
 
     def test_patch_underflow(self):
         for args in [
@@ -223,6 +224,10 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(PCB(*controls), bcontrol)
         self.assertEqual(list(unpack_control_block(bcontrol)),
                          controls)
+        for n in 1, 23, 25, 47, 49:
+            bcontrol = unpack_control_block(n * b'\x00')
+            self.assertRaisesRegex(ValueError, "invalid control block",
+                                   list, bcontrol)  # force iteration
 
 
 class TestFormat(unittest.TestCase):

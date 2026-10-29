@@ -6,14 +6,14 @@ The code is mostly derived from ``cx_bsdiff`` (written by Anthony Tuininga,
 http://cx-bsdiff.sourceforge.net/).  The ``cx_bsdiff`` code in turn was
 derived from bsdiff, the standalone utility produced for BSD which can be
 found at http://www.daemonology.net/bsdiff.
-In addition to the two functions (diff and patch) cx_bsdiff provides, this
-package includes:
+Key features of this package include:
 
-* an interface to the BSDIFF4-format
+* high-level ``diff`` and ``patch`` functions
+* an interface to the BSDIFF4 format
 * improved error handling for malformed patches
-* functions for creating and applying patches directly to files
-* command line interfaces: ``bsdiff4`` and ``bspatch4``
-* tests
+* functions for creating patches from files and applying them to files
+* command-line interfaces: ``bsdiff4`` and ``bspatch4``
+* extensive tests
 
 
 The bsdiff4 package defines the following high level functions:

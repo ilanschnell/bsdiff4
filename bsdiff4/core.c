@@ -10,9 +10,9 @@
 #include <stdint.h>
 
 
-/* swap two suffix array entries */
+/* swap two values */
 static inline void
-swap_indices(Py_ssize_t *a, Py_ssize_t *b)
+swap(Py_ssize_t *a, Py_ssize_t *b)
 {
     Py_ssize_t tmp = *a;
     *a = *b;
@@ -37,7 +37,7 @@ split_small(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
                 j = 0;
             }
             if (V[I[k + i] + h] == x) {
-                swap_indices(&I[k + j], &I[k + i]);
+                swap(&I[k + j], &I[k + i]);
                 j++;
             }
         }
@@ -73,11 +73,11 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
             i++;
         }
         else if (V[I[i] + h] == x) {
-            swap_indices(&I[i], &I[jj + j]);
+            swap(&I[i], &I[jj + j]);
             j++;
         }
         else {
-            swap_indices(&I[i], &I[kk + k]);
+            swap(&I[i], &I[kk + k]);
             k++;
         }
     }
@@ -87,7 +87,7 @@ partition_group(Py_ssize_t *I, Py_ssize_t *V, Py_ssize_t start,
             j++;
         }
         else {
-            swap_indices(&I[jj + j], &I[kk + k]);
+            swap(&I[jj + j], &I[kk + k]);
             k++;
         }
     }

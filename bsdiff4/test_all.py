@@ -143,21 +143,16 @@ class TestCoreDiffPatch(unittest.TestCase):
     def test_diff_adjust_overlap(self):
         # Ensure that an overlapping byte is assigned to the better
         # matching block.
-        src = b'ccccdabcadcb'
-        dst = b'ccccdcdabcadcb'
-        self.assertEqual(core.diff(src, dst), (PCB((5, 0, -2), (9, 0, -9)),
-                                               14 * b'\0', b''))
+        self.assertEqual(core.diff(b'ccccdabcadcb', b'ccccdcdabcadcb'),
+                         (PCB((5, 0, -2), (9, 0, -9)), 14 * b'\0', b''))
 
     def test_patch_corrupt(self):
-        for bcontrol in [PCB((-1, 0, 0)),
-                         PCB((0, -1, 0)),
-                         PCB((5, 0, 0)),
-                         PCB((0, 5, 0))]:
+        for control in (-1, 0, 0), (0, -1, 0), (5, 0, 0), (0, 5, 0):
             self.assertRaises(ValueError, core.patch,
-                              b'abcd', 4, bcontrol, 4 * b'\x00', b'')
+                              b'abcd', 4, PCB(control), 4 * b'\x00', b'')
 
-        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
         self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+        self.assertRaises(ValueError, core.patch, b'', -1, b'', b'', b'')
         self.assertRaises(ValueError, core.patch, b'', 0, b'A', b'', b'')
 
     def test_patch_underflow(self):

@@ -152,7 +152,7 @@ qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
     for (h = 1; sa[0] != -(size + 1); h += h) {
         Py_ssize_t len = 0;
 
-        for (i = 0; i < size + 1;) {
+        for (i = 0; i <= size;) {
             if (sa[i] < 0) {
                 len -= sa[i];
                 i -= sa[i];
@@ -163,14 +163,14 @@ qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
                 len = rank[sa[i]] + 1 - i;
                 split(sa, rank, i, len, h);
                 i += len;
-                len=0;
+                len = 0;
             }
         }
         if (len)
             sa[i - len] = -len;
     }
 
-    for (i = 0; i < size + 1; i++)
+    for (i = 0; i <= size; i++)
         sa[rank[i]] = i;
 }
 

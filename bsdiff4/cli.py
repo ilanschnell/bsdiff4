@@ -51,6 +51,7 @@ def show_patch(patch_path, verbose=False):
     total_len = getsize(patch_path)
     with open(patch_path, 'rb') as fi:
         control_len, diff_len, dst_len = unpack_header(fi.read(32))
+        print("sizes:")
         for name, size in [
             ('total', total_len),
             ('control', control_len),
@@ -58,10 +59,7 @@ def show_patch(patch_path, verbose=False):
             ('extra', total_len - 32 - control_len - diff_len),
             ('dst', dst_len),
         ]:
-            print('%s size: %d (%s)' % (name, size, human_bytes(size)))
-
-        if dst_len:
-            print('total / dst = %.2f%%' % (100.0 * total_len / dst_len))
+            print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
 
         if not verbose:
             return
@@ -74,7 +72,7 @@ def show_patch(patch_path, verbose=False):
             ('diff', len(diff_block)),
             ('extra', len(extra_block)),
         ]:
-            print('%s: %d (%s)' % (name, size, human_bytes(size)))
+            print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
 
         print('\nnumber of control tuples: %d' % (len(control_block) // 24))
         print('%10s %10s %10s' % ('x', 'y', 'z'))

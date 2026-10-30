@@ -300,11 +300,6 @@ class TestFormat(unittest.TestCase):
         for data in invalid_blocks:
             self.assertRaises(OSError, read_patch, BytesIO(data))
 
-        control = bz2.compress(b'\x00')
-        data = pack_header(len(control), len(empty), 0) + control + 2 * empty
-        self.assertRaisesRegex(ValueError, "invalid control block",
-                               read_patch, BytesIO(data))
-
         for data in [
             pack_header(len(empty) + 1, 0, 0) + empty,
             pack_header(len(empty), len(empty) + 1, 0) + 2 * empty,
@@ -320,17 +315,6 @@ class TestFormat(unittest.TestCase):
             self.assertRaisesRegex(ValueError,
                                    "size too large in bsdiff4 patch",
                                    read_patch, BytesIO(data))
-
-    def test_header_only(self):
-        bcontrol = pack_control_block((3, 1, 0))
-        fi = BytesIO()
-        write_patch(fi, 4, bcontrol, 3 * b'\x00', b'!')
-        fi.seek(0)
-        control_len, diff_len, dst_len, control_block = read_patch(
-            fi, header_only=True)
-        self.assertEqual((dst_len, control_block), (4, bcontrol))
-        self.assertEqual(fi.tell(), 32 + control_len)
-        self.assertGreater(diff_len, 0)
 
 
 class TestCompatibility(unittest.TestCase):
@@ -350,6 +334,17 @@ class TestCompatibility(unittest.TestCase):
 
     def test_header(self):
         self.assertEqual(unpack_header(self.data[:32]), (0x2a, 0x25, 0x04))
+
+    def test_read_write_patch(self):
+        f = BytesIO(self.data)
+        dst_len, control_block, diff_block, extra_block = read_patch(f)
+        self.assertEqual(dst_len, 4)
+        self.assertEqual(len(control_block), 24)
+        self.assertEqual(diff_block, b'\x00\x00\x01')
+        self.assertEqual(extra_block, b'!')
+        f = BytesIO()
+        write_patch(f, dst_len, control_block, diff_block, extra_block)
+        self.assertEqual(f.getvalue(), self.data)
 
     def test_truncated_patch(self):
         for i in range(len(self.data)):

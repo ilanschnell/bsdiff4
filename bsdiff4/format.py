@@ -55,19 +55,13 @@ def read_exact(fi, size):
     return data
 
 
-def read_patch(fi, header_only=False):
+def read_patch(fi):
     "read a BSDIFF4-format patch from stream 'fi'"
     sizes = unpack_header(read_exact(fi, 32))
     for size in sizes:
         check_size(size)
     control_len, diff_len, dst_len = sizes
-    # read the control header
     control_block = bz2.decompress(read_exact(fi, control_len))
-    if len(control_block) % 24:
-        raise ValueError("invalid control block")
-    if header_only:
-        return control_len, diff_len, dst_len, control_block
-    # read the diff and extra blocks
     diff_block = bz2.decompress(read_exact(fi, diff_len))
     extra_block = bz2.decompress(fi.read())
     return dst_len, control_block, diff_block, extra_block

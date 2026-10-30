@@ -163,7 +163,12 @@ class TestCoreDiffPatch(unittest.TestCase):
                              3 * b'\x00', b'dana')
             self.assertEqual(dst, b'bandana')
 
-    def test_patch_corrupt(self):
+        # The control block must be binary data, not a list of tuples.
+        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+
+    # ----- Patch edge cases and error handling -----
+
+    def test_x_y_out_of_range(self):
         for control, var_name in [((-1, 0, 0), 'x'),
                                   ((0, -1, 0), 'y'),
                                   ((5, 0, 0), 'x'),
@@ -174,17 +179,18 @@ class TestCoreDiffPatch(unittest.TestCase):
                                    core.patch, b'abcd', 4,
                                    bcontrol, 4 * b'\x00', b'')
 
-        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+    def test_negative_destination_length(self):
         msg = r"corrupt patch \(negative destination length\)"
         self.assertRaisesRegex(ValueError, msg,
                                core.patch, b'', -1, b'', b'', b'')
 
+    def test_invalid_control_block(self):
         msg = r"corrupt patch \(invalid control block\)"
         for n in 1, 23, 25, 47, 49:
             self.assertRaisesRegex(ValueError, msg,
                                    core.patch, b'', 0, n * b'\x00', b'', b'')
 
-    def test_patch_final_state(self):
+    def test_final_state(self):
         for args, msg in [
             ((1, b'', b'', b''),  "incomplete output"),
             ((0, b'', b'x', b''), "unused block data"),

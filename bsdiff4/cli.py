@@ -61,9 +61,6 @@ def show_patch(patch_path, verbose=False):
         ]:
             print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
 
-        if not verbose:
-            return
-
         fi.seek(0)
         _, control_block, diff_block, extra_block = read_patch(fi)
         print("\nuncompressed block sizes:")
@@ -75,9 +72,10 @@ def show_patch(patch_path, verbose=False):
             print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
 
         print('\nnumber of control tuples: %d' % (len(control_block) // 24))
-        print('%10s %10s %10s' % ('x', 'y', 'z'))
-        for ct in unpack_control_block(control_block):
-            print('%10d %10d %10d' % ct)
+        if verbose:
+            print('%10s %10s %10s' % ('x', 'y', 'z'))
+            for ct in unpack_control_block(control_block):
+                print('%10d %10d %10d' % ct)
 
 
 def main_bspatch4():

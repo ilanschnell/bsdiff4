@@ -464,6 +464,39 @@ class TestFile(unittest.TestCase):
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')
 
+    def test_inplace_preserves_file(self):
+        self.write_data('src', b'source data')
+        self.write_data('dst', b'destination data')
+        file_diff(self.path('src'), self.path('dst'), self.path('patch'))
+
+        src = self.path('src')
+        link = self.path('link')
+
+        os.link(src, link)
+        stat_before = os.stat(src)
+
+        file_patch_inplace(src, self.path('patch'))
+
+        stat_after = os.stat(src)
+        self.assertEqual((stat_after.st_dev, stat_after.st_ino),
+                         (stat_before.st_dev, stat_before.st_ino))
+        self.assert_same_file_content('src', 'dst')
+        self.assert_same_file_content('link', 'dst')
+
+    def test_patch_error_preserves_files(self):
+        self.write_data('src', b'source data')
+        self.write_data('dst', b'destination data')
+        self.write_data('patch', b'invalid patch')
+
+        self.assertRaises(ValueError, file_patch,
+                          self.path('src'), self.path('dst'),
+                          self.path('patch'))
+        self.assertEqual(read_data(self.path('dst')), b'destination data')
+
+        self.assertRaises(ValueError, file_patch_inplace,
+                          self.path('src'), self.path('patch'))
+        self.assertEqual(read_data(self.path('src')), b'source data')
+
 # -------------------------- free threading ------------------------------
 
 NTHREADS = 4

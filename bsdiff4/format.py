@@ -95,24 +95,23 @@ def diff(src_bytes: bytes, dst_bytes: bytes) -> bytes:
     return faux.getvalue()
 
 
-def file_diff(src_path: str, dst_path: str, patch_path: str) -> None:
-    """file_diff(src_path, dst_path, patch_path)
-
-    Write a BSDIFF4-format patch (from the file src_path to the file dst_path)
-    to the file patch_path.
-    """
-    src = read_data(src_path)
-    dst = read_data(dst_path)
-    with open(patch_path, 'wb') as fo:
-        write_patch(fo, len(dst), *core.diff(src, dst))
-
-
 def patch(src_bytes: bytes, patch_bytes: bytes) -> bytes:
     """patch(src_bytes, patch_bytes) -> bytes
 
     Apply the BSDIFF4-format patch_bytes to src_bytes and return the bytes.
     """
     return core.patch(src_bytes, *read_patch(BytesIO(patch_bytes)))
+
+
+def file_diff(src_path: str, dst_path: str, patch_path: str) -> None:
+    """file_diff(src_path, dst_path, patch_path)
+
+    Write a BSDIFF4-format patch (from the file src_path to the file dst_path)
+    to the file patch_path.
+    """
+    patch_bytes = diff(read_data(src_path), read_data(dst_path))
+    with open(patch_path, 'wb') as fo:
+        fo.write(patch_bytes)
 
 
 def file_patch_inplace(path: str, patch_path: str) -> None:
@@ -123,8 +122,9 @@ def file_patch_inplace(path: str, patch_path: str) -> None:
     with open(patch_path, 'rb') as fi:
         with open(path, 'r+b') as fo:
             data = fo.read()
+            dst = core.patch(data, *read_patch(fi))
             fo.seek(0)
-            fo.write(core.patch(data, *read_patch(fi)))
+            fo.write(dst)
             fo.truncate()
 
 
@@ -141,5 +141,6 @@ def file_patch(src_path: str, dst_path: str, patch_path: str) -> None:
         return
 
     with open(patch_path, 'rb') as fi:
-        with open(dst_path, 'wb') as fo:
-            fo.write(core.patch(read_data(src_path), *read_patch(fi)))
+        dst = core.patch(read_data(src_path), *read_patch(fi))
+    with open(dst_path, 'wb') as fo:
+        fo.write(dst)

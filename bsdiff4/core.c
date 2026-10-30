@@ -550,13 +550,15 @@ decode_tuple(const char *str, int64_t *x, int64_t *y, int64_t *z)
     *z = decode_int64(str + 16);
 }
 
+#define CORRUPT(s) PyErr_SetString(PyExc_ValueError, "corrupt patch (" s ")")
+
 /* update the source offset while checking for overflow */
 static int
 update_src_pos(int64_t *src_pos, int64_t increment)
 {
     if ((increment > 0 && *src_pos > INT64_MAX - increment) ||
         (increment < 0 && *src_pos < INT64_MIN - increment)) {
-        PyErr_SetString(PyExc_ValueError, "corrupt patch (offset overflow)");
+        CORRUPT("offset overflow");
         return -1;
     }
     *src_pos += increment;
@@ -582,11 +584,11 @@ mod_patch(PyObject *module, PyObject *args)
         return NULL;
 
     if (dst_len < 0) {
-        PyErr_SetString(PyExc_ValueError, "negative destination length");
+        CORRUPT("negative destination length");
         return NULL;
     }
     if (control_len % 24) {
-        PyErr_SetString(PyExc_ValueError, "invalid control block");
+        CORRUPT("invalid control block");
         return NULL;
     }
 
@@ -600,7 +602,7 @@ mod_patch(PyObject *module, PyObject *args)
 
         decode_tuple(control_block + i, &x, &y, &z);
         if (x < 0 || x > dst_len - dst_pos || x > diff_remaining) {
-            PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
+            CORRUPT("x out of range");
             goto error;
         }
         memcpy(dst + dst_pos, diff_block, x);
@@ -612,7 +614,7 @@ mod_patch(PyObject *module, PyObject *args)
                 dst[dst_pos + j] += src[src_pos + j];
         dst_pos += x;
         if (y < 0 || y > dst_len - dst_pos || y > extra_remaining) {
-            PyErr_SetString(PyExc_ValueError, "corrupt patch (overflow)");
+            CORRUPT("y out of range");
             goto error;
         }
         memcpy(dst + dst_pos, extra_block, y);
@@ -624,9 +626,12 @@ mod_patch(PyObject *module, PyObject *args)
             goto error;
     }
 
-    /* confirm that a valid patch was applied */
-    if (dst_pos != dst_len || diff_remaining != 0 || extra_remaining != 0) {
-        PyErr_SetString(PyExc_ValueError, "corrupt patch (underflow)");
+    if (dst_pos != dst_len) {
+        CORRUPT("incomplete output");
+        goto error;
+    }
+    if (diff_remaining != 0 || extra_remaining != 0) {
+        CORRUPT("unused block data");
         goto error;
     }
 
@@ -637,6 +642,7 @@ error:
     return NULL;
 }
 
+#undef CORRUPT
 
 /* encode an integer as 8 bytes */
 static PyObject *

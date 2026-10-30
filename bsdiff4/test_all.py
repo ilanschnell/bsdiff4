@@ -167,8 +167,8 @@ class TestCoreDiffPatch(unittest.TestCase):
         for control in (-1, 0, 0), (0, -1, 0), (5, 0, 0), (0, 5, 0):
             bcontrol = pack_control_block(control)
             self.assertRaisesRegex(ValueError, r"corrupt patch \(overflow\)",
-                                   core.patch, b'abcd',
-                                   4, bcontrol, 4 * b'\x00', b'')
+                                   core.patch, b'abcd', 4,
+                                   bcontrol, 4 * b'\x00', b'')
 
         self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
         self.assertRaisesRegex(ValueError, "negative destination length",
@@ -179,12 +179,12 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch_underflow(self):
         for args in [
-            (b'', 1, b'', b'', b''),
-            (b'', 0, b'', b'x', b''),
-            (b'', 0, b'', b'', b'x'),
+            (1, b'', b'', b''),
+            (0, b'', b'x', b''),
+            (0, b'', b'', b'x'),
         ]:
             self.assertRaisesRegex(ValueError, r"corrupt patch \(underflow\)",
-                                   core.patch, *args)
+                                   core.patch, b'', *args)
 
     def test_src_pos_out_of_range(self):
         bcontrol = pack_control_block((0, 0, -1), (2, 0, 0))
@@ -236,10 +236,10 @@ class TestHelpers(unittest.TestCase):
 
     def test_control_block(self):
         bcontrol = bytes.fromhex("""
-        0000000000000000 0000000000000000 0100000000000080
-        0200000000000000 0000000000000000 0000000000000000
+        1f00000000000000 a007000000000000 0100000000000080
+        0200000000000000 3000000000000080 0000000000000000
         """)
-        controls = [(0, 0, -1), (2, 0, 0)]
+        controls = [(0x1f, 0x7a0, -1), (2, -0x30, 0)]
 
         self.assertEqual(pack_control_block(*controls), bcontrol)
         for control in (1, 2), (1, 2, 3, 4):
@@ -309,7 +309,9 @@ class TestFormat(unittest.TestCase):
 
     def round_trip(self, src, dst):
         p = diff(src, dst)
+        self.assertIs(type(p), bytes)
         dst2 = patch(src, p)
+        self.assertIs(type(dst2), bytes)
         self.assertEqual(dst, dst2)
 
     def test_cases(self):
@@ -337,7 +339,7 @@ class TestFormat(unittest.TestCase):
         self.round_trip(src, dst)
 
 
-EMPTY = bz2.compress(b'')
+EMPTY = bz2.compress(b'')  # compressed empty block
 
 class TestFormatErrors(unittest.TestCase):
 

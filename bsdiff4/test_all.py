@@ -107,6 +107,8 @@ ROUND_TRIP_CASES = [
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
     (b'123456789 987654321', b'123456789000987654321'),  # issue #14
+    (b'', os.urandom(200)),
+    (os.urandom(200), os.urandom(200)),
 ]
 
 
@@ -149,7 +151,17 @@ class TestCoreDiffPatch(unittest.TestCase):
         # matching block.
         self.assertEqual(core.diff(b'ccccdabcadcb', b'ccccdcdabcadcb'),
                          (pack_control_block((5, 0, -2), (9, 0, -9)),
-                          14 * b'\0', b''))
+                          14 * b'\x00', b''))
+
+    def test_patch(self):
+        for controls in [
+            [(3, 4, 2)],
+            [(3, 4, 2), (0, 0, 0)],  # (0, 0, 0) is a no-op control tuple
+            [(0, 0, 0), (3, 4, 2)],
+        ]:
+            dst = core.patch(b'banana', 7, pack_control_block(*controls),
+                             3 * b'\x00', b'dana')
+            self.assertEqual(dst, b'bandana')
 
     def test_patch_corrupt(self):
         for control in (-1, 0, 0), (0, -1, 0), (5, 0, 0), (0, 5, 0):
@@ -189,8 +201,10 @@ class TestCoreDiffPatch(unittest.TestCase):
             bcontrol = pack_control_block((0, 0, z))
             self.assertEqual(core.patch(b'', 0, bcontrol, b'', b''), b'')
 
-        for controls in [[(0, 0, M - 1), (0, 0, 1)],
-                         [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]]:
+        for controls in [
+            [(0, 0, M - 1), (0, 0, 1)],
+            [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)],
+        ]:
             bcontrol = pack_control_block(*controls)
             self.assertRaisesRegex(ValueError,
                                    r"corrupt patch \(offset overflow\)",
@@ -238,6 +252,51 @@ class TestHelpers(unittest.TestCase):
                                    list, bcontrol)  # force iteration
 
 
+class Example:
+    src = b'abc'
+    dst = b'abd!'
+    # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
+    # 42 5a 68 39 = BZh9
+    data = bytes.fromhex("""
+    42534449 46463430 2a000000 00000000 25000000 00000000 04000000 00000000
+    425a6839 31415926 5359d014 9a290000 04c00068 08200030 cd34193f 5209593c
+    5dc914e1 42434052 68a4425a 68393141 59265359 4c5a9f48 00000040 00600020
+    00210082 8c5dc914 e1424131 6a7d2042 5a683931 41592653 592d15eb 1c000000
+    10002000 20002118 4682ee48 a70a1205 a2bd6380
+    """)
+    header_sizes = (0x2a, 0x25, 0x04)  # control_len, diff_len, dst_len
+    control_tuples = [(3, 1, 0)]
+    diff_block = b'\x00\x00\x01'
+    extra_block = b'!'
+
+
+class TestExample(unittest.TestCase):
+
+    def test_compatibility(self):
+        self.assertEqual(patch(Example.src, Example.data), Example.dst)
+
+    def test_header(self):
+        self.assertEqual(unpack_header(Example.data[:32]),
+                         Example.header_sizes)
+
+    def test_read_patch(self):
+        f = BytesIO(Example.data)
+        dst_len, control_block, diff_block, extra_block = read_patch(f)
+        self.assertEqual(dst_len, len(Example.dst))
+        self.assertEqual(list(unpack_control_block(control_block)),
+                         Example.control_tuples)
+        self.assertEqual(diff_block, Example.diff_block)
+        self.assertEqual(extra_block, Example.extra_block)
+
+    def test_write_patch(self):
+        f = BytesIO()
+        write_patch(f, len(Example.dst),
+                    pack_control_block(*Example.control_tuples),
+                    Example.diff_block,
+                    Example.extra_block)
+        self.assertEqual(f.getvalue(), Example.data)
+
+
 class TestFormat(unittest.TestCase):
 
     @unittest.skipIf(UNDER_QEMU, "slow under QEMU")
@@ -277,35 +336,40 @@ class TestFormat(unittest.TestCase):
         dst = a + os.urandom(100) + b
         self.round_trip(src, dst)
 
-    def test_malformed_patch(self):
-        self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
-                               read_patch, BytesIO(MAGIC))
 
+EMPTY = bz2.compress(b'')
+
+class TestFormatErrors(unittest.TestCase):
+
+    def test_invalid_header(self):
         p = b"BSDIFF30" + 24 * b'\x00'
         self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
                                read_patch, BytesIO(p))
 
-        empty = bz2.compress(b'')
+    def test_truncated_patch(self):
+        for data in [
+            MAGIC,
+            MAGIC + 23 * b'\x00',
+            pack_header(len(EMPTY) + 1, 0, 0) + EMPTY,
+            pack_header(len(EMPTY), len(EMPTY) + 1, 0) + 2 * EMPTY,
+        ]:
+            self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
+                                   read_patch, BytesIO(data))
+
+    def test_negative_lengths(self):
         for lengths in [(-1, 0, 0), (0, -1, 0), (0, 0, -1)]:
-            data = pack_header(*lengths) + 3 * empty
+            data = pack_header(*lengths) + 3 * EMPTY
             self.assertRaisesRegex(ValueError,
                                    "negative size in bsdiff4 patch",
                                    read_patch, BytesIO(data))
 
-        invalid_blocks = [
-            pack_header(1, len(empty), 0) + b'x' + empty + empty,
-            pack_header(len(empty), 1, 0) + empty + b'x' + empty,
-            pack_header(len(empty), len(empty), 0) + empty + empty + b'x',
-        ]
-        for data in invalid_blocks:
-            self.assertRaises(OSError, read_patch, BytesIO(data))
-
+    def test_invalid_blocks(self):
         for data in [
-            pack_header(len(empty) + 1, 0, 0) + empty,
-            pack_header(len(empty), len(empty) + 1, 0) + 2 * empty,
+            pack_header(1, len(EMPTY), 0) + b'x' + EMPTY + EMPTY,
+            pack_header(len(EMPTY), 1, 0) + EMPTY + b'x' + EMPTY,
+            pack_header(len(EMPTY), len(EMPTY), 0) + EMPTY + EMPTY + b'x',
         ]:
-            self.assertRaisesRegex(ValueError, "truncated bsdiff4 patch",
-                                   read_patch, BytesIO(data))
+            self.assertRaises(OSError, read_patch, BytesIO(data))
 
     @unittest.skipUnless(sys.maxsize < (1 << 31), "requires 32-bit Python")
     def test_header_overflow(self):
@@ -317,54 +381,28 @@ class TestFormat(unittest.TestCase):
                                    read_patch, BytesIO(data))
 
 
-class TestCompatibility(unittest.TestCase):
-
-    # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
-    # 42 5a 68 39 = BZh9
-    data = bytes.fromhex("""
-    42534449 46463430 2a000000 00000000 25000000 00000000 04000000 00000000
-    425a6839 31415926 5359d014 9a290000 04c00068 08200030 cd34193f 5209593c
-    5dc914e1 42434052 68a4425a 68393141 59265359 4c5a9f48 00000040 00600020
-    00210082 8c5dc914 e1424131 6a7d2042 5a683931 41592653 592d15eb 1c000000
-    10002000 20002118 4682ee48 a70a1205 a2bd6380
-    """)
-
-    def test_compatibility(self):
-        self.assertEqual(patch(b'abc', self.data), b'abd!')
-
-    def test_header(self):
-        self.assertEqual(unpack_header(self.data[:32]), (0x2a, 0x25, 0x04))
-
-    def test_read_write_patch(self):
-        f = BytesIO(self.data)
-        dst_len, control_block, diff_block, extra_block = read_patch(f)
-        self.assertEqual(dst_len, 4)
-        self.assertEqual(len(control_block), 24)
-        self.assertEqual(diff_block, b'\x00\x00\x01')
-        self.assertEqual(extra_block, b'!')
-        f = BytesIO()
-        write_patch(f, dst_len, control_block, diff_block, extra_block)
-        self.assertEqual(f.getvalue(), self.data)
+class TestMutate(unittest.TestCase):
 
     def test_truncated_patch(self):
-        for i in range(len(self.data)):
+        for i in range(len(Example.data)):
             # truncating patch
-            self.assertRaises(ValueError, patch, b'abc', self.data[:i])
+            self.assertRaises(ValueError, patch,
+                              Example.src, Example.data[:i])
 
     @unittest.skipIf(UNDER_QEMU, "slow under QEMU")
     def test_mutated_patch(self):
-        data = self.data
+        data = Example.data
         for i in range(len(data)):
             mut = bytearray(data)
             for j in range(8):
                 # mutate j-th bit in i-th byte
                 mut[i] = data[i] ^ (1 << j)
                 try:
-                    dst = patch(b'abc', bytes(mut))
+                    dst = patch(Example.src, bytes(mut))
                 except (ValueError, MemoryError, OSError):
                     continue
                 # mutation could theoretically produce another valid patch
-                self.assertEqual(dst, b'abd!')
+                self.assertEqual(dst, Example.dst)
 
 # ----------------------------- file layer -------------------------------
 
@@ -404,19 +442,6 @@ class TestFile(unittest.TestCase):
             self.write_data('src', a)
             self.write_data('dst', b)
             self.round_trip()
-
-    def test_1(self):
-        a = 1000 * b'ABCDE'
-        b = 1000 * b'XYZ'
-        self.write_data('src', a + os.urandom(100) + b)
-        self.write_data('dst', a + os.urandom(100) + b)
-        self.round_trip()
-
-    def test_2(self):
-        a = 10000 * b'ABCDEFG'
-        self.write_data('src', a)
-        self.write_data('dst', a + b'extra bytes at the end')
-        self.round_trip()
 
     def test_inplace(self):
         a = 1000 * b'ABCDE'

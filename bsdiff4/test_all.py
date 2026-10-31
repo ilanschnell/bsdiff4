@@ -14,7 +14,7 @@ from threading import Barrier
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (MAGIC, pack_header, unpack_header,
                             pack_control_block, unpack_control_block,
-                            write_patch, read_patch, read_data)
+                            write_patch, read_patch)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -430,9 +430,17 @@ class TestFile(unittest.TestCase):
     def path(self, fn):
         return os.path.join(self.tmpdir, fn)
 
+    def read_data(self, fn):
+        with open(self.path(fn), 'rb') as fi:
+            return fi.read()
+
+    def write_data(self, fn, data):
+        with open(self.path(fn), 'wb') as fo:
+            fo.write(data)
+
     def assert_same_file_content(self, fn1, fn2):
-        data1 = read_data(self.path(fn1))
-        data2 = read_data(self.path(fn2))
+        data1 = self.read_data(fn1)
+        data2 = self.read_data(fn2)
         self.assertEqual(data1, data2)
 
     def round_trip(self):
@@ -445,10 +453,6 @@ class TestFile(unittest.TestCase):
         # patch 'src' in place
         file_patch(self.path('src'), self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')
-
-    def write_data(self, fn, data):
-        with open(self.path(fn), 'wb') as fo:
-            fo.write(data)
 
     def test_cases(self):
         for a, b in ROUND_TRIP_CASES:
@@ -466,13 +470,15 @@ class TestFile(unittest.TestCase):
         self.assert_same_file_content('src', 'dst')
 
     def check_preserves_file(self, inplace):
+        # Verify that patching preserves the inode and its hard-link
+        # relationship.
         self.write_data('src', b'source data')
         self.write_data('dst', b'destination data')
-        file_diff(self.path('src'), self.path('dst'), self.path('patch'))
+        patch_path = self.path('patch')
+        file_diff(self.path('src'), self.path('dst'), patch_path)
 
         src = self.path('src')
         link = self.path('link')
-        patch_path = self.path('patch')
 
         os.link(src, link)
         stat_before = os.stat(src)
@@ -480,11 +486,13 @@ class TestFile(unittest.TestCase):
         if inplace:
             file_patch_inplace(src, patch_path)
         else:
-            file_patch(src, link, patch_path)
+            file_patch(link, src, patch_path)
 
+        # Ensure that `src` still refers to the same file.
         stat_after = os.stat(src)
         self.assertEqual((stat_after.st_dev, stat_after.st_ino),
                          (stat_before.st_dev, stat_before.st_ino))
+        # Ensure that the hard link was not broken.
         self.assertTrue(samefile(src, link))
         self.assert_same_file_content('src', 'dst')
 
@@ -495,6 +503,7 @@ class TestFile(unittest.TestCase):
         self.check_preserves_file(inplace=True)
 
     def test_patch_error_preserves_files(self):
+        # Verify that an invalid patch leaves the target file unchanged.
         self.write_data('src', b'source data')
         self.write_data('dst', b'destination data')
         self.write_data('patch', b'invalid patch')
@@ -502,11 +511,11 @@ class TestFile(unittest.TestCase):
         self.assertRaises(ValueError, file_patch,
                           self.path('src'), self.path('dst'),
                           self.path('patch'))
-        self.assertEqual(read_data(self.path('dst')), b'destination data')
+        self.assertEqual(self.read_data('dst'), b'destination data')
 
         self.assertRaises(ValueError, file_patch_inplace,
                           self.path('src'), self.path('patch'))
-        self.assertEqual(read_data(self.path('src')), b'source data')
+        self.assertEqual(self.read_data('src'), b'source data')
 
 # -------------------------- free threading ------------------------------
 

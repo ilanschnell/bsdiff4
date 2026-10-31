@@ -207,6 +207,7 @@ class TestCoreDiffPatch(unittest.TestCase):
     # ----- Patch edge cases and error handling -----
 
     def test_x_y_out_of_range(self):
+        # regression test for PR #29
         for control, var_name in [((-1, 0, 0), 'x'),
                                   ((0, -1, 0), 'y'),
                                   ((5, 0, 0), 'x'),

@@ -238,13 +238,13 @@ class TestCoreDiffPatch(unittest.TestCase):
                                    core.patch, b'', *args)
 
     def test_src_pos_outside_source(self):
-        bcontrol = pack_control_block((0, 0, -1), (2, 0, 0))
-        self.assertEqual(
-            core.patch(b'ab', 2, bcontrol, b'\x01\x01', b''), b'\x01b')
-
-        bcontrol = pack_control_block((0, 0, 2), (2, 0, 0))
-        self.assertEqual(
-            core.patch(b'ab', 2, bcontrol, b'\x01\x02', b''), b'\x01\x02')
+        src = b'ab'
+        for controls, bdiff, dst in [
+            ([(0, 0, -1), (2, 0, 0)], b'\x01\x01', b'\x01b'),
+            ([(0, 0,  2), (2, 0, 0)], b'\x01\x02', b'\x01\x02'),
+        ]:
+            bcontrol = pack_control_block(*controls)
+            self.assertEqual(core.patch(src, 2, bcontrol, bdiff, b''), dst)
 
     def test_src_pos_overflow(self):
         M = 1 << 63

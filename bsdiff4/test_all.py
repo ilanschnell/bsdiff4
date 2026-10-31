@@ -118,10 +118,10 @@ BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', os.urandom(200)]
 class TestCoreDiffPatch(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        control, diff, extra = core.diff(src, dst)
-        for block in control, diff, extra:
+        blocks = core.diff(src, dst)
+        for block in blocks:
             self.assertIs(type(block), bytes)
-        dst2 = core.patch(src, len(dst), control, diff, extra)
+        dst2 = core.patch(src, len(dst), *blocks)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)
 

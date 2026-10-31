@@ -90,9 +90,9 @@ def diff(src_bytes: bytes, dst_bytes: bytes) -> bytes:
 
     Return a BSDIFF4-format patch (from src_bytes to dst_bytes) as bytes.
     """
-    faux = BytesIO()
-    write_patch(faux, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
-    return faux.getvalue()
+    fo = BytesIO()
+    write_patch(fo, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
+    return fo.getvalue()
 
 
 def patch(src_bytes: bytes, patch_bytes: bytes) -> bytes:
@@ -121,12 +121,12 @@ def file_patch_inplace(path: str, patch_path: str) -> None:
     """
     with open(patch_path, 'rb') as fi:
         patch_args = read_patch(fi)
-    with open(path, 'r+b') as fo:
-        data = fo.read()
+    with open(path, 'r+b') as f:
+        data = f.read()
         dst = core.patch(data, *patch_args)
-        fo.seek(0)
-        fo.write(dst)
-        fo.truncate()
+        f.seek(0)
+        f.write(dst)
+        f.truncate()
 
 
 def file_patch(src_path: str, dst_path: str, patch_path: str) -> None:

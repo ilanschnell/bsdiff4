@@ -118,11 +118,10 @@ BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', os.urandom(200)]
 class TestCoreDiffPatch(unittest.TestCase):
 
     def round_trip(self, src, dst):
-        control_block, diff_block, extra_block = core.diff(src, dst)
-        for b in control_block, diff_block, extra_block:
-            self.assertIs(type(b), bytes)
-        dst2 = core.patch(src, len(dst),
-                          control_block, diff_block, extra_block)
+        control, diff, extra = core.diff(src, dst)
+        for block in control, diff, extra:
+            self.assertIs(type(block), bytes)
+        dst2 = core.patch(src, len(dst), control, diff, extra)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)
 
@@ -194,13 +193,12 @@ class TestCoreDiffPatch(unittest.TestCase):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
         noop2 = 3 * (7 * b'\x00' + b'\x80')  # negative zero no-op
         operation = pack_control_block((3, 4, 2))
-        for control_block in [
+        for bcontrol in [
             operation,
             noop + operation + noop,
             noop2 + operation + noop + noop2,
         ]:
-            dst = core.patch(b'banana', 7, control_block,
-                             3 * b'\x00', b'dana')
+            dst = core.patch(b'banana', 7, bcontrol, 3 * b'\x00', b'dana')
             self.assertEqual(dst, b'bandana')
 
         # The control block must be binary data, not a list of tuples.
@@ -259,11 +257,11 @@ class TestCoreDiffPatch(unittest.TestCase):
             (0, [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)], b''),
             (2, [(0, 0, M - 1), (2, 0, 0)],               b'\x00\x00'),
         ]:
-            bcontrol = pack_control_block(*controls)
+            control_block = pack_control_block(*controls)
             self.assertRaisesRegex(ValueError,
                                    r"corrupt patch \(offset overflow\)",
                                    core.patch, b'', dst_len,
-                                   bcontrol, diff_block, b'')
+                                   control_block, diff_block, b'')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 

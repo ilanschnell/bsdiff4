@@ -120,12 +120,13 @@ def file_patch_inplace(path: str, patch_path: str) -> None:
     Apply the BSDIFF4-format file patch_path to the file 'path' in place.
     """
     with open(patch_path, 'rb') as fi:
-        with open(path, 'r+b') as fo:
-            data = fo.read()
-            dst = core.patch(data, *read_patch(fi))
-            fo.seek(0)
-            fo.write(dst)
-            fo.truncate()
+        patch_args = read_patch(fi)
+    with open(path, 'r+b') as fo:
+        data = fo.read()
+        dst = core.patch(data, *patch_args)
+        fo.seek(0)
+        fo.write(dst)
+        fo.truncate()
 
 
 def file_patch(src_path: str, dst_path: str, patch_path: str) -> None:
@@ -134,12 +135,6 @@ def file_patch(src_path: str, dst_path: str, patch_path: str) -> None:
     Apply the BSDIFF4-format file patch_path to the file src_path and
     write the result to the file dst_path.
     """
-    from os.path import abspath
-
-    if abspath(dst_path) == abspath(src_path):
-        file_patch_inplace(src_path, patch_path)
-        return
-
     with open(patch_path, 'rb') as fi:
         dst = core.patch(read_data(src_path), *read_patch(fi))
     with open(dst_path, 'wb') as fo:

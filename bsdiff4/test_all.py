@@ -5,6 +5,7 @@ import random
 import shutil
 import unittest
 import tempfile
+from os.path import samefile
 from io import BytesIO
 from sysconfig import get_config_var
 from concurrent.futures import ThreadPoolExecutor
@@ -464,24 +465,34 @@ class TestFile(unittest.TestCase):
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assert_same_file_content('src', 'dst')
 
-    def test_inplace_preserves_file(self):
+    def check_preserves_file(self, inplace):
         self.write_data('src', b'source data')
         self.write_data('dst', b'destination data')
         file_diff(self.path('src'), self.path('dst'), self.path('patch'))
 
         src = self.path('src')
         link = self.path('link')
+        patch_path = self.path('patch')
 
         os.link(src, link)
         stat_before = os.stat(src)
 
-        file_patch_inplace(src, self.path('patch'))
+        if inplace:
+            file_patch_inplace(src, patch_path)
+        else:
+            file_patch(src, link, patch_path)
 
         stat_after = os.stat(src)
         self.assertEqual((stat_after.st_dev, stat_after.st_ino),
                          (stat_before.st_dev, stat_before.st_ino))
+        self.assertTrue(samefile(src, link))
         self.assert_same_file_content('src', 'dst')
-        self.assert_same_file_content('link', 'dst')
+
+    def test_patch_preserves_file(self):
+        self.check_preserves_file(inplace=False)
+
+    def test_inplace_preserves_file(self):
+        self.check_preserves_file(inplace=True)
 
     def test_patch_error_preserves_files(self):
         self.write_data('src', b'source data')

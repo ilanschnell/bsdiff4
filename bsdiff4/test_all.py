@@ -155,10 +155,19 @@ class TestCoreDiffPatch(unittest.TestCase):
                           14 * b'\x00', b''))
 
     def test_empty_dst(self):
+        dst = b''
         blocks = (b'', b'', b'')
-        for src in b'', b'\x00', b'a', 100 * b'a':
-            self.assertEqual(core.diff(src, b''), blocks)
-            self.assertEqual(core.patch(src, 0, *blocks), b'')
+        for src in b'', b'\x00', b'a', 100 * b'a', os.urandom(200):
+            self.assertEqual(core.diff(src, dst), blocks)
+            self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+
+    def test_empty_src(self):
+        src = b''
+        for dst in b'', b'\x00', b'a', 100 * b'a', os.urandom(200):
+            blocks = (pack_control_block((0, len(dst), 0)) if dst else b'',
+                      b'', dst)
+            self.assertEqual(core.diff(src, dst), blocks)
+            self.assertEqual(core.patch(src, len(dst), *blocks), dst)
 
     def test_patch(self):
         for controls in [

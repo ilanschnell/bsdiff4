@@ -392,12 +392,14 @@ EMPTY = bz2.compress(b'')  # compressed empty block
 class TestFormatErrors(unittest.TestCase):
 
     def test_invalid_header(self):
-        p = b"BSDIFF30" + 24 * b'\x00'
+        p = b"BSDIFF41" + 24 * b'\x00'
         self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
                                read_patch, BytesIO(p))
 
     def test_truncated_patch(self):
         for data in [
+            b'',
+            b'ABC',
             MAGIC,
             MAGIC + 23 * b'\x00',
             pack_header(len(EMPTY) + 1, 0, 0) + EMPTY,

@@ -18,8 +18,8 @@ def pack_header(control_len, diff_len, dst_len):
 def unpack_header(header):
     if len(header) != 32:
         raise ValueError("invalid header size")
-    if header[:7] != MAGIC[:7]:
-        raise ValueError("invalid magic bsdiff4 header")
+    if header[:8] != MAGIC:
+        raise ValueError("invalid magic bsdiff4 header, got %r" % header[:8])
     return tuple(core.decode_int64(header[i:i + 8]) for i in range(8, 32, 8))
 
 

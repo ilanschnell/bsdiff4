@@ -181,7 +181,7 @@ class TestCoreDiffPatch(unittest.TestCase):
                 x, y, z = controls[0]
                 self.assertEqual(x, len(src))
                 self.assertEqual(y, 0)
-                # z is irrelevant because patching is already complete
+                # final source-position adjustment z does not affect output
             else:
                 self.assertEqual(controls, [])
 

@@ -112,6 +112,8 @@ ROUND_TRIP_CASES = [
     (os.urandom(200), os.urandom(200)),
 ]
 
+BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', os.urandom(200)]
+
 
 class TestCoreDiffPatch(unittest.TestCase):
 
@@ -157,17 +159,36 @@ class TestCoreDiffPatch(unittest.TestCase):
     def test_empty_dst(self):
         dst = b''
         blocks = (b'', b'', b'')
-        for src in b'', b'\x00', b'a', 100 * b'a', os.urandom(200):
+        for src in BYTES_CASES:
             self.assertEqual(core.diff(src, dst), blocks)
             self.assertEqual(core.patch(src, len(dst), *blocks), dst)
 
     def test_empty_src(self):
         src = b''
-        for dst in b'', b'\x00', b'a', 100 * b'a', os.urandom(200):
+        for dst in BYTES_CASES:
             blocks = (pack_control_block((0, len(dst), 0)) if dst else b'',
                       b'', dst)
             self.assertEqual(core.diff(src, dst), blocks)
             self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+
+    def test_identical_src_dst(self):
+        for src in BYTES_CASES:
+            control, diff, extra = core.diff(src, src)
+            controls = list(unpack_control_block(control))
+
+            if src:
+                self.assertEqual(len(controls), 1)
+                x, y, z = controls[0]
+                self.assertEqual(x, len(src))
+                self.assertEqual(y, 0)
+                # z is irrelevant because patching is already complete
+            else:
+                self.assertEqual(controls, [])
+
+            self.assertEqual(diff, len(src) * b'\x00')
+            self.assertEqual(extra, b'')
+            self.assertEqual(core.patch(src, len(src), control, diff, extra),
+                             src)
 
     def test_patch(self):
         for controls in [

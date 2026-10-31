@@ -5,8 +5,8 @@ import random
 import shutil
 import unittest
 import tempfile
-from os.path import samefile
 from io import BytesIO
+from os.path import exists, samefile
 from sysconfig import get_config_var
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -460,19 +460,22 @@ class TestFile(unittest.TestCase):
             self.write_data('dst', b)
             self.round_trip()
 
-    def test_inplace(self):
-        a = 1000 * b'ABCDE'
-        b = 1000 * b'XYZ'
-        self.write_data('src', a + os.urandom(100) + b)
-        self.write_data('dst', a + os.urandom(100) + b)
-        file_diff(self.path('src'), self.path('dst'), self.path('patch'))
+    def test_example(self):
+        self.write_data('src', Example.src)
+        self.write_data('patch', Example.data)
+        file_patch(self.path('src'), self.path('dst'), self.path('patch'))
+        self.assertEqual(self.read_data('dst'), Example.dst)
+
+    def test_example_inplace(self):
+        self.write_data('src', Example.src)
+        self.write_data('patch', Example.data)
         file_patch_inplace(self.path('src'), self.path('patch'))
-        self.assert_same_file_content('src', 'dst')
+        self.assertEqual(self.read_data('src'), Example.dst)
 
     def check_preserves_file(self, inplace):
         # Verify that patching preserves the inode and its hard-link
         # relationship.
-        self.write_data('src', b'source data')
+        self.write_data('src', b'source data will be patched with new data')
         self.write_data('dst', b'destination data')
         patch_path = self.path('patch')
         file_diff(self.path('src'), self.path('dst'), patch_path)
@@ -516,6 +519,21 @@ class TestFile(unittest.TestCase):
         self.assertRaises(ValueError, file_patch_inplace,
                           self.path('src'), self.path('patch'))
         self.assertEqual(self.read_data('src'), b'source data')
+
+        self.assertRaises(ValueError, file_patch,
+                          self.path('src'), self.path('src'),
+                          self.path('patch'))
+        self.assertEqual(self.read_data('src'), b'source data')
+
+    def test_patch_error_does_not_create_dst(self):
+        # Verify that an invalid patch does not create the target file.
+        self.write_data('src', b'source data')
+        self.write_data('patch', b'invalid patch')
+
+        self.assertRaises(ValueError, file_patch,
+                          self.path('src'), self.path('dst'),
+                          self.path('patch'))
+        self.assertFalse(exists(self.path('dst')))
 
 # -------------------------- free threading ------------------------------
 

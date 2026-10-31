@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import bsdiff4.core as core  # type: ignore
-from bsdiff4.format import (MAGIC, pack_header, unpack_header,
+from bsdiff4.format import (pack_header, unpack_header,
                             pack_control_block, unpack_control_block,
                             write_patch, read_patch)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
@@ -191,7 +191,7 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
-        noop2 = 3 * (7 * b'\x00' + b'\x80')  # negative zero no-op
+        noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
         operation = pack_control_block((3, 4, 2))
         for bcontrol in [
             operation,
@@ -269,10 +269,9 @@ class TestCoreDiffPatch(unittest.TestCase):
 class TestHelpers(unittest.TestCase):
 
     def test_header(self):
-        bheader = b'BSDIFF40' + bytes.fromhex("""
-        c9 02 00 00 00 00 00 00
-        a2 07 00 00 00 00 00 00
-        c0 0f 02 00 00 00 00 00 """)
+        bheader = bytes.fromhex("""
+        42 53 44 49 46 46 34 30   c9 02 00 00 00 00 00 00
+        a2 07 00 00 00 00 00 00   c0 0f 02 00 00 00 00 00 """)
         sizes = (0x2c9, 0x7a2, 0x20fc0)
 
         self.assertEqual(pack_header(*sizes), bheader)
@@ -286,8 +285,7 @@ class TestHelpers(unittest.TestCase):
     def test_control_block(self):
         bcontrol = bytes.fromhex("""
         1f00000000000000 a007000000000000 0100000000000080
-        0200000000000000 3000000000000080 0000000000000000
-        """)
+        0200000000000000 3000000000000080 0000000000000000 """)
         controls = [(0x1f, 0x7a0, -1), (2, -0x30, 0)]
 
         self.assertEqual(pack_control_block(*controls), bcontrol)
@@ -311,8 +309,7 @@ class Example:
     425a6839 31415926 5359d014 9a290000 04c00068 08200030 cd34193f 5209593c
     5dc914e1 42434052 68a4425a 68393141 59265359 4c5a9f48 00000040 00600020
     00210082 8c5dc914 e1424131 6a7d2042 5a683931 41592653 592d15eb 1c000000
-    10002000 20002118 4682ee48 a70a1205 a2bd6380
-    """)
+    10002000 20002118 4682ee48 a70a1205 a2bd6380 """)
     header_sizes = (0x2a, 0x25, 0x04)  # control_len, diff_len, dst_len
     control_tuples = [(3, 1, 0)]
     diff_block = b'\x00\x00\x01'
@@ -401,8 +398,8 @@ class TestFormatErrors(unittest.TestCase):
         for data in [
             b'',
             b'ABC',
-            MAGIC,
-            MAGIC + 23 * b'\x00',
+            b'BSDIFF40',
+            b'BSDIFF40' + 23 * b'\x00',
             pack_header(len(EMPTY) + 1, 0, 0) + EMPTY,
             pack_header(len(EMPTY), len(EMPTY) + 1, 0) + 2 * EMPTY,
         ]:

@@ -191,12 +191,15 @@ class TestCoreDiffPatch(unittest.TestCase):
                              src)
 
     def test_patch(self):
-        for controls in [
-            [(3, 4, 2)],
-            [(3, 4, 2), (0, 0, 0)],  # (0, 0, 0) is a no-op control tuple
-            [(0, 0, 0), (3, 4, 2)],
+        noop = pack_control_block((0, 0, 0))  # no-op control tuple
+        noop2 = 3 * (7 * b'\x00' + b'\x80')  # negative zero no-op
+        operation = pack_control_block((3, 4, 2))
+        for control_block in [
+            operation,
+            noop + operation + noop,
+            noop2 + operation + noop + noop2,
         ]:
-            dst = core.patch(b'banana', 7, pack_control_block(*controls),
+            dst = core.patch(b'banana', 7, control_block,
                              3 * b'\x00', b'dana')
             self.assertEqual(dst, b'bandana')
 

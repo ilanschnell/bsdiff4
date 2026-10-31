@@ -50,12 +50,12 @@ class TestCoreInt64(unittest.TestCase):
             core.decode_int64(bytes.fromhex('00 00 00 00 00 00 00 80')), 0)
 
     def test_errors(self):
-        self.assertRaises(TypeError, core.encode_int64, 'x')
+        self.assertRaises(TypeError, core.encode_int64, 8 * b'\x00')
         M = 1 << 63
         for n in -M -1, -M, M, M + 1:
             self.assertRaises(OverflowError, core.encode_int64, n)
 
-        self.assertRaises(TypeError, core.decode_int64, 12345)
+        self.assertRaises(TypeError, core.decode_int64, 0)
         for n in 0, 1, 7, 9, 16:
             self.assertRaisesRegex(ValueError, "8 bytes expected",
                                    core.decode_int64, n * b'\x00')

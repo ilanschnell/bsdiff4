@@ -73,25 +73,33 @@ class TestPatch(unittest.TestCase):
             self.round_trip(a, b)
             self.round_trip(b, a)
 
-    def assert_corrupt(self, dst_len, controls, bdiff=b'', bextra=b''):
+    def assert_corrupt(self, reason, dst_len, controls,
+                       bdiff=b'', bextra=b''):
         f = BytesIO()
         write_patch(f, dst_len, pack_control_block(*controls), bdiff, bextra)
-        p = f.getvalue()
-        with self.assertRaisesRegex(ValueError, "corrupt patch"):
-            patch(b'', p)
+        with self.assertRaisesRegex(ValueError,
+                                    r"corrupt patch \(%s\)" % reason):
+            patch(b'', f.getvalue())
 
     def test_malformed(self):
         # Negative diff and extra lengths.
-        self.assert_corrupt(0, [(-1, 0, 0)])
-        self.assert_corrupt(0, [(0, -1, 0)])
+        self.assert_corrupt("x out of range", 0, [(-1, 0, 0)])
+        self.assert_corrupt("y out of range", 0, [(0, -1, 0)])
 
         # Truncated diff and extra blocks.
-        self.assert_corrupt(1, [(1, 0, 0)])
-        self.assert_corrupt(1, [(0, 1, 0)])
+        self.assert_corrupt("x out of range", 1, [(1, 0, 0)])
+        self.assert_corrupt("y out of range", 1, [(0, 1, 0)])
 
         # Diff and extra data extending beyond the destination.
-        self.assert_corrupt(1, [(2, 0, 0)], bdiff=b'xx')
-        self.assert_corrupt(1, [(0, 2, 0)], bextra=b'xx')
+        self.assert_corrupt("x out of range", 1, [(2, 0, 0)], bdiff=b'xx')
+        self.assert_corrupt("y out of range", 1, [(0, 2, 0)], bextra=b'xx')
+
+        # Destination length is 1, but no destination bytes are generated.
+        self.assert_corrupt("incomplete output", 1, [])
+
+        # Additional unused diff and extra block data.
+        self.assert_corrupt("unused block data", 0, [], bdiff=b'x')
+        self.assert_corrupt("unused block data", 0, [], bextra=b'x')
 
 
 if __name__ == '__main__':

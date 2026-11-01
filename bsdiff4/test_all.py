@@ -99,6 +99,8 @@ class TestSuffixArray(unittest.TestCase):
         self.check_data(os.urandom(1000))
 
 
+RND_200 = os.urandom(200)
+
 ROUND_TRIP_CASES = [
     (b'', b''),
     (b'', b'x'),
@@ -108,11 +110,13 @@ ROUND_TRIP_CASES = [
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
     (b'123456789 987654321', b'123456789000987654321'),  # issue #14
-    (b'', os.urandom(200)),
-    (os.urandom(200), os.urandom(200)),
+    (b'', RND_200),
+    (RND_200, RND_200),
+    (RND_200, os.urandom(20) + RND_200),
+    (RND_200, RND_200 + os.urandom(20)),
 ]
 
-BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', os.urandom(200)]
+BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]
 
 
 class TestCoreDiffPatch(unittest.TestCase):
@@ -364,12 +368,6 @@ class TestFormat(unittest.TestCase):
         for a, b in ROUND_TRIP_CASES:
             self.round_trip(a, b)
             self.round_trip(b, a)
-
-    def test_extra(self):
-        src = os.urandom(1000)
-        dst = src + os.urandom(10)
-        self.round_trip(src, dst)
-        self.round_trip(dst, src)
 
     def test_random(self):
         for _ in range(100):

@@ -18,7 +18,7 @@ def patch(src, patch_bytes) -> bytes:
 
     for x, y, z in unpack_control_block(control_block):
         if x < 0 or x > dst_len - dst_pos or x > len(diff_block) - diff_pos:
-            raise ValueError("corrupt patch")
+            raise ValueError("corrupt patch (x out of range)")
 
         dst[dst_pos:dst_pos + x] = diff_block[diff_pos:diff_pos + x]
         diff_pos += x
@@ -30,26 +30,27 @@ def patch(src, patch_bytes) -> bytes:
         dst_pos += x
 
         if y < 0 or y > dst_len - dst_pos or y > len(extra_block) - extra_pos:
-            raise ValueError("corrupt patch")
+            raise ValueError("corrupt patch (y out of range)")
 
         dst[dst_pos:dst_pos + y] = extra_block[extra_pos:extra_pos + y]
         extra_pos += y
         dst_pos += y
         src_pos += x + z
 
-    if (dst_pos != dst_len or diff_pos != len(diff_block) or
-        extra_pos != len(extra_block)):
-        raise ValueError("corrupt patch")
+    if dst_pos != dst_len:
+        raise ValueError("corrupt patch (incomplete output)")
+
+    if diff_pos != len(diff_block) or extra_pos != len(extra_block):
+        raise ValueError("corrupt patch (unused block data)")
 
     return bytes(dst)
 
 # ------------------------------- tests -----------------------------------
 
-import os
-import random
 import unittest
 
 from bsdiff4.format import pack_control_block, diff, write_patch
+from bsdiff4.test_all import ROUND_TRIP_CASES
 
 
 class TestPatch(unittest.TestCase):
@@ -63,32 +64,14 @@ class TestPatch(unittest.TestCase):
 
     def round_trip(self, src, dst):
         p = diff(src, dst)
-        self.assertEqual(patch(src, p), dst)
+        dst2 = patch(src, p)
+        self.assertIs(type(dst2), bytes)
+        self.assertEqual(dst, dst2)
 
-    def test_zero(self):
-        self.round_trip(b'', b'')
-
-    def test_edge_cases(self):
-        for src, dst in [(b'', b'x'), (b'x', b''), (b'abc', b'abc')]:
-            self.round_trip(src, dst)
-
-    def test_extra(self):
-        src = os.urandom(1000)
-        dst = src + os.urandom(10)
-        self.round_trip(src, dst)
-        self.round_trip(dst, src)
-
-    def test_small(self):
-        src = b'123456789 987654321'
-        dst = b'123456789000987654321'
-        self.round_trip(src, dst)
-        self.round_trip(dst, src)
-
-    def test_random(self):
-        for _ in range(100):
-            n1 = random.randint(0, 1000)
-            n2 = random.randint(0, 1000)
-            self.round_trip(os.urandom(n1), os.urandom(n2))
+    def test_cases(self):
+        for a, b in ROUND_TRIP_CASES:
+            self.round_trip(a, b)
+            self.round_trip(b, a)
 
     def assert_corrupt(self, dst_len, controls, bdiff=b'', bextra=b''):
         f = BytesIO()

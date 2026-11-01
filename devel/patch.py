@@ -11,8 +11,8 @@ from bsdiff4.format import unpack_control_block, read_patch
 
 def patch(src, patch_bytes) -> bytes:
     src_len = len(src)
-    dst_len, control_block, diff_block, extra_block = \
-        read_patch(BytesIO(patch_bytes))
+    dst_len, control_block, diff_block, extra_block = read_patch(
+        BytesIO(patch_bytes))
     dst = bytearray(dst_len)
     src_pos = dst_pos = diff_pos = extra_pos = 0
 

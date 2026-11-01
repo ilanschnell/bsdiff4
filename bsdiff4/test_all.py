@@ -193,11 +193,11 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.assertEqual(core.patch(src, len(src), control, diff, extra),
                              src)
 
-    def test_diff_addition(self):
-        src = RND_200
-        dst = bytes((value + 3) % 256 for value in src)
+    def test_patch_addition(self):
+        src = bytes(range(256))
+        dst = bytes((value + 1) % 256 for value in src)
         bcontrol = pack_control_block((len(src), 0, 0))
-        blocks = bcontrol, len(src) * b'\x03', b''
+        blocks = bcontrol, len(src) * b'\x01', b''
         self.assertEqual(core.patch(src, len(dst), *blocks), dst)
 
     def test_patch(self):

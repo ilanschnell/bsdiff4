@@ -193,6 +193,13 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.assertEqual(core.patch(src, len(src), control, diff, extra),
                              src)
 
+    def test_diff_addition(self):
+        src = RND_200
+        dst = bytes((value + 3) % 256 for value in src)
+        bcontrol = pack_control_block((len(src), 0, 0))
+        blocks = bcontrol, len(src) * b'\x03', b''
+        self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+
     def test_patch(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
         noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
@@ -224,7 +231,7 @@ class TestCoreDiffPatch(unittest.TestCase):
                                   ((0, 5, 0), 'y')]:
             bcontrol = pack_control_block(control)
             self.assert_corrupt("%s out of range" % var_name, b'abcd', 4,
-                                bcontrol, 4 * b'\x00')
+                                bcontrol, diff=4 * b'\x00')
 
     def test_negative_destination_length(self):
         self.assert_corrupt("negative destination length", dst_len=-1)
@@ -258,9 +265,9 @@ class TestCoreDiffPatch(unittest.TestCase):
             (0, [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]),
             (2, [(0, 0, M - 1), (2, 0, 0)]),
         ]:
-            control_block = pack_control_block(*controls)
+            bcontrol = pack_control_block(*controls)
             self.assert_corrupt("offset overflow", b'', dst_len,
-                                control_block, diff=dst_len * b'\x00')
+                                bcontrol, diff=dst_len * b'\x00')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 

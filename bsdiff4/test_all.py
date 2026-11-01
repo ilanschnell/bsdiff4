@@ -210,6 +210,12 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     # ----- Patch edge cases and error handling -----
 
+    def assert_corrupt(self, reason, src=b'', dst_len=0,
+                       control=b'', diff=b'', extra=b''):
+        msg = r"corrupt patch \(%s\)" % reason
+        with self.assertRaisesRegex(ValueError, msg):
+            core.patch(src, dst_len, control, diff, extra)
+
     def test_x_y_out_of_range(self):
         # regression test for PR #29
         for control, var_name in [((-1, 0, 0), 'x'),
@@ -217,30 +223,20 @@ class TestCoreDiffPatch(unittest.TestCase):
                                   ((5, 0, 0), 'x'),
                                   ((0, 5, 0), 'y')]:
             bcontrol = pack_control_block(control)
-            msg = r"corrupt patch \(%s out of range\)" % var_name
-            self.assertRaisesRegex(ValueError, msg,
-                                   core.patch, b'abcd', 4,
-                                   bcontrol, 4 * b'\x00', b'')
+            self.assert_corrupt("%s out of range" % var_name, b'abcd', 4,
+                                bcontrol, 4 * b'\x00')
 
     def test_negative_destination_length(self):
-        msg = r"corrupt patch \(negative destination length\)"
-        self.assertRaisesRegex(ValueError, msg,
-                               core.patch, b'', -1, b'', b'', b'')
+        self.assert_corrupt("negative destination length", dst_len=-1)
 
     def test_invalid_control_block(self):
-        msg = r"corrupt patch \(invalid control block\)"
         for n in 1, 23, 25, 47, 49:
-            self.assertRaisesRegex(ValueError, msg,
-                                   core.patch, b'', 0, n * b'\x00', b'', b'')
+            self.assert_corrupt("invalid control block", control=n * b'\x00')
 
     def test_final_state(self):
-        for args, msg in [
-            ((1, b'', b'', b''),  "incomplete output"),
-            ((0, b'', b'x', b''), "unused block data"),
-            ((0, b'', b'', b'x'), "unused block data"),
-        ]:
-            self.assertRaisesRegex(ValueError, r"corrupt patch \(%s\)" % msg,
-                                   core.patch, b'', *args)
+        self.assert_corrupt("incomplete output", dst_len=1)
+        self.assert_corrupt("unused block data", diff=b'x')
+        self.assert_corrupt("unused block data", extra=b'x')
 
     def test_src_pos_outside_source(self):
         src = b'ab'
@@ -257,16 +253,14 @@ class TestCoreDiffPatch(unittest.TestCase):
             bcontrol = pack_control_block((0, 0, z))
             self.assertEqual(core.patch(b'', 0, bcontrol, b'', b''), b'')
 
-        for dst_len, controls, diff_block in [
-            (0, [(0, 0, M - 1), (0, 0, 1)],               b''),
-            (0, [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)], b''),
-            (2, [(0, 0, M - 1), (2, 0, 0)],               b'\x00\x00'),
+        for dst_len, controls in [
+            (0, [(0, 0, M - 1), (0, 0, 1)]),
+            (0, [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]),
+            (2, [(0, 0, M - 1), (2, 0, 0)]),
         ]:
             control_block = pack_control_block(*controls)
-            self.assertRaisesRegex(ValueError,
-                                   r"corrupt patch \(offset overflow\)",
-                                   core.patch, b'', dst_len,
-                                   control_block, diff_block, b'')
+            self.assert_corrupt("offset overflow", b'', dst_len,
+                                control_block, diff=dst_len * b'\x00')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 

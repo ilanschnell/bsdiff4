@@ -9,10 +9,8 @@ MAGIC = b'BSDIFF40'
 
 
 def pack_header(control_len, diff_len, dst_len):
-    return (MAGIC +
-            core.encode_int64(control_len) +
-            core.encode_int64(diff_len) +
-            core.encode_int64(dst_len))
+    lengths = control_len, diff_len, dst_len
+    return MAGIC + b''.join(core.encode_int64(n) for n in lengths)
 
 
 def unpack_header(header):

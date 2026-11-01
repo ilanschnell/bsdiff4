@@ -509,7 +509,7 @@ class TestFile(unittest.TestCase):
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assertEqual(self.read_data('src'), Example.dst)
 
-    def check_preserves_file(self, inplace):
+    def check_preserves_file(self, mode):
         # Verify that patching preserves the inode and its hard-link
         # relationship.
         self.write_data('src', b'source data will be patched with new data')
@@ -523,10 +523,14 @@ class TestFile(unittest.TestCase):
         os.link(src, link)
         stat_before = os.stat(src)
 
-        if inplace:
+        if mode == 'inplace':
             file_patch_inplace(src, patch_path)
+        elif mode == 'samepath':
+            file_patch(src, src, patch_path)
+        elif mode == 'samefile':
+            file_patch(src, link, patch_path)
         else:
-            file_patch(link, src, patch_path)
+            raise ValueError(mode)
 
         # Ensure that `src` still refers to the same file.
         stat_after = os.stat(src)
@@ -536,11 +540,14 @@ class TestFile(unittest.TestCase):
         self.assertTrue(samefile(src, link))
         self.assert_same_file_content('src', 'dst')
 
-    def test_patch_preserves_file(self):
-        self.check_preserves_file(inplace=False)
+    def test_preserves_file_inplace(self):
+        self.check_preserves_file('inplace')
 
-    def test_inplace_preserves_file(self):
-        self.check_preserves_file(inplace=True)
+    def test_preserves_file_samepath(self):
+        self.check_preserves_file('samepath')
+
+    def test_preserves_file_samefile(self):
+        self.check_preserves_file('samefile')
 
     def test_patch_error_preserves_files(self):
         # Verify that an invalid patch leaves the target file unchanged.

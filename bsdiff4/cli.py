@@ -65,6 +65,7 @@ def show_patch(fi, verbose=False):
             totals = [totals[i] + ct[i] for i in range(3)]
         print('%10s %10s %10s' % (3 * ('------',)))
         print('%10d %10d %10d' % tuple(totals))
+        print('\nfinal source position: %d' % (totals[0] + totals[2]))
 
 
 def main_bsdiff4():

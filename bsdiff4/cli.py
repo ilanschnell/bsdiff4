@@ -78,8 +78,12 @@ def show_patch(patch_path, verbose=False):
         print('\nnumber of control tuples: %d' % (len(control_block) // 24))
         if verbose:
             print('%10s %10s %10s' % ('x', 'y', 'z'))
+            totals = [0, 0, 0]
             for ct in unpack_control_block(control_block):
                 print('%10d %10d %10d' % ct)
+                totals = [totals[i] + ct[i] for i in range(3)]
+            print('%10s %10s %10s' % (3 * ('------',)))
+            print('%10d %10d %10d' % tuple(totals))
 
 
 def main_bspatch4():

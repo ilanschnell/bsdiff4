@@ -69,7 +69,11 @@ def show_patch(patch_path, verbose=False):
             ('diff', len(diff_block)),
             ('extra', len(extra_block)),
         ]:
-            print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
+            note = ""
+            if name == 'diff' and diff_block:
+                nonzero = len(diff_block) - diff_block.count(b'\x00')
+                note = '  (non-zero bytes: %d)' % nonzero
+            print('%10s: %10d (%s)%s' % (name, size, human_bytes(size), note))
 
         print('\nnumber of control tuples: %d' % (len(control_block) // 24))
         if verbose:

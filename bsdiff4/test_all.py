@@ -193,6 +193,20 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.assertEqual(core.patch(src, len(src), control, diff, extra),
                              src)
 
+    def test_nonzero_diff(self):
+        src = b"The quick brown fox jumps over the lazy dog."
+        dst = b"The quick brown fox jumps over the hazy dog."
+        control, diff, extra = core.diff(src, dst)
+        iter_control = unpack_control_block(control)
+        x, y, z = next(iter_control)
+        self.assertRaises(StopIteration, next, iter_control)
+        self.assertEqual((x, y), (len(src), 0))
+        self.assertEqual(diff.count(b'\x00'), len(src) - 1)
+        self.assertEqual(diff[35], (ord(b'h') - ord(b'l')) & 0xff)
+        self.assertEqual(extra, b"")
+        self.assertEqual(core.patch(src, len(dst), control, diff, extra),
+                         dst)
+
     def test_patch_addition(self):
         src = bytes(range(256))
         dst = bytes((value + 1) % 256 for value in src)

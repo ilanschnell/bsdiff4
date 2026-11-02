@@ -4,7 +4,7 @@ import os
 import random
 from io import BytesIO
 
-from bsdiff4 import diff
+from bsdiff4 import diff, patch
 from bsdiff4.cli import show_patch
 
 blocks = [os.urandom(random.randrange(10, 1000)) for _ in range(20)]
@@ -13,4 +13,7 @@ blocks.extend(blocks[:5])
 random.shuffle(blocks)
 dst = b''.join(blocks)
 
-show_patch(BytesIO(diff(src, dst)), verbose=True)
+patch_data = diff(src, dst)
+show_patch(BytesIO(patch_data), verbose=True)
+
+assert patch(src, patch_data) == dst

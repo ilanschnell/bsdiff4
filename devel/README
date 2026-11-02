@@ -8,6 +8,10 @@ patch.py
     Pure Python implementation of the BSDIFF4 patch-application loop.
 
 
+shuffle.py
+    demonstration of BSDIFF’s handling of moved data
+
+
 test_cli.sh
     Integration tests for the command-line tools and BSDIFF4 compatibility.
 

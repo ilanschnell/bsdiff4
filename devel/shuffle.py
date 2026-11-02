@@ -13,6 +13,8 @@ blocks.extend(blocks[:5])
 random.shuffle(blocks)
 dst = b''.join(blocks)
 
+print("source size: %s\n" % len(src))
+
 patch_data = diff(src, dst)
 show_patch(BytesIO(patch_data), verbose=True)
 

@@ -309,7 +309,7 @@ class Example:
     dst = b'abd!'
     # BSDIFF40 patch from b'abc' to b'abd!', verified with bspatch.
     # 42 5a 68 39 = BZh9
-    data = bytes.fromhex("""
+    patch = bytes.fromhex("""
     42534449 46463430 2a000000 00000000 25000000 00000000 04000000 00000000
     425a6839 31415926 5359d014 9a290000 04c00068 08200030 cd34193f 5209593c
     5dc914e1 42434052 68a4425a 68393141 59265359 4c5a9f48 00000040 00600020
@@ -324,14 +324,14 @@ class Example:
 class TestExample(unittest.TestCase):
 
     def test_compatibility(self):
-        self.assertEqual(patch(Example.src, Example.data), Example.dst)
+        self.assertEqual(patch(Example.src, Example.patch), Example.dst)
 
     def test_header(self):
-        self.assertEqual(unpack_header(Example.data[:32]),
+        self.assertEqual(unpack_header(Example.patch[:32]),
                          Example.header_sizes)
 
     def test_read_patch(self):
-        f = BytesIO(Example.data)
+        f = BytesIO(Example.patch)
         dst_len, control_block, diff_block, extra_block = read_patch(f)
         self.assertEqual(dst_len, len(Example.dst))
         self.assertEqual(list(unpack_control_block(control_block)),
@@ -345,7 +345,7 @@ class TestExample(unittest.TestCase):
                     pack_control_block(*Example.control_tuples),
                     Example.diff_block,
                     Example.extra_block)
-        self.assertEqual(f.getvalue(), Example.data)
+        self.assertEqual(f.getvalue(), Example.patch)
 
 
 class TestFormat(unittest.TestCase):
@@ -433,14 +433,14 @@ class TestFormatErrors(unittest.TestCase):
 class TestMutate(unittest.TestCase):
 
     def test_truncated_patch(self):
-        for i in range(len(Example.data)):
+        for i in range(len(Example.patch)):
             # truncating patch
             self.assertRaises(ValueError, patch,
-                              Example.src, Example.data[:i])
+                              Example.src, Example.patch[:i])
 
     @unittest.skipIf(UNDER_QEMU, "slow under QEMU")
     def test_mutated_patch(self):
-        data = Example.data
+        data = Example.patch
         for i in range(len(data)):
             mut = bytearray(data)
             for j in range(8):
@@ -498,13 +498,13 @@ class TestFile(unittest.TestCase):
 
     def test_example(self):
         self.write_data('src', Example.src)
-        self.write_data('patch', Example.data)
+        self.write_data('patch', Example.patch)
         file_patch(self.path('src'), self.path('dst'), self.path('patch'))
         self.assertEqual(self.read_data('dst'), Example.dst)
 
     def test_example_inplace(self):
         self.write_data('src', Example.src)
-        self.write_data('patch', Example.data)
+        self.write_data('patch', Example.patch)
         file_patch_inplace(self.path('src'), self.path('patch'))
         self.assertEqual(self.read_data('src'), Example.dst)
 

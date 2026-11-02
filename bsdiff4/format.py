@@ -120,8 +120,8 @@ def file_patch_inplace(path: str, patch_path: str) -> None:
     with open(patch_path, 'rb') as fi:
         patch_args = read_patch(fi)
     with open(path, 'r+b') as f:
-        data = f.read()
-        dst = core.patch(data, *patch_args)
+        src = f.read()
+        dst = core.patch(src, *patch_args)
         f.seek(0)
         f.write(dst)
         f.truncate()

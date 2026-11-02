@@ -28,28 +28,8 @@ def show_filesizes(*args):
         print('%s: %s (%s)' % (name, args[i], human_bytes(size)))
 
 
-def main_bsdiff4():
-    p = ArgumentParser(
-        description=("generate a BSDIFF4-format PATCH from SRC to DST "
-                     "and write it to PATCH"))
-    p.add_argument('-v', '--verbose', action='store_true',
-                   help="show file sizes")
-    p.add_argument('--version', action='version',
-                   version="bsdiff4 %s" % __version__)
-    p.add_argument('src', metavar='SRC')
-    p.add_argument('dst', metavar='DST')
-    p.add_argument('patch', metavar='PATCH')
-    args = p.parse_args()
-
-    paths = args.src, args.dst, args.patch
-    file_diff(*paths)
-    if args.verbose:
-        show_filesizes(*paths)
-
-
 def show_patch(fi, verbose=False):
-    fi.seek(0, 2)  # go to EOF
-    total_len = fi.tell()
+    total_len = fi.seek(0, 2)  # go to EOF and return position
     fi.seek(0)
     control_len, diff_len, dst_len = unpack_header(fi.read(32))
     print("sizes:")
@@ -85,6 +65,25 @@ def show_patch(fi, verbose=False):
             totals = [totals[i] + ct[i] for i in range(3)]
         print('%10s %10s %10s' % (3 * ('------',)))
         print('%10d %10d %10d' % tuple(totals))
+
+
+def main_bsdiff4():
+    p = ArgumentParser(
+        description=("generate a BSDIFF4-format PATCH from SRC to DST "
+                     "and write it to PATCH"))
+    p.add_argument('-v', '--verbose', action='store_true',
+                   help="show file sizes")
+    p.add_argument('--version', action='version',
+                   version="bsdiff4 %s" % __version__)
+    p.add_argument('src', metavar='SRC')
+    p.add_argument('dst', metavar='DST')
+    p.add_argument('patch', metavar='PATCH')
+    args = p.parse_args()
+
+    paths = args.src, args.dst, args.patch
+    file_diff(*paths)
+    if args.verbose:
+        show_filesizes(*paths)
 
 
 def main_bspatch4():

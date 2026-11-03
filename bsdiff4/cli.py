@@ -29,6 +29,21 @@ def show_filesizes(*args):
         print('%s: %s (%s)' % (name, args[i], human_bytes(size)))
 
 
+def show_header(fi):
+    total_len = fi.seek(0, 2)  # go to EOF and return position
+    fi.seek(0)
+    control_len, diff_len, dst_len = unpack_header(fi.read(32))
+    print("sizes:")
+    for name, size in [
+        ('total', total_len),
+        ('control', control_len),
+        ('diff', diff_len),
+        ('extra', total_len - 32 - control_len - diff_len),
+        ('dst', dst_len),
+    ]:
+        print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
+
+
 def show_control(control_block, verbose=False):
     print('\nnumber of control tuples: %d' % (len(control_block) // 24))
     print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
@@ -50,19 +65,7 @@ def show_control(control_block, verbose=False):
 
 
 def show_patch(fi, verbose=False):
-    total_len = fi.seek(0, 2)  # go to EOF and return position
-    fi.seek(0)
-    control_len, diff_len, dst_len = unpack_header(fi.read(32))
-    print("sizes:")
-    for name, size in [
-        ('total', total_len),
-        ('control', control_len),
-        ('diff', diff_len),
-        ('extra', total_len - 32 - control_len - diff_len),
-        ('dst', dst_len),
-    ]:
-        print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
-
+    show_header(fi)
     fi.seek(0)
     control_block, diff_block, extra_block = read_patch(fi)
     print("\nuncompressed block sizes:")
@@ -83,9 +86,10 @@ def show_patch(fi, verbose=False):
 
 
 def main_bsdiff4():
-    p = ArgumentParser(
-        description=("generate a BSDIFF4-format PATCH from SRC to DST "
-                     "and write it to PATCH"))
+    """
+    Generate a BSDIFF4-format PATCH from SRC to DST and write it to PATCH.
+    """
+    p = ArgumentParser(description=main_bsdiff4.__doc__)
     p.add_argument('-v', '--verbose', action='store_true',
                    help="show file sizes")
     p.add_argument('--version', action='version',
@@ -105,11 +109,15 @@ def main_bsdiff4():
 
 
 def main_bspatch4():
+    """
+    Generate DST by applying the BSDIFF4-format PATCH file to SRC;
+    with only PATCH, display information about and verify the patch.
+    """
     p = ArgumentParser(
         usage="%(prog)s [options] SRC DST PATCH\n"
               "       %(prog)s [options] PATCH",
-        description=("generate DST by applying the BSDIFF4-format PATCH "
-                     "file to SRC, or display information about PATCH"))
+        description=main_bspatch4.__doc__,
+    )
     p.add_argument('-v', '--verbose', action='store_true',
                    help="show file sizes or all control tuples")
     p.add_argument('--version', action='version',

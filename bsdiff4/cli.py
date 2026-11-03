@@ -58,14 +58,15 @@ def show_patch(fi, verbose=False):
 
     print('\nnumber of control tuples: %d' % (len(control_block) // 24))
     if verbose:
-        print('%10s %10s %10s' % ('x', 'y', 'z'))
-        totals = [0, 0, 0]
-        for ct in unpack_control_block(control_block):
-            print('%10d %10d %10d' % ct)
-            totals = [totals[i] + ct[i] for i in range(3)]
-        print('%10s %10s %10s' % (3 * ('------',)))
-        print('%10d %10d %10d' % tuple(totals))
-        print('\nfinal source position: %d' % (totals[0] + totals[2]))
+        print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
+        src_pos = 0
+        totals = [0, 0]
+        for x, y, z in unpack_control_block(control_block):
+            print('%10d %10d %10d %10d' % (x, y, z, src_pos))
+            src_pos += x + z
+            totals = [totals[i] + v for i, v in enumerate((x, y))]
+        print('%10s %10s' % (2 * ('------',)))
+        print('%10d %10d' % tuple(totals))
 
 
 def main_bsdiff4():

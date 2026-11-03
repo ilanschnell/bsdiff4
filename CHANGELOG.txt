@@ -2,7 +2,8 @@
 -------------------
   * preserve output files when diff or patch computation fails
   * require complete BSDIFF40 magic header when reading patches
-  * show nonzero diff byte count and control totals in patch summary
+  * show nonzero diff byte count, source positions and control totals in
+    patch summary
 
 
 2026-10-30   1.4.1:

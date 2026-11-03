@@ -7,6 +7,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <assert.h>
 #include <stdint.h>
 
 
@@ -633,8 +634,7 @@ mod_patch(PyObject *module, PyObject *args)
         CORRUPT("incomplete output");
         goto error;
     }
-    if (diff_remaining != 0 || extra_remaining != 0)
-        Py_UNREACHABLE();
+    assert(diff_remaining == 0 && extra_remaining == 0);
 
     return result;
 

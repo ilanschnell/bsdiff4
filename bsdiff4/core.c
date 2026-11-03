@@ -608,10 +608,11 @@ mod_patch(PyObject *module, PyObject *args)
         memcpy(dst + dst_pos, diff_block, x);
         diff_block += x;
         diff_remaining -= x;
-        /* Check bounds without overflowing src_pos + j. */
-        for (j = 0; j < x; j++)
+        for (j = 0; j < x; j++) {
+            /* Check bounds without overflowing src_pos + j. */
             if (src_pos >= -j && src_pos < src_len - j)
                 dst[dst_pos + j] += src[src_pos + j];
+        }
         dst_pos += x;
         if (y < 0 || y > dst_len - dst_pos || y > extra_remaining) {
             CORRUPT("y out of range");

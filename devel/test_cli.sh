@@ -23,7 +23,7 @@ cmp /bin/tail tail
 
 bspatch4 a.diff >info.txt
 test -s info.txt
-head -n 20 info.txt
+cat info.txt
 
 # Apply patch in-place
 cp /bin/head foo

@@ -2,7 +2,7 @@ import sys
 from argparse import ArgumentParser
 from os.path import getsize
 
-from bsdiff4 import __version__
+from bsdiff4 import core, __version__
 from bsdiff4.format import (file_diff, file_patch, read_patch,
                             unpack_header, unpack_control_block)
 
@@ -29,13 +29,7 @@ def show_filesizes(*args):
         print('%s: %s (%s)' % (name, args[i], human_bytes(size)))
 
 
-def check_overflow(n):
-    M = 1 << 63
-    if not -M <= n < M:
-        raise ValueError("corrupt patch (offset overflow)")
-
-
-def show_control(control_block, dst_len, diff_len, extra_len, verbose=False):
+def show_control(control_block, verbose=False):
     print('\nnumber of control tuples: %d' % (len(control_block) // 24))
     print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
     omitted = False
@@ -47,25 +41,12 @@ def show_control(control_block, dst_len, diff_len, extra_len, verbose=False):
         else:
             omitted = True
         totals = (totals[0] + x, totals[1] + y)
-        if x < 0 or totals[0] > diff_len:
-            raise ValueError("corrupt patch (x out of range): "
-                             "%d %d %d" % (x, y, z))
-        if y < 0 or totals[1] > extra_len:
-            raise ValueError("corrupt patch (y out of range): "
-                             "%d %d %d" % (x, y, z))
-        src_pos += x
-        check_overflow(src_pos)
-        src_pos += z
-        check_overflow(src_pos)
+        src_pos += x + z
 
     if omitted:
         print('%10s %10s %10s' % (3 * ('...',)))
     print('%10s %10s' % (2 * ('------',)))
     print('%10d %10d' % totals)
-
-    if sum(totals) != dst_len:
-        raise ValueError("corrupt patch (output size mismatch)")
-    assert totals == (diff_len, extra_len)
 
 
 def show_patch(fi, verbose=False):
@@ -96,8 +77,9 @@ def show_patch(fi, verbose=False):
             note = '  (non-zero bytes: %d)' % nonzero
         print('%10s: %10d (%s)%s' % (name, size, human_bytes(size), note))
 
-    show_control(control_block, dst_len, len(diff_block), len(extra_block),
-                 verbose)
+    show_control(control_block, verbose)
+    # validate by applying to empty source
+    core.patch(b'', control_block, diff_block, extra_block)
 
 
 def main_bsdiff4():

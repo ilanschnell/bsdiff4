@@ -31,7 +31,8 @@ def pack_control_block(*controls):
 def unpack_control_block(control_block):
     "unpack the binary control block and generate control tuples"
     if len(control_block) % 24:
-        raise ValueError("invalid control block")
+        raise ValueError("invalid control block (length not a multiple "
+                         "of 24, got %d)" % len(control_block))
 
     for i in range(0, len(control_block), 24):
         yield tuple(core.decode_int64(control_block[j:j + 8])

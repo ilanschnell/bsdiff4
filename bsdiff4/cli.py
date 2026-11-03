@@ -57,17 +57,17 @@ def show_patch(fi, verbose=False):
             note = '  (non-zero bytes: %d)' % nonzero
         print('%10s: %10d (%s)%s' % (name, size, human_bytes(size), note))
 
-    print('\nnumber of control tuples: %d' % (len(control_block) // 24))
+    controls = list(unpack_control_block(control_block))
+    print('\nnumber of control tuples: %d' % len(controls))
     if verbose:
         print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
         src_pos = 0
-        totals = [0, 0]
-        for x, y, z in unpack_control_block(control_block):
+        for x, y, z in controls:
             print('%10d %10d %10d %10d' % (x, y, z, src_pos))
             src_pos += x + z
-            totals = [totals[i] + v for i, v in enumerate((x, y))]
         print('%10s %10s' % (2 * ('------',)))
-        print('%10d %10d' % tuple(totals))
+        print('%10d %10d' % (sum(x for x, y, z in controls),
+                             sum(y for x, y, z in controls)))
 
 
 def main_bsdiff4():

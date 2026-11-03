@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser
 from os.path import getsize
 
@@ -83,7 +84,10 @@ def main_bsdiff4():
     args = p.parse_args()
 
     paths = args.src, args.dst, args.patch
-    file_diff(*paths)
+    try:
+        file_diff(*paths)
+    except OSError as e:
+        sys.exit("%s: %s" % (p.prog, e))
     if args.verbose:
         show_filesizes(*paths)
 
@@ -102,13 +106,19 @@ def main_bspatch4():
     args = p.parse_args()
 
     if len(args.paths) == 1:
-        with open(args.paths[0], 'rb') as fi:
-            show_patch(fi, args.verbose)
+        try:
+            with open(args.paths[0], 'rb') as fi:
+                show_patch(fi, args.verbose)
+        except (ValueError, OSError) as e:
+            sys.exit("%s: %s" % (p.prog, e))
         return
 
     if len(args.paths) != 3:
         p.error("requires either PATCH or SRC DST PATCH")
 
-    file_patch(*args.paths)
+    try:
+        file_patch(*args.paths)
+    except (ValueError, OSError) as e:
+        sys.exit("%s: %s" % (p.prog, e))
     if args.verbose:
         show_filesizes(*args.paths)

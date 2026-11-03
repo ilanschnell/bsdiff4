@@ -11,7 +11,8 @@ Key features of this package include:
 
 * high-level ``diff`` and ``patch`` functions
 * an interface to the BSDIFF4 format
-* improved error handling for malformed patches
+* stricter validation and improved error handling of malformed patches than
+  the standard ``bspatch`` tool; in particular overlong blocks are rejected
 * functions for creating patches from files and applying them to files
 * command-line interfaces: ``bsdiff4`` and ``bspatch4``
 * support for free-threaded Python

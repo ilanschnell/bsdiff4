@@ -14,7 +14,8 @@ Key features of this package include:
 * stricter validation and improved error handling of malformed patches than
   the standard ``bspatch`` tool; in particular overlong blocks are rejected
 * functions for creating patches from files and applying them to files
-* command-line interfaces: ``bsdiff4`` and ``bspatch4``
+* command-line interfaces: ``bsdiff4`` and ``bspatch4`` (the latter can also
+  inspect patches using ``bspatch4 PATCH``)
 * support for free-threaded Python
 * type hints
 * extensive tests

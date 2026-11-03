@@ -7,5 +7,9 @@ __all__ = ["diff", "patch", "file_diff", "file_patch", "file_patch_inplace"]
 
 
 def test(verbosity=1):
-    from bsdiff4.test_all import run
+    """test(verbosity=1) -> TextTestResult
+
+    Run self-test, and return `unittest.runner.TextTestResult` object.
+    """
+    from bsdiff4.tests import run
     return run(verbosity=verbosity)

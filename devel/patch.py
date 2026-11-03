@@ -50,7 +50,7 @@ def patch(src, patch_bytes) -> bytes:
 import unittest
 
 from bsdiff4.format import pack_control_block, diff, write_patch
-from bsdiff4.test_all import ROUND_TRIP_CASES
+from bsdiff4.tests import ROUND_TRIP_CASES
 
 
 class TestPatch(unittest.TestCase):

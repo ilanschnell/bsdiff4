@@ -419,6 +419,14 @@ class TestFormatErrors(unittest.TestCase):
                                    "negative size in bsdiff4 patch",
                                    read_patch, BytesIO(data))
 
+    def test_invalid_control_block(self):
+        for n in 1, 23, 25, 47, 49:
+            f = BytesIO()
+            write_patch(f, n * b'\x00', b'', b'')
+            f.seek(0)
+            self.assertRaisesRegex(ValueError, "invalid control block",
+                                   read_patch, f)
+
     def test_invalid_blocks(self):
         for data in [
             pack_header(1, len(EMPTY), 0) + b'x' + EMPTY + EMPTY,
@@ -428,7 +436,8 @@ class TestFormatErrors(unittest.TestCase):
             self.assertRaises(OSError, read_patch, BytesIO(data))
 
     def test_dst_length(self):
-        data = pack_header(len(EMPTY), len(EMPTY), 1) + 3 * EMPTY
+        dst_len = 1  # Conflicts with the empty diff and extra block.
+        data = pack_header(len(EMPTY), len(EMPTY), dst_len) + 3 * EMPTY
         self.assertRaisesRegex(ValueError, "invalid destination length",
                                read_patch, BytesIO(data))
 
@@ -436,7 +445,7 @@ class TestFormatErrors(unittest.TestCase):
     def test_header_overflow(self):
         M = 1 << 31
         for lengths in [(M, 0, 0), (0, M, 0), (0, 0, M)]:
-            data = pack_header(*lengths) + 3 * bz2.compress(b'')
+            data = pack_header(*lengths) + 3 * EMPTY
             self.assertRaisesRegex(ValueError,
                                    "size too large in bsdiff4 patch",
                                    read_patch, BytesIO(data))

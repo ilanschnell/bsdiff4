@@ -32,7 +32,7 @@ def unpack_control_block(control_block):
     "unpack the binary control block and generate control tuples"
     if len(control_block) % 24:
         raise ValueError("invalid control block (length not a multiple "
-                         "of 24, got %d)" % len(control_block))
+                         "of 24): %d" % len(control_block))
 
     for i in range(0, len(control_block), 24):
         yield tuple(core.decode_int64(control_block[j:j + 8])
@@ -63,12 +63,15 @@ def read_patch(fi):
     control_block = bz2.decompress(read_exact(fi, control_len))
     diff_block = bz2.decompress(read_exact(fi, diff_len))
     extra_block = bz2.decompress(fi.read())
-    return dst_len, control_block, diff_block, extra_block
+    if dst_len != len(diff_block) + len(extra_block):
+        raise ValueError("invalid destination length")
+    return control_block, diff_block, extra_block
 
 
-def write_patch(fo, dst_len, control_block, diff_block, extra_block):
+def write_patch(fo, control_block, diff_block, extra_block):
     "write a BSDIFF4-format patch to stream 'fo'"
     # compress each block
+    dst_len = len(diff_block) + len(extra_block)
     control_block = bz2.compress(control_block)
     diff_block = bz2.compress(diff_block)
     extra_block = bz2.compress(extra_block)
@@ -90,7 +93,7 @@ def diff(src_bytes: bytes, dst_bytes: bytes) -> bytes:
     Return a BSDIFF4-format patch (from src_bytes to dst_bytes) as bytes.
     """
     fo = BytesIO()
-    write_patch(fo, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
+    write_patch(fo, *core.diff(src_bytes, dst_bytes))
     return fo.getvalue()
 
 

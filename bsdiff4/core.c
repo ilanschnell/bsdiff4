@@ -576,17 +576,19 @@ mod_patch(PyObject *module, PyObject *args)
     Py_ssize_t dst_pos = 0, i;
     int64_t src_pos = 0;
 
-    if (!PyArg_ParseTuple(args, "s#ns#s#s#",
-                          &src, &src_len, &dst_len,
+    if (!PyArg_ParseTuple(args, "s#s#s#s#",
+                          &src, &src_len,
                           &control_block, &control_len,
                           &diff_block, &diff_remaining,
                           &extra_block, &extra_remaining))
         return NULL;
 
-    if (dst_len < 0) {
-        CORRUPT("negative destination length");
+    if (diff_remaining > PY_SSIZE_T_MAX - extra_remaining) {
+        PyErr_NoMemory();
         return NULL;
     }
+    dst_len = diff_remaining + extra_remaining;
+
     if (control_len % 24) {
         CORRUPT("invalid control block");
         return NULL;
@@ -631,10 +633,8 @@ mod_patch(PyObject *module, PyObject *args)
         CORRUPT("incomplete output");
         goto error;
     }
-    if (diff_remaining != 0 || extra_remaining != 0) {
-        CORRUPT("unused block data");
-        goto error;
-    }
+    if (diff_remaining != 0 || extra_remaining != 0)
+        Py_UNREACHABLE();
 
     return result;
 

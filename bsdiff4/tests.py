@@ -125,7 +125,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         blocks = core.diff(src, dst)
         for block in blocks:
             self.assertIs(type(block), bytes)
-        dst2 = core.patch(src, len(dst), *blocks)
+        dst2 = core.patch(src, *blocks)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)
 
@@ -164,7 +164,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         blocks = (b'', b'', b'')
         for src in BYTES_CASES:
             self.assertEqual(core.diff(src, dst), blocks)
-            self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+            self.assertEqual(core.patch(src, *blocks), dst)
 
     def test_empty_src(self):
         src = b''
@@ -172,7 +172,7 @@ class TestCoreDiffPatch(unittest.TestCase):
             blocks = (pack_control_block((0, len(dst), 0)) if dst else b'',
                       b'', dst)
             self.assertEqual(core.diff(src, dst), blocks)
-            self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+            self.assertEqual(core.patch(src, *blocks), dst)
 
     def test_identical_src_dst(self):
         for src in BYTES_CASES:
@@ -190,8 +190,7 @@ class TestCoreDiffPatch(unittest.TestCase):
 
             self.assertEqual(diff, len(src) * b'\x00')
             self.assertEqual(extra, b'')
-            self.assertEqual(core.patch(src, len(src), control, diff, extra),
-                             src)
+            self.assertEqual(core.patch(src, control, diff, extra), src)
 
     def test_nonzero_diff(self):
         src = b"The quick brown fox jumps over the lazy dog."
@@ -204,15 +203,14 @@ class TestCoreDiffPatch(unittest.TestCase):
         self.assertEqual(diff.count(b'\x00'), len(src) - 1)
         self.assertEqual(diff[35], (ord(b'h') - ord(b'l')) & 0xff)
         self.assertEqual(extra, b"")
-        self.assertEqual(core.patch(src, len(dst), control, diff, extra),
-                         dst)
+        self.assertEqual(core.patch(src, control, diff, extra), dst)
 
     def test_patch_addition(self):
         src = bytes(range(256))
         dst = bytes((value + 1) % 256 for value in src)
         bcontrol = pack_control_block((len(src), 0, 0))
         blocks = bcontrol, len(src) * b'\x01', b''
-        self.assertEqual(core.patch(src, len(dst), *blocks), dst)
+        self.assertEqual(core.patch(src, *blocks), dst)
 
     def test_patch(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
@@ -223,7 +221,7 @@ class TestCoreDiffPatch(unittest.TestCase):
             noop + operation + noop,
             noop2 + operation + noop + noop2,
         ]:
-            dst = core.patch(b'banana', 7, bcontrol, 3 * b'\x00', b'dana')
+            dst = core.patch(b'banana', bcontrol, 3 * b'\x00', b'dana')
             self.assertEqual(dst, b'bandana')
 
         # The control block must be binary data, not a list of tuples.
@@ -231,11 +229,11 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     # ----- Patch edge cases and error handling -----
 
-    def assert_corrupt(self, reason, src=b'', dst_len=0,
+    def assert_corrupt(self, reason, src=b'',
                        control=b'', diff=b'', extra=b''):
         msg = r"corrupt patch \(%s\)" % reason
         with self.assertRaisesRegex(ValueError, msg):
-            core.patch(src, dst_len, control, diff, extra)
+            core.patch(src, control, diff, extra)
 
     def test_x_y_out_of_range(self):
         # regression test for PR #29
@@ -244,20 +242,16 @@ class TestCoreDiffPatch(unittest.TestCase):
                                   ((5, 0, 0), 'x'),
                                   ((0, 5, 0), 'y')]:
             bcontrol = pack_control_block(control)
-            self.assert_corrupt("%s out of range" % var_name, b'abcd', 4,
+            self.assert_corrupt("%s out of range" % var_name, b'abcd',
                                 bcontrol, diff=4 * b'\x00')
-
-    def test_negative_destination_length(self):
-        self.assert_corrupt("negative destination length", dst_len=-1)
 
     def test_invalid_control_block(self):
         for n in 1, 23, 25, 47, 49:
             self.assert_corrupt("invalid control block", control=n * b'\x00')
 
     def test_final_state(self):
-        self.assert_corrupt("incomplete output", dst_len=1)
-        self.assert_corrupt("unused block data", diff=b'x')
-        self.assert_corrupt("unused block data", extra=b'x')
+        self.assert_corrupt("incomplete output", diff=b'x')
+        self.assert_corrupt("incomplete output", extra=b'x')
 
     def test_src_pos_outside_source(self):
         src = b'ab'
@@ -266,13 +260,13 @@ class TestCoreDiffPatch(unittest.TestCase):
             ([(0, 0,  2), (2, 0, 0)], b'\x01\x02', b'\x01\x02'),
         ]:
             bcontrol = pack_control_block(*controls)
-            self.assertEqual(core.patch(src, 2, bcontrol, bdiff, b''), dst)
+            self.assertEqual(core.patch(src, bcontrol, bdiff, b''), dst)
 
     def test_src_pos_overflow(self):
         M = 1 << 63
         for z in -M + 1, M - 1:
             bcontrol = pack_control_block((0, 0, z))
-            self.assertEqual(core.patch(b'', 0, bcontrol, b'', b''), b'')
+            self.assertEqual(core.patch(b'', bcontrol, b'', b''), b'')
 
         for dst_len, controls in [
             (0, [(0, 0, M - 1), (0, 0, 1)]),
@@ -280,7 +274,7 @@ class TestCoreDiffPatch(unittest.TestCase):
             (2, [(0, 0, M - 1), (2, 0, 0)]),
         ]:
             bcontrol = pack_control_block(*controls)
-            self.assert_corrupt("offset overflow", b'', dst_len,
+            self.assert_corrupt("offset overflow", b'',
                                 bcontrol, diff=dst_len * b'\x00')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
@@ -346,8 +340,7 @@ class TestExample(unittest.TestCase):
 
     def test_read_patch(self):
         f = BytesIO(Example.patch)
-        dst_len, control_block, diff_block, extra_block = read_patch(f)
-        self.assertEqual(dst_len, len(Example.dst))
+        control_block, diff_block, extra_block = read_patch(f)
         self.assertEqual(list(unpack_control_block(control_block)),
                          Example.control_tuples)
         self.assertEqual(diff_block, Example.diff_block)
@@ -355,7 +348,7 @@ class TestExample(unittest.TestCase):
 
     def test_write_patch(self):
         f = BytesIO()
-        write_patch(f, len(Example.dst),
+        write_patch(f,
                     pack_control_block(*Example.control_tuples),
                     Example.diff_block,
                     Example.extra_block)
@@ -433,6 +426,11 @@ class TestFormatErrors(unittest.TestCase):
             pack_header(len(EMPTY), len(EMPTY), 0) + EMPTY + EMPTY + b'x',
         ]:
             self.assertRaises(OSError, read_patch, BytesIO(data))
+
+    def test_dst_length(self):
+        data = pack_header(len(EMPTY), len(EMPTY), 1) + 3 * EMPTY
+        self.assertRaisesRegex(ValueError, "invalid destination length",
+                               read_patch, BytesIO(data))
 
     @unittest.skipUnless(sys.maxsize < (1 << 31), "requires 32-bit Python")
     def test_header_overflow(self):
@@ -628,7 +626,7 @@ class TestFreeThreading(unittest.TestCase):
                 blocks = core.diff(src, dst)
                 if blocks != expected_blocks:
                     return False
-                if core.patch(src, len(dst), *blocks) != dst:
+                if core.patch(src, *blocks) != dst:
                     return False
                 if core.suffix_array(src) != expected_sa:
                     return False

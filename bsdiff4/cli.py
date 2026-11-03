@@ -29,6 +29,45 @@ def show_filesizes(*args):
         print('%s: %s (%s)' % (name, args[i], human_bytes(size)))
 
 
+def check_overflow(n):
+    M = 1 << 63
+    if not -M <= n < M:
+        raise ValueError("corrupt patch (offset overflow)")
+
+
+def show_control(control_block, dst_len, diff_len, extra_len, verbose=False):
+    print('\nnumber of control tuples: %d' % (len(control_block) // 24))
+    print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
+    omitted = False
+    src_pos = 0
+    totals = (0, 0)  # x, y totals
+    for i, (x, y, z) in enumerate(unpack_control_block(control_block)):
+        if i < 5 or verbose:
+            print('%10d %10d %10d %10d' % (x, y, z, src_pos))
+        else:
+            omitted = True
+        totals = (totals[0] + x, totals[1] + y)
+        if x < 0 or totals[0] > diff_len:
+            raise ValueError("corrupt patch (x out of range): "
+                             "%d %d %d" % (x, y, z))
+        if y < 0 or totals[1] > extra_len:
+            raise ValueError("corrupt patch (y out of range): "
+                             "%d %d %d" % (x, y, z))
+        src_pos += x
+        check_overflow(src_pos)
+        src_pos += z
+        check_overflow(src_pos)
+
+    if omitted:
+        print('%10s %10s %10s' % (3 * ('...',)))
+    print('%10s %10s' % (2 * ('------',)))
+    print('%10d %10d' % totals)
+
+    if sum(totals) != dst_len:
+        raise ValueError("corrupt patch (output size mismatch)")
+    assert totals == (diff_len, extra_len)
+
+
 def show_patch(fi, verbose=False):
     total_len = fi.seek(0, 2)  # go to EOF and return position
     fi.seek(0)
@@ -44,7 +83,7 @@ def show_patch(fi, verbose=False):
         print('%10s: %10d (%s)' % (name, size, human_bytes(size)))
 
     fi.seek(0)
-    _, control_block, diff_block, extra_block = read_patch(fi)
+    control_block, diff_block, extra_block = read_patch(fi)
     print("\nuncompressed block sizes:")
     for name, size in [
         ('control', len(control_block)),
@@ -57,17 +96,8 @@ def show_patch(fi, verbose=False):
             note = '  (non-zero bytes: %d)' % nonzero
         print('%10s: %10d (%s)%s' % (name, size, human_bytes(size), note))
 
-    controls = list(unpack_control_block(control_block))
-    print('\nnumber of control tuples: %d' % len(controls))
-    if verbose:
-        print('%10s %10s %10s %10s' % ('x', 'y', 'z', 'src pos'))
-        src_pos = 0
-        for x, y, z in controls:
-            print('%10d %10d %10d %10d' % (x, y, z, src_pos))
-            src_pos += x + z
-        print('%10s %10s' % (2 * ('------',)))
-        print('%10d %10d' % (sum(x for x, y, z in controls),
-                             sum(y for x, y, z in controls)))
+    show_control(control_block, dst_len, len(diff_block), len(extra_block),
+                 verbose)
 
 
 def main_bsdiff4():
@@ -99,7 +129,7 @@ def main_bspatch4():
         description=("generate DST by applying the BSDIFF4-format PATCH "
                      "file to SRC, or display information about PATCH"))
     p.add_argument('-v', '--verbose', action='store_true',
-                   help="show file sizes or control tuples")
+                   help="show file sizes or all control tuples")
     p.add_argument('--version', action='version',
                    version="bsdiff4 %s" % __version__)
     p.add_argument('paths', nargs='+', metavar='PATH')

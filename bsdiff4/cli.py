@@ -103,8 +103,8 @@ def main_bsdiff4():
     paths = args.src, args.dst, args.patch
     try:
         file_diff(*paths)
-    except OSError as e:
-        sys.exit("%s: %s" % (p.prog, e))
+    except (OSError, MemoryError) as e:
+        sys.exit("%s: %s" % (p.prog, str(e) or type(e).__name__))
     if args.verbose:
         show_filesizes(*paths)
 
@@ -130,8 +130,8 @@ def main_bspatch4():
         try:
             with open(args.paths[0], 'rb') as fi:
                 show_patch(fi, args.verbose)
-        except (ValueError, OSError) as e:
-            sys.exit("%s: %s" % (p.prog, e))
+        except (ValueError, OSError, MemoryError) as e:
+            sys.exit("%s: %s" % (p.prog, str(e) or type(e).__name__))
         return
 
     if len(args.paths) != 3:
@@ -139,7 +139,7 @@ def main_bspatch4():
 
     try:
         file_patch(*args.paths)
-    except (ValueError, OSError) as e:
-        sys.exit("%s: %s" % (p.prog, e))
+    except (ValueError, OSError, MemoryError) as e:
+        sys.exit("%s: %s" % (p.prog, str(e) or type(e).__name__))
     if args.verbose:
         show_filesizes(*args.paths)

@@ -82,7 +82,7 @@ def show_patch(fi, verbose=False):
         print('%10s: %10d (%s)%s' % (name, size, human_bytes(size), note))
 
     show_control(control_block, verbose)
-    # validate by applying to empty source
+    # validate patch by applying it to empty source
     core.patch(b'', control_block, diff_block, extra_block)
 
 

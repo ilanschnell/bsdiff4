@@ -359,6 +359,13 @@ class TestExample(unittest.TestCase):
                     Example.extra_block)
         self.assertEqual(f.getvalue(), Example.patch)
 
+    def test_read_write_roundtrip(self):
+        blocks = read_patch(BytesIO(Example.patch))
+        f = BytesIO()
+        write_patch(f, *blocks)
+        f.seek(0)
+        self.assertEqual(read_patch(f), blocks)
+
 
 class TestFormat(unittest.TestCase):
 

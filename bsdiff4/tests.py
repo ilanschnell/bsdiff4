@@ -136,14 +136,23 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def check_diff_blocks(self, src, dst, controls, diff, extra):
         # Check construction of control, diff and extra blocks.
-        control, actual_diff, actual_extra = core.diff(src, dst)
-        self.assertEqual(list(unpack_control_block(control)), controls)
-        self.assertEqual(actual_diff, diff)
-        self.assertEqual(actual_extra, extra)
+        blocks = core.diff(src, dst)
+        self.assertEqual(list(unpack_control_block(blocks[0])), controls)
+        self.assertEqual(blocks[1], diff)
+        self.assertEqual(blocks[2], extra)
+        self.assertEqual(core.patch(src, *blocks), dst)
 
     def test_diff_simple_example(self):
         self.check_diff_blocks(b'banana', b'bandana',
                                [(3, 4, 2)], 3 * b'\x00', b'dana')
+
+    def test_nonzero_diff(self):
+        src = b"The quick brown fox jumps over the lazy dog."
+        dst = b"The quick brown fox jumps over the hazy dog."
+        n = len(src)
+        diff = bytearray(n)
+        diff[35] = (ord(b'h') - ord(b'l')) & 0xff
+        self.check_diff_blocks(src, dst, [(n, 0, -8)], bytes(diff), b'')
 
     def test_diff_insert_byte(self):
         src = 32 * b'a'
@@ -174,19 +183,14 @@ class TestCoreDiffPatch(unittest.TestCase):
                                14 * b'\x00', b'')
 
     def test_empty_dst(self):
-        dst = b''
-        blocks = (b'', b'', b'')
         for src in BYTES_CASES:
-            self.assertEqual(core.diff(src, dst), blocks)
-            self.assertEqual(core.patch(src, *blocks), dst)
+            self.check_diff_blocks(src, b'', [], b'', b'')
 
     def test_empty_src(self):
-        src = b''
         for dst in BYTES_CASES:
-            blocks = (pack_control_block((0, len(dst), 0)) if dst else b'',
-                      b'', dst)
-            self.assertEqual(core.diff(src, dst), blocks)
-            self.assertEqual(core.patch(src, *blocks), dst)
+            self.check_diff_blocks(b'', dst,
+                                   [(0, len(dst), 0)] if dst else [],
+                                   diff=b'', extra=dst)
 
     def test_identical_src_dst(self):
         for src in BYTES_CASES:
@@ -205,19 +209,6 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.assertEqual(diff, len(src) * b'\x00')
             self.assertEqual(extra, b'')
             self.assertEqual(core.patch(src, control, diff, extra), src)
-
-    def test_nonzero_diff(self):
-        src = b"The quick brown fox jumps over the lazy dog."
-        dst = b"The quick brown fox jumps over the hazy dog."
-        control, diff, extra = core.diff(src, dst)
-        iter_control = unpack_control_block(control)
-        x, y, z = next(iter_control)
-        self.assertRaises(StopIteration, next, iter_control)
-        self.assertEqual((x, y), (len(src), 0))
-        self.assertEqual(diff.count(b'\x00'), len(src) - 1)
-        self.assertEqual(diff[35], (ord(b'h') - ord(b'l')) & 0xff)
-        self.assertEqual(extra, b"")
-        self.assertEqual(core.patch(src, control, diff, extra), dst)
 
     def test_patch_addition(self):
         src = bytes(range(256))
@@ -239,7 +230,7 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.assertEqual(dst, b'bandana')
 
         # The control block must be binary data, not a list of tuples.
-        self.assertRaises(TypeError, core.patch, b'', 0, [], b'', b'')
+        self.assertRaises(TypeError, core.patch, b'', [], b'', b'')
 
     # ----- Patch edge cases and error handling -----
 

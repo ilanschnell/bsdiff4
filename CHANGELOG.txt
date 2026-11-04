@@ -1,3 +1,7 @@
+2026-XX-XX   1.4.3:
+-------------------
+
+
 2026-11-04   1.4.2:
 -------------------
   * validate the declared destination size before allocating output

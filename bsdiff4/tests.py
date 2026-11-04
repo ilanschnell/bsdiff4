@@ -134,43 +134,44 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.round_trip(a, b)
             self.round_trip(b, a)
 
-    def test_diff_blocks(self):
+    def check_diff_blocks(self, src, dst, controls, diff, extra):
         # Check construction of control, diff and extra blocks.
-        control, diff, extra = core.diff(b'banana', b'bandana')
-        self.assertEqual(list(unpack_control_block(control)), [(3, 4, 2)])
-        self.assertEqual(diff, 3 * b'\x00')
-        self.assertEqual(extra, b'dana')
+        control, actual_diff, actual_extra = core.diff(src, dst)
+        self.assertEqual(list(unpack_control_block(control)), controls)
+        self.assertEqual(actual_diff, diff)
+        self.assertEqual(actual_extra, extra)
 
+    def test_diff_simple_example(self):
+        self.check_diff_blocks(b'banana', b'bandana',
+                               [(3, 4, 2)], 3 * b'\x00', b'dana')
+
+    def test_diff_insert_byte(self):
         src = 32 * b'a'
         dst = src[:16] + b'b' + src[16:]
-        control, diff, extra = core.diff(src, dst)
-        self.assertEqual(list(unpack_control_block(control)), [(32, 1, -1)])
-        self.assertEqual(diff, 16 * b'\x00' + b'\x01' + 15 * b'\x00')
-        self.assertEqual(extra, b'a')
+        self.check_diff_blocks(src, dst, [(32, 1, -1)],
+                               diff=16 * b'\x00' + b'\x01' + 15 * b'\x00',
+                               extra=b'a')
 
+    def test_diff_swap_repeated_blocks(self):
         A, B = 100 * b'A', 100 * b'B'
-        src = A + B
-        dst = B + A
-        control, diff, extra = core.diff(src, dst)
-        self.assertEqual(list(unpack_control_block(control)),
-                         [(0, 100, 0), (100, 0, -100)])
-        self.assertEqual(diff, 100 * b'\x00')
-        self.assertEqual(extra, B)
+        self.check_diff_blocks(A + B, B + A,
+                               [(0, 100, 0), (100, 0, -100)],
+                               diff=100 * b'\x00', extra=B)
 
+    def test_diff_swap_blocks(self):
         src = bytes(range(200))
         dst = src[100:] + src[:100]
-        control, diff, extra = core.diff(src, dst)
-        self.assertEqual(list(unpack_control_block(control)),
-                         [(0, 0, 100), (100, 0, -200), (100, 0, -100)])
-        self.assertEqual(diff, 200 * b'\x00')
-        self.assertEqual(extra, b'')
+        self.check_diff_blocks(src, dst,
+                               [(0, 0, 100), (100, 0, -200), (100, 0, -100)],
+                               diff=200 * b'\x00', extra=b'')
 
     def test_diff_adjust_overlap(self):
         # Ensure that an overlapping byte is assigned to the better
         # matching block.
-        self.assertEqual(core.diff(b'ccccdabcadcb', b'ccccdcdabcadcb'),
-                         (pack_control_block((5, 0, -2), (9, 0, -9)),
-                          14 * b'\x00', b''))
+        self.check_diff_blocks(b'ccccdabcadcb',
+                               b'ccccdcdabcadcb',
+                               [(5, 0, -2), (9, 0, -9)],
+                               14 * b'\x00', b'')
 
     def test_empty_dst(self):
         dst = b''

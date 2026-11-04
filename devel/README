@@ -4,6 +4,10 @@ While bsdiff4 itself supports Python 3.7+, some of these programs
 may require higher Python versions.
 
 
+addition.py
+    demonstration of BSDIFF’s handling of diff addition
+
+
 patch.py
     Pure Python implementation of the BSDIFF4 patch-application loop.
 

@@ -218,7 +218,7 @@ matchlen(const char *a, Py_ssize_t a_len,
     return i;
 }
 
-/* return the longest prefix-match length and store its position in *pos */
+/* find a prefix match using the suffix array */
 static Py_ssize_t
 search(const Py_ssize_t *sa,
        const char *a, Py_ssize_t a_len,
@@ -526,7 +526,9 @@ mod_diff(PyObject *module, PyObject *args)
     char *src, *dst;
     PyObject *result;
 
-    if (!PyArg_ParseTuple(args, "s#s#", &src, &src_len, &dst, &dst_len))
+    if (!PyArg_ParseTuple(args, "s#s#",
+                          &src, &src_len,
+                          &dst, &dst_len))
         return NULL;
 
     if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)

@@ -294,7 +294,7 @@ class TestHelpers(unittest.TestCase):
 
         self.assertEqual(pack_header(*sizes), bheader)
         self.assertEqual(unpack_header(bheader), sizes)
-        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
+        self.assertRaisesRegex(ValueError, "invalid BSDIFF40 magic header",
                                unpack_header, 32 * b'\x00')
         for n in 0, 1, 31, 33:
             self.assertRaisesRegex(ValueError, "invalid header size",
@@ -402,7 +402,7 @@ class TestFormatErrors(unittest.TestCase):
 
     def test_invalid_header(self):
         p = b"BSDIFF41" + 24 * b'\x00'
-        self.assertRaisesRegex(ValueError, "invalid magic bsdiff4 header",
+        self.assertRaisesRegex(ValueError, "invalid BSDIFF40 magic header",
                                read_patch, BytesIO(p))
 
     def test_truncated_patch(self):

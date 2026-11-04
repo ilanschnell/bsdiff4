@@ -40,11 +40,11 @@ if bspatch4 tail tail; then  # bspatch4 requires 1 or 3 arguments
     exit 1
 fi
 
-if bspatch4 tail 2>error.txt; then  # invalid BSDIFF4 magic
+if bspatch4 tail 2>error.txt; then  # invalid BSDIFF40 magic header
     echo "bspatch4 unexpectedly succeeded" >&2
     exit 1
 fi
-grep -q '^bspatch4: invalid magic bsdiff4 header' error.txt
+grep -q '^bspatch4: invalid BSDIFF40 magic header' error.txt
 cat error.txt
 
 # Apply a patch produced by the system bsdiff using bsdiff4.

@@ -9,7 +9,7 @@ except ImportError:
 kwds = {}
 kwds['long_description'] = open('README.rst').read()
 
-# Read version from bsdiff/__init__.py
+# Read version from bsdiff4/__init__.py
 pat = re.compile(r'__version__\s*=\s*"(\S+)"', re.M)
 data = open('bsdiff4/__init__.py').read()
 kwds['version'] = pat.search(data).group(1)

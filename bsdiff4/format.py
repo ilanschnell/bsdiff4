@@ -17,7 +17,7 @@ def unpack_header(header):
     if len(header) != 32:
         raise ValueError("invalid header size")
     if header[:8] != MAGIC:
-        raise ValueError("invalid magic bsdiff4 header, got %r" % header[:8])
+        raise ValueError("invalid BSDIFF40 magic header, got %r" % header[:8])
     return tuple(core.decode_int64(header[i:i + 8]) for i in range(8, 32, 8))
 
 
@@ -106,7 +106,7 @@ def patch(src_bytes: bytes, patch_bytes: bytes) -> bytes:
 
 
 def file_diff(src_path: str, dst_path: str, patch_path: str) -> None:
-    """file_diff(src_path, dst_path, patch_path)
+    """file_diff(src_path, dst_path, patch_path) -> None
 
     Write a BSDIFF4-format patch (from the file src_path to the file dst_path)
     to the file patch_path.
@@ -117,22 +117,21 @@ def file_diff(src_path: str, dst_path: str, patch_path: str) -> None:
 
 
 def file_patch_inplace(path: str, patch_path: str) -> None:
-    """file_patch_inplace(path, patch_path)
+    """file_patch_inplace(path, patch_path) -> None
 
     Apply the BSDIFF4-format file patch_path to the file 'path' in place.
     """
     with open(patch_path, 'rb') as fi:
         blocks = read_patch(fi)
     with open(path, 'r+b') as f:
-        src = f.read()
-        dst = core.patch(src, *blocks)
+        dst = core.patch(f.read(), *blocks)
         f.seek(0)
         f.write(dst)
         f.truncate()
 
 
 def file_patch(src_path: str, dst_path: str, patch_path: str) -> None:
-    """file_patch(src_path, dst_path, patch_path)
+    """file_patch(src_path, dst_path, patch_path) -> None
 
     Apply the BSDIFF4-format file patch_path to the file src_path and
     write the result to the file dst_path.

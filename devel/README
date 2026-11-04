@@ -5,7 +5,7 @@ may require higher Python versions.
 
 
 addition.py
-    demonstration of BSDIFF’s handling of diff addition
+    Demonstration of BSDIFF’s handling of diff addition.
 
 
 patch.py
@@ -13,7 +13,7 @@ patch.py
 
 
 shuffle.py
-    demonstration of BSDIFF’s handling of moved data
+    Demonstration of BSDIFF’s handling of moved data.
 
 
 test_cli.sh

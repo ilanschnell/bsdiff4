@@ -8,7 +8,7 @@ jobs:
     name: Test CLI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install reference bsdiff tools
         run: |
@@ -21,7 +21,7 @@ jobs:
     name: Self-tests on Python 3.7 with C assertions
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v7
         with:

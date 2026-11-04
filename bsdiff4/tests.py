@@ -136,21 +136,34 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_diff_blocks(self):
         # Check construction of control, diff and extra blocks.
-        self.assertEqual(core.diff(b'banana', b'bandana'),
-                         (pack_control_block((3, 4, 2)),
-                          3 * b'\x00', b'dana'))
+        control, diff, extra = core.diff(b'banana', b'bandana')
+        self.assertEqual(list(unpack_control_block(control)), [(3, 4, 2)])
+        self.assertEqual(diff, 3 * b'\x00')
+        self.assertEqual(extra, b'dana')
 
         src = 32 * b'a'
-        dst = 16 * b'a' + b'b' + 16 * b'a'
-        self.assertEqual(core.diff(src, dst),
-                         (pack_control_block((32, 1, -1)),
-                          16 * b'\x00' + b'\x01' + 15 * b'\x00', b'a'))
+        dst = src[:16] + b'b' + src[16:]
+        control, diff, extra = core.diff(src, dst)
+        self.assertEqual(list(unpack_control_block(control)), [(32, 1, -1)])
+        self.assertEqual(diff, 16 * b'\x00' + b'\x01' + 15 * b'\x00')
+        self.assertEqual(extra, b'a')
 
-        src = 100 * b'a' + 100 * b'b'
-        dst = 100 * b'b' + 100 * b'a'
-        self.assertEqual(core.diff(src, dst),
-                         (pack_control_block((0, 100, 0), (100, 0, -100)),
-                          100 * b'\x00', 100 * b'b'))
+        A, B = 100 * b'A', 100 * b'B'
+        src = A + B
+        dst = B + A
+        control, diff, extra = core.diff(src, dst)
+        self.assertEqual(list(unpack_control_block(control)),
+                         [(0, 100, 0), (100, 0, -100)])
+        self.assertEqual(diff, 100 * b'\x00')
+        self.assertEqual(extra, B)
+
+        src = bytes(range(200))
+        dst = src[100:] + src[:100]
+        control, diff, extra = core.diff(src, dst)
+        self.assertEqual(list(unpack_control_block(control)),
+                         [(0, 0, 100), (100, 0, -200), (100, 0, -100)])
+        self.assertEqual(diff, 200 * b'\x00')
+        self.assertEqual(extra, b'')
 
     def test_diff_adjust_overlap(self):
         # Ensure that an overlapping byte is assigned to the better

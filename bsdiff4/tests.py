@@ -332,6 +332,7 @@ class Example:
     control_tuples = [(3, 1, 0)]
     diff_block = b'\x00\x00\x01'
     extra_block = b'!'
+    blocks = (pack_control_block(*control_tuples), diff_block, extra_block)
 
 
 class TestExample(unittest.TestCase):
@@ -343,26 +344,12 @@ class TestExample(unittest.TestCase):
         self.assertEqual(unpack_header(Example.patch[:32]),
                          Example.header_sizes)
 
-    def test_read_patch(self):
-        f = BytesIO(Example.patch)
-        control_block, diff_block, extra_block = read_patch(f)
-        self.assertEqual(list(unpack_control_block(control_block)),
-                         Example.control_tuples)
-        self.assertEqual(diff_block, Example.diff_block)
-        self.assertEqual(extra_block, Example.extra_block)
-
-    def test_write_patch(self):
-        f = BytesIO()
-        write_patch(f,
-                    pack_control_block(*Example.control_tuples),
-                    Example.diff_block,
-                    Example.extra_block)
-        self.assertEqual(f.getvalue(), Example.patch)
-
     def test_read_write_roundtrip(self):
         blocks = read_patch(BytesIO(Example.patch))
+        self.assertEqual(blocks, Example.blocks)
         f = BytesIO()
         write_patch(f, *blocks)
+        self.assertEqual(f.getvalue(), Example.patch)
         f.seek(0)
         self.assertEqual(read_patch(f), blocks)
 

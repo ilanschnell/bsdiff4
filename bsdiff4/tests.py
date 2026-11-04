@@ -229,11 +229,10 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     # ----- Patch edge cases and error handling -----
 
-    def assert_corrupt(self, reason, src=b'',
-                       control=b'', diff=b'', extra=b''):
+    def assert_corrupt(self, reason, control=b'', diff=b'', extra=b''):
         msg = r"corrupt patch \(%s\)" % reason
         with self.assertRaisesRegex(ValueError, msg):
-            core.patch(src, control, diff, extra)
+            core.patch(b'', control, diff, extra)
 
     def test_x_y_out_of_range(self):
         # regression test for PR #29
@@ -242,8 +241,8 @@ class TestCoreDiffPatch(unittest.TestCase):
                                   ((5, 0, 0), 'x'),
                                   ((0, 5, 0), 'y')]:
             bcontrol = pack_control_block(control)
-            self.assert_corrupt("%s out of range" % var_name, b'abcd',
-                                bcontrol, diff=4 * b'\x00')
+            self.assert_corrupt("%s out of range" % var_name,
+                                bcontrol, diff=4 * b'\x00', extra=b'abcd')
 
     def test_invalid_control_block(self):
         for n in 1, 23, 25, 47, 49:
@@ -251,7 +250,8 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_final_state(self):
         self.assert_corrupt("incomplete output", diff=b'x')
-        self.assert_corrupt("incomplete output", extra=b'x')
+        self.assert_corrupt("incomplete output", extra=b'y')
+        self.assert_corrupt("incomplete output", diff=b'x', extra=b'y')
 
     def test_src_pos_outside_source(self):
         src = b'ab'
@@ -268,14 +268,14 @@ class TestCoreDiffPatch(unittest.TestCase):
             bcontrol = pack_control_block((0, 0, z))
             self.assertEqual(core.patch(b'', bcontrol, b'', b''), b'')
 
-        for dst_len, controls in [
-            (0, [(0, 0, M - 1), (0, 0, 1)]),
-            (0, [(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)]),
-            (2, [(0, 0, M - 1), (2, 0, 0)]),
+        for controls, diff_len in [
+            ([(0, 0, M - 1), (0, 0, 1)], 0),
+            ([(0, 0, -M + 1), (0, 0, -1), (0, 0, -1)], 0),
+            ([(0, 0, M - 1), (2, 0, 0)], 2),
         ]:
             bcontrol = pack_control_block(*controls)
-            self.assert_corrupt("offset overflow", b'',
-                                bcontrol, diff=dst_len * b'\x00')
+            self.assert_corrupt("offset overflow",
+                                bcontrol, diff=diff_len * b'\x00')
 
 # ----------------------- BSDIFF4 format layer ---------------------------
 

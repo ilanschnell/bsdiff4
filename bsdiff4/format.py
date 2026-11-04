@@ -113,9 +113,9 @@ def file_diff(src_path: str, dst_path: str, patch_path: str) -> None:
     Write a BSDIFF4-format patch (from the file src_path to the file dst_path)
     to the file patch_path.
     """
-    patch_bytes = diff(read_data(src_path), read_data(dst_path))
+    blocks = core.diff(read_data(src_path), read_data(dst_path))
     with open(patch_path, 'wb') as fo:
-        fo.write(patch_bytes)
+        write_patch(fo, *blocks)
 
 
 def file_patch_inplace(path: str, patch_path: str) -> None:
@@ -124,10 +124,10 @@ def file_patch_inplace(path: str, patch_path: str) -> None:
     Apply the BSDIFF4-format file patch_path to the file 'path' in place.
     """
     with open(patch_path, 'rb') as fi:
-        patch_args = read_patch(fi)
+        blocks = read_patch(fi)
     with open(path, 'r+b') as f:
         src = f.read()
-        dst = core.patch(src, *patch_args)
+        dst = core.patch(src, *blocks)
         f.seek(0)
         f.write(dst)
         f.truncate()

@@ -110,6 +110,9 @@ split(Py_ssize_t *sa, Py_ssize_t *rank, Py_ssize_t start,
     }
 
     partition_group(sa, rank, start, len, h, &lower, &upper);
+    assert(start <= lower);
+    assert(lower < upper);
+    assert(upper <= start + len);
 
     if (lower > start)
         split(sa, rank, start, lower - start, h);
@@ -447,6 +450,11 @@ compute_diff(const char *src, Py_ssize_t src_len,
             adjust_overlap(src, dst, lastscan, lastpos, scan, pos,
                            &lenf, &lenb);
 
+            assert(lenf >= 0 && lenb >= 0);
+            assert(lastpos >= 0 && lenf <= src_len - lastpos);
+            assert(lastscan >= 0 && lenf <= dst_len - lastscan);
+            assert(lastscan + lenf <= scan - lenb);
+
             for (i = 0; i < lenf; i++)
                 result->diff[result->diff_len + i] =
                     dst[lastscan + i] - src[lastpos + i];
@@ -469,6 +477,9 @@ compute_diff(const char *src, Py_ssize_t src_len,
     }
 
     PyMem_Free(sa);
+    assert(result->diff_len <= dst_len);
+    assert(result->extra_len == dst_len - result->diff_len);
+    assert(PyByteArray_GET_SIZE(result->control) % 24 == 0);
     return 0;
 
 error:

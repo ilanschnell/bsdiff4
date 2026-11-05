@@ -40,3 +40,4 @@ jobs:
           assert bsdiff4.core.DEBUG
           assert bsdiff4.test().wasSuccessful()
           EOF
+          python "$GITHUB_WORKSPACE/devel/test_suffix_array.py"

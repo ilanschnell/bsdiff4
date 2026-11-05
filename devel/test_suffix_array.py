@@ -1,12 +1,15 @@
 """
 Additional tests and verifications for suffix_array() which are neither
 part of the regular test suite nor part of any bsdiff4 distributions.
-Unlike bsdiff4 itself, this test only supports Python 3.10 and higher.
 """
 import os
 import unittest
-from itertools import pairwise
 from random import randrange
+try:
+    from itertools import pairwise  # available under Python 3.10 and higher
+except ImportError:
+    def pairwise(a):
+        return zip(a, a[1:])
 
 from bsdiff4.core import suffix_array
 

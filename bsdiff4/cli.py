@@ -2,8 +2,7 @@ import sys
 from argparse import ArgumentParser
 from os.path import getsize
 
-import bsdiff4.core as core  # type: ignore
-from bsdiff4 import __version__
+from bsdiff4 import core, __version__
 from bsdiff4.format import (file_diff, file_patch, read_patch,
                             unpack_header, unpack_control_block)
 

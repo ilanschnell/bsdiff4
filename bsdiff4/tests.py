@@ -148,9 +148,10 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_nonzero_diff(self):
         src = b"The quick brown fox jumps over the lazy dog."
-        dst = b"The quick brown fox jumps over the hazy dog."
-        n = len(src)
+        dst = b"the quick brown fox jumps over the hazy dog."
+        n = len(dst)
         diff = bytearray(n)
+        diff[0] = 32
         diff[35] = (ord(b'h') - ord(b'l')) & 0xff
         self.check_diff_blocks(src, dst, [(n, 0, -8)], bytes(diff), b'')
 

@@ -34,4 +34,9 @@ jobs:
 
       - name: Run self-tests
         working-directory: /tmp
-        run: python -c "import bsdiff4; assert bsdiff4.test().wasSuccessful()"
+        run: |
+          python - <<'EOF'
+          import bsdiff4.core
+          assert bsdiff4.core.DEBUG
+          assert bsdiff4.test().wasSuccessful()
+          EOF

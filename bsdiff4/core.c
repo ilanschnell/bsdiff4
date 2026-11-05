@@ -749,7 +749,17 @@ PyInit_core(void)
         return NULL;
 
 #ifdef Py_GIL_DISABLED
-    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+    if (PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED) < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
+#endif
+
+#ifndef NDEBUG
+    if (PyModule_AddIntConstant(m, "DEBUG", 1) < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
 #endif
 
     return m;

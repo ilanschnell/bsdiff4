@@ -668,6 +668,7 @@ def run(verbosity=1):
     print('bsdiff4 version: %s' % __version__)
     print('UNDER_QEMU: %s' % UNDER_QEMU)
     print('GIL_DISABLED: %s' % GIL_DISABLED)
+    print('DEBUG: %s' % getattr(core, "DEBUG", 0))
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()

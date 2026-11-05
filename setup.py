@@ -9,9 +9,9 @@ except ImportError:
 kwds = {}
 kwds['long_description'] = open('README.rst').read()
 
-# Read version from bsdiff4/__init__.py
-pat = re.compile(r'__version__\s*=\s*"(\S+)"', re.M)
-data = open('bsdiff4/__init__.py').read()
+# Read version from bsdiff4/core.c
+pat = re.compile(r'#define\s+BSDIFF4_VERSION\s+"(\S+)"', re.M)
+data = open('bsdiff4/core.c').read()
 kwds['version'] = pat.search(data).group(1)
 
 macros = []

@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#define BSDIFF4_VERSION  "1.4.3"
 
 /* swap two values */
 static inline void
@@ -748,19 +749,21 @@ PyInit_core(void)
     if (m == NULL)
         return NULL;
 
+    if (PyModule_AddStringMacro(m, BSDIFF4_VERSION) < 0)
+        goto error;
+
 #ifdef Py_GIL_DISABLED
-    if (PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED) < 0) {
-        Py_DECREF(m);
-        return NULL;
-    }
+    if (PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED) < 0)
+        goto error;
 #endif
 
 #ifndef NDEBUG
-    if (PyModule_AddIntConstant(m, "DEBUG", 1) < 0) {
-        Py_DECREF(m);
-        return NULL;
-    }
+    if (PyModule_AddIntConstant(m, "DEBUG", 1) < 0)
+        goto error;
 #endif
 
     return m;
+ error:
+    Py_DECREF(m);
+    return NULL;
 }

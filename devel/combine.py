@@ -93,10 +93,10 @@ def _make_patch(symbols):
 
     while i < len(symbols):
         value = symbols[i]
+        x = 0
         if isinstance(value, tuple):
             src_pos = _seek(controls, src_pos, value[0])
 
-            x = 0
             while (i < len(symbols) and
                    isinstance(symbols[i], tuple) and
                    symbols[i][0] == src_pos + x):
@@ -104,11 +104,9 @@ def _make_patch(symbols):
                 x += 1
                 i += 1
             src_pos = _update_position(src_pos, x)
-        else:
-            x = 0
 
         y = 0
-        while i < len(symbols) and not isinstance(symbols[i], tuple):
+        while i < len(symbols) and isinstance(symbols[i], int):
             extra_block.append(symbols[i])
             y += 1
             i += 1
@@ -134,8 +132,9 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
 
 # ------------------------------- tests -----------------------------------
 
-from random import Random
+import sys
 import unittest
+from random import Random
 
 from bsdiff4.format import diff, patch
 
@@ -174,11 +173,12 @@ class TestCombine(unittest.TestCase):
             c = patch(b, patch_bc)
             self.assertEqual(patch(a, patch_ac), c)
 
+    @unittest.skipIf(sys.version_info[:2] < (3, 9),
+                     "random.randbytes added in Python 3.9")
     def test_random(self):
         random = Random(0)
         for _ in range(100):
-            values = [bytes(random.randrange(256)
-                            for _ in range(random.randrange(100)))
+            values = [random.randbytes(random.randrange(100))
                       for _ in range(3)]
             self.check(*values)
 
@@ -201,4 +201,10 @@ class TestCombine(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        from pprint import pprint
+        from bsdiff4.format import read_data
+        p = read_data(sys.argv[1])
+        pprint(_apply_symbolically(p, None))
+        sys.exit()
     unittest.main()

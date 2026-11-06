@@ -135,23 +135,34 @@ BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]
 
 class TestCoreDiffPatch(unittest.TestCase):
 
-    def assert_canonical(self, control_block):
+    def assert_canonical(self, control_block, src_len):
         controls = list(unpack_control_block(control_block))
         src_pos = 0
         for i, (x, y, z) in enumerate(controls):
+            # Source position is always in the source range.
+            self.assertTrue(0 <= src_pos <= src_len)
+            # Generated patches never reference negative or overlong
+            # source ranges.
+            self.assertTrue(0 <= x <= src_len - src_pos)
+            self.assertGreaterEqual(y, 0)
+            # No-op tuples are not present.
             self.assertTrue(x or y or z)
             if i:
+                # Canonical tuple must contain a nonempty diff range.
                 self.assertGreater(x, 0)
             if i == len(controls) - 1:
+                # The final source offset is irrelevant and set to zero
                 self.assertEqual(z, 0)
-            self.assertGreaterEqual(src_pos, 0)
+            else:
+                # Adjacent diff ranges must have been merged.
+                self.assertTrue(y or z)
             src_pos += x + z
 
     def round_trip(self, src, dst):
         blocks = core.diff(src, dst)
         for block in blocks:
             self.assertIs(type(block), bytes)
-        self.assert_canonical(blocks[0])
+        self.assert_canonical(blocks[0], len(src))
         dst2 = core.patch(src, *blocks)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)

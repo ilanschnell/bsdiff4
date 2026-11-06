@@ -106,6 +106,7 @@ ROUND_TRIP_CASES = [
     (b'', b'x'),
     (b'abc', b'abc'),
     (b'abc', b'abx'),
+    (b'abc', b'axc'),
     (b'abc', b'abxy'),
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
@@ -114,6 +115,10 @@ ROUND_TRIP_CASES = [
     (RND_200, RND_200),
     (RND_200, os.urandom(20) + RND_200),
     (RND_200, RND_200 + os.urandom(20)),
+    # Three bytes in the middle replaced.
+    (RND_200, RND_200[:98] + os.urandom(3) + RND_200[101:]),
+    # 10 bytes replaced by 15 new bytes
+    (RND_200, RND_200[:95] + os.urandom(15) + RND_200[105:]),
 ]
 
 BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]

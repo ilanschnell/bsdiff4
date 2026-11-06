@@ -44,7 +44,7 @@ def _apply_symbolically(patch_bytes, source):
             delta = diff_block[diff_pos + j]
             position = src_pos + j
             if source is None:
-                value = (position, delta)
+                value = ((position, delta) if position >= 0 else delta)
             elif 0 <= position < len(source):
                 value = source[position]
                 if isinstance(value, tuple):
@@ -152,17 +152,39 @@ from bsdiff4.tests import ROUND_TRIP_CASES
 
 class TestCanonicalize(unittest.TestCase):
 
-    def check(self, a, b):
-        patch_org = diff(a, b)
-        patch_canon = canonicalize(patch_org)
-        self.assertIs(type(patch_canon), bytes)
-        self.assertEqual(patch(a, patch_canon), b)
-        self.assertEqual(canonicalize(patch_canon), patch_canon)
+    def check_canon_patch(self, p):
+        blocks = read_patch(BytesIO(p))
+        controls = list(unpack_control_block(blocks[0]))
+        for i, (x, y, z) in enumerate(controls):
+            self.assertTrue(x or y or z)
+            if i:
+                self.assertTrue(x or y)
+            if i == len(controls) - 1:
+                self.assertEqual(z, 0)
+
+    def check_case(self, a, b):
+        org_patch = diff(a, b)
+        canon_patch = canonicalize(org_patch)
+        self.assertIs(type(canon_patch), bytes)
+        self.assertEqual(patch(a, canon_patch), b)
+        self.assertEqual(canonicalize(canon_patch), canon_patch)
+        self.check_canon_patch(canon_patch)
 
     def test_cases(self):
         for a, b in ROUND_TRIP_CASES:
-            self.check(a, b)
-            self.check(b, a)
+            self.check_case(a, b)
+            self.check_case(b, a)
+
+    def test_negative_source_position(self):
+        f = BytesIO()
+        bcontrol = pack_control_block((0, 0, -1), (1, 0, 0))
+        write_patch(f, bcontrol, b'\x2a', b'')
+        canon_patch = canonicalize(f.getvalue())
+        blocks = read_patch(BytesIO(canon_patch))
+        self.assertEqual(list(unpack_control_block(blocks[0])),
+                         [(0, 1, 0)])
+        self.assertEqual(blocks[1:], (b'', b'\x2a'))
+        self.check_canon_patch(canon_patch)
 
 
 class TestCombine(unittest.TestCase):

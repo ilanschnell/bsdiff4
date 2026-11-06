@@ -125,6 +125,18 @@ def _make_patch(symbols):
 
 
 def canonicalize(patch_bytes: bytes) -> bytes:
+    """
+    Normalizes:
+    * negative source references into literal extra bytes
+    * maximal consecutive source references into diff runs
+    * maximal literal sequences into extra runs
+    * diff followed by extra into one control tuple
+    * source seeks into the preceding tuple where possible
+    * empty/no-op and trailing control tuples
+    * the final z to zero
+    * noncanonical integer encodings such as negative zero
+    * compressed blocks by decoding and recompressing them
+    """
     return _make_patch(_apply_symbolically(patch_bytes, None))
 
 
@@ -166,6 +178,7 @@ class TestCanonicalize(unittest.TestCase):
         org_patch = diff(a, b)
         canon_patch = canonicalize(org_patch)
         self.assertIs(type(canon_patch), bytes)
+        self.assertEqual(canon_patch, org_patch)
         self.assertEqual(patch(a, canon_patch), b)
         self.assertEqual(canonicalize(canon_patch), canon_patch)
         self.check_canon_patch(canon_patch)
@@ -262,9 +275,11 @@ class TestCombine(unittest.TestCase):
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        from pprint import pprint
+        #from pprint import pprint
+        from bsdiff4.cli import show_patch
         from bsdiff4.format import read_data
         p = read_data(sys.argv[1])
-        pprint(_apply_symbolically(p, None))
+        #pprint(_apply_symbolically(p, None))
+        show_patch(BytesIO(canonicalize(p)), verbose=True)
     else:
         unittest.main()

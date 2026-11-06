@@ -149,7 +149,7 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_diff_simple_example(self):
         self.check_diff_blocks(b'banana', b'bandana',
-                               [(3, 4, 2)], 3 * b'\x00', b'dana')
+                               [(3, 4, 0)], 3 * b'\x00', b'dana')
 
     def test_nonzero_diff(self):
         src = b"The quick brown fox jumps over the lazy dog."
@@ -158,26 +158,37 @@ class TestCoreDiffPatch(unittest.TestCase):
         diff = bytearray(n)
         diff[0] = 32
         diff[35] = (ord(b'h') - ord(b'l')) & 0xff
-        self.check_diff_blocks(src, dst, [(n, 0, -8)], bytes(diff), b'')
+        self.check_diff_blocks(src, dst, [(n, 0, 0)], bytes(diff), b'')
+
+    def test_merge_rule(self):
+        # A diff range followed by an extra-only control is merged into
+        # one control tuple.
+        src = 20 * b' ' + b'&xtraBlock'
+        dst = b'..' + 18 * b' ' + b'&exBlock&extraBlock'
+        # Without merging, controls would be [(21, 0, -9), (0, 18, 9)]
+        self.check_diff_blocks(src, dst,
+                               controls=[(21, 18, 0)],
+                               diff=b'\x0e\x0e' + 19 * b'\x00',
+                               extra=b'exBlock&extraBlock')
 
     def test_diff_insert_byte(self):
         src = 32 * b'a'
         dst = src[:16] + b'b' + src[16:]
-        self.check_diff_blocks(src, dst, [(32, 1, -1)],
+        self.check_diff_blocks(src, dst, [(32, 1, 0)],
                                diff=16 * b'\x00' + b'\x01' + 15 * b'\x00',
                                extra=b'a')
 
     def test_diff_swap_repeated_blocks(self):
         A, B = 100 * b'A', 100 * b'B'
         self.check_diff_blocks(A + B, B + A,
-                               [(0, 100, 0), (100, 0, -100)],
+                               [(0, 100, 0), (100, 0, 0)],
                                diff=100 * b'\x00', extra=B)
 
     def test_diff_swap_blocks(self):
         src = bytes(range(200))
         dst = src[100:] + src[:100]
         self.check_diff_blocks(src, dst,
-                               [(0, 0, 100), (100, 0, -200), (100, 0, -100)],
+                               [(0, 0, 100), (100, 0, -200), (100, 0, 0)],
                                diff=200 * b'\x00', extra=b'')
 
     def test_diff_adjust_overlap(self):
@@ -185,7 +196,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         # matching block.
         self.check_diff_blocks(b'ccccdabcadcb',
                                b'ccccdcdabcadcb',
-                               [(5, 0, -2), (9, 0, -9)],
+                               [(5, 0, -2), (9, 0, 0)],
                                14 * b'\x00', b'')
 
     def test_empty_dst(self):

@@ -54,6 +54,6 @@ Example:
    >>> b[100:106] = b' diff '
    >>> p = bsdiff4.diff(a, bytes(b))
    >>> len(p)
-   154
+   153
    >>> bsdiff4.patch(a, p) == b
    True

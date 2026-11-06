@@ -332,7 +332,7 @@ queue_add(PyObject *control, PendingControl *pending,
         return 0;
     }
 
-    /* Replace (x, y, z), (0, y2, z2) with (x, y + y2, z + z2);
+    /* Replace (px, py, pz), (0, y, z) with (px, py + y, pz + z);
        the intervening source seek is irrelevant because extra data does not
        access the source. */
     if (x == 0) {
@@ -344,7 +344,7 @@ queue_add(PyObject *control, PendingControl *pending,
         return 0;
     }
 
-    /* Replace (x, 0, 0), (x2, y2, z2) with (x + x2, y2, z2);
+    /* Replace (px, 0, 0), (x, y, z) with (px + x, y, z);
        both diff ranges access consecutive source data. */
     if (pending->y == 0 && pending->z == 0) {
         assert(x <= PY_SSIZE_T_MAX - pending->x);
@@ -368,7 +368,7 @@ queue_flush(PyObject *control, const PendingControl *pending)
     if (pending->initialized == 0)
         return 0;
 
-    /* The final source offset is irrelevant. */
+    /* The final source offset z is irrelevant. */
     if (pending->x == 0 && pending->y == 0)
         return 0;
 

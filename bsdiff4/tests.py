@@ -110,11 +110,16 @@ ROUND_TRIP_CASES = [
     (b'abc', b'abxy'),
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
+    (b'ccccdabcadcb', b'ccccdcdabcadcb'),
     (b'123456789 987654321', b'123456789000987654321'),  # issue #14
     # These inputs cause control tuples to be merged during diff generation.
     (b'ababababcdababababc', b'&ababababcdabababab'),
     (b'aaaaaaaaaaaaaaaaaaaabxtrabytes',
      b'ccaaaaaaaaaaaaaaaaaabexbytesbextrabytes'),
+    # swap repeated blocks
+    (50 * b'a' + 50 * b'b', 50 * b'b' + 50 * b'a'),
+    # swap random blocks
+    (RND_200, RND_200[100:] + RND_200[:100]),
     (b'', RND_200),
     (RND_200, RND_200),
     (RND_200, os.urandom(20) + RND_200),
@@ -130,10 +135,23 @@ BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]
 
 class TestCoreDiffPatch(unittest.TestCase):
 
+    def assert_canonical(self, control_block):
+        controls = list(unpack_control_block(control_block))
+        src_pos = 0
+        for i, (x, y, z) in enumerate(controls):
+            self.assertTrue(x or y or z)
+            if i:
+                self.assertGreater(x, 0)
+            if i == len(controls) - 1:
+                self.assertEqual(z, 0)
+            self.assertGreaterEqual(src_pos, 0)
+            src_pos += x + z
+
     def round_trip(self, src, dst):
         blocks = core.diff(src, dst)
         for block in blocks:
             self.assertIs(type(block), bytes)
+        self.assert_canonical(blocks[0])
         dst2 = core.patch(src, *blocks)
         self.assertIs(type(dst2), bytes)
         self.assertEqual(dst2, dst)

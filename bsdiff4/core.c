@@ -321,8 +321,8 @@ typedef struct {
 
 /* retain one control tuple so it can be combined with the next */
 static int
-queue_control(PyObject *control, PendingControl *pending,
-              Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
+queue_add(PyObject *control, PendingControl *pending,
+          Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
 {
     if (pending->initialized == 0) {
         pending->x = x;
@@ -530,8 +530,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
             result->extra_len += extra_len;
 
             z = (pos - lenb) - (lastpos + lenf);
-            if (queue_control(result->control, &pending,
-                              lenf, extra_len, z) < 0)
+            if (queue_add(result->control, &pending, lenf, extra_len, z) < 0)
                 goto error;
 
             lastscan = scan - lenb;

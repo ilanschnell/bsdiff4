@@ -111,6 +111,10 @@ ROUND_TRIP_CASES = [
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
     (b'123456789 987654321', b'123456789000987654321'),  # issue #14
+    # These inputs cause control tuples to be merged during diff generation.
+    (b'ababababcdababababc', b'&ababababcdabababab'),
+    (b'aaaaaaaaaaaaaaaaaaaabxtrabytes',
+     b'ccaaaaaaaaaaaaaaaaaabexbytesbextrabytes'),
     (b'', RND_200),
     (RND_200, RND_200),
     (RND_200, os.urandom(20) + RND_200),

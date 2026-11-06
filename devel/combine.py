@@ -75,11 +75,18 @@ def _apply_symbolically(patch_bytes, source):
 
 
 def _seek(controls, position, target):
-    """Emit no-op tuples to move the source position to target."""
+    """Move the source position to target."""
+    merge = bool(controls)
     while position != target:
         increment = target - position
         increment = max(-INT64_MAX, min(INT64_MAX, increment))
-        controls.append((0, 0, increment))
+        if merge:
+            x, y, z = controls[-1]
+            assert z == 0
+            controls[-1] = x, y, increment
+            merge = False
+        else:
+            controls.append((0, 0, increment))
         position = _update_position(position, increment)
     return position
 
@@ -97,8 +104,7 @@ def _make_patch(symbols):
         if isinstance(value, tuple):
             src_pos = _seek(controls, src_pos, value[0])
 
-            while (i < len(symbols) and
-                   isinstance(symbols[i], tuple) and
+            while (i < len(symbols) and isinstance(symbols[i], tuple) and
                    symbols[i][0] == src_pos + x):
                 diff_block.append(symbols[i][1])
                 x += 1
@@ -114,9 +120,12 @@ def _make_patch(symbols):
         controls.append((x, y, 0))
 
     f = BytesIO()
-    write_patch(f, pack_control_block(*controls),
-                bytes(diff_block), bytes(extra_block))
+    write_patch(f, pack_control_block(*controls), diff_block, extra_block)
     return f.getvalue()
+
+
+def canonicalize(patch_bytes: bytes) -> bytes:
+    return _make_patch(_apply_symbolically(patch_bytes, None))
 
 
 def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
@@ -132,11 +141,28 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
 
 # ------------------------------- tests -----------------------------------
 
+import os
 import sys
 import unittest
-from random import Random
+from random import randrange
 
 from bsdiff4.format import diff, patch
+from bsdiff4.tests import ROUND_TRIP_CASES
+
+
+class TestCanonicalize(unittest.TestCase):
+
+    def check(self, a, b):
+        patch_org = diff(a, b)
+        patch_canon = canonicalize(patch_org)
+        self.assertIs(type(patch_canon), bytes)
+        self.assertEqual(patch(a, patch_canon), b)
+        self.assertEqual(canonicalize(patch_canon), patch_canon)
+
+    def test_cases(self):
+        for a, b in ROUND_TRIP_CASES:
+            self.check(a, b)
+            self.check(b, a)
 
 
 class TestCombine(unittest.TestCase):
@@ -167,20 +193,32 @@ class TestCombine(unittest.TestCase):
         patch_bc = self.make_patch([(2, 1, 2), (3, 0, -7), (2, 0, 0)],
                                    bytes(range(10, 80, 10)), b'Q')
         patch_ac = combine(patch_ab, patch_bc)
+        control_block = read_patch(BytesIO(patch_ac))[0]
+        self.assertTrue(all(x or y for x, y, z in
+                            unpack_control_block(control_block)))
 
-        for a in [b'', b'abc', b'abcdefg', bytes(range(20))]:
+        for a in b'', b'abc', b'abcdefg', 20 * b'a', bytes(range(20)):
             b = patch(a, patch_ab)
             c = patch(b, patch_bc)
             self.assertEqual(patch(a, patch_ac), c)
 
-    @unittest.skipIf(sys.version_info[:2] < (3, 9),
-                     "random.randbytes added in Python 3.9")
     def test_random(self):
-        random = Random(0)
         for _ in range(100):
-            values = [random.randbytes(random.randrange(100))
-                      for _ in range(3)]
+            values = [os.urandom(randrange(100)) for _ in range(3)]
             self.check(*values)
+
+    def test_random_mutations(self):
+        n = 500
+        a = os.urandom(n)
+        b = bytearray(a)
+        for _ in range(n // 10):
+            b[randrange(n)] = randrange(256)
+        b = bytes(b)
+        c = bytearray(b)
+        for _ in range(n // 10):
+            c[randrange(n)] = randrange(256)
+        c = bytes(c)
+        self.check(a, b, c)
 
     def test_corrupt_patch(self):
         empty = diff(b'', b'')
@@ -206,5 +244,5 @@ if __name__ == '__main__':
         from bsdiff4.format import read_data
         p = read_data(sys.argv[1])
         pprint(_apply_symbolically(p, None))
-        sys.exit()
-    unittest.main()
+    else:
+        unittest.main()

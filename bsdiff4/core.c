@@ -332,9 +332,9 @@ queue_add(PyObject *control, PendingControl *pending,
         return 0;
     }
 
-    /* Replace (px, py, pz), (0, y, z) with (px, py + y, pz + z);
-       the intervening source seek is irrelevant because extra data does not
-       access the source. */
+    /* A tuple with no diff range does not access the source; any data it
+       emits is extra data.  Fold it into the preceding tuple:
+       (px, py, pz), (0, y, z) -> (px, py + y, pz + z). */
     if (x == 0) {
         assert(y <= PY_SSIZE_T_MAX - pending->y);
         assert((z >= 0 && pending->z <= PY_SSIZE_T_MAX - z) ||
@@ -344,7 +344,8 @@ queue_add(PyObject *control, PendingControl *pending,
         return 0;
     }
 
-    /* Replace (px, 0, 0), (x, y, z) with (px + x, y, z);
+    /* The preceding rule may cancel intervening source seeks, leaving
+       (px, 0, 0), (x, y, z).  Replace these with (px + x, y, z), as
        both diff ranges access consecutive source data. */
     if (pending->y == 0 && pending->z == 0) {
         assert(x <= PY_SSIZE_T_MAX - pending->x);

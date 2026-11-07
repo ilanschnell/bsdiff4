@@ -198,11 +198,13 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
         self.check_diff_blocks(src, dst, [(n, 0, 0)], bytes(diff), b'')
 
     def test_merge_rules(self):
+        #                       ...................
         src = b'SRFLJLKEOXQDHIUSRFLJLKEOXQDHIUSRFLJCADRFLJLKEOXQDHIUS'
         dst = b'IRFLJLKEOXQDHIUSRFLJTWYVGPNBMEOXQDHIUSRFLJLKEOX'
         #        ^^^^^^^^^^^^^^^^^^^
         # dst[1:20] occurs in src at offsets 1 and 16.  The matcher first
         # selects the latter occurrence, then returns to the former.
+        self.assertTrue(src[1:20] == src[16:35] == dst[1:20])
         # Without merging, controls would be:
         #     [(1, 0, 15), (0, 0, -15), (19, 27, 0)]
         # Branch 1 merges the first two tuples:

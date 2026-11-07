@@ -220,10 +220,10 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
                                extra=b'TWYVGPNBMEOXQDHIUSRFLJLKEOX')
 
     def test_merge_rules_diff_only(self):
-        A = b'RCdrQsXKTOo1N5Ml7Xa'  # 19 bytes
-        B = b'332230220'            # 9 bytes
-        C = b'cGIm8gt4E'            # 9 bytes
-        D = b'ZHDSOJjqK'            # 9 bytes
+        A = b'RCdrQsXKTOo1N5Ml7Xa'
+        B = b'332230220'
+        C = b'cGIm8gt4E'
+        D = b'ZHDSOJjqK'
         src = A + A + B + C + A + B + B
         dst = A + A + D + B + A + B + B
         # Without merging, controls would be:
@@ -232,8 +232,8 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
         #     [(19, 0, 0), (74, 0, 0)]
         # The second gives the canonical result:
         #     [(93, 0, 0)]
-        # The seeks cancel, so the diff block is the bytewise difference
-        # between dst and src.
+        # The seeks cancel, so the diff block is simply the bytewise
+        # difference between dst and src.
         bdiff = bytes((b - a) & 0xff for a, b in zip(src, dst))
         self.check_diff_blocks(src, dst, [(93, 0, 0)], bdiff, b'')
 

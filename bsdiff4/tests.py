@@ -117,6 +117,8 @@ ROUND_TRIP_CASES = [
     (b'ababababcdababababc', b'&ababababcdabababab'),
     (b'aaaaaaaaaaaaaaaaaaaabxtrabytes',
      b'ccaaaaaaaaaaaaaaaaaabexbytesbextrabytes'),
+    (b'srfljlkeoxqdhiusrfljlkeoxqdhiusrfljcadrfljlkeoxqdhius',
+     b'irfljlkeoxqdhiusrfljtwyvgpnbmeoxqdhiusrfljlkeox'),
     # swap repeated blocks
     (50 * b'a' + 50 * b'b', 50 * b'b' + 50 * b'a'),
     # swap random blocks
@@ -288,6 +290,7 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
                 ([(3, 4, 0)], b'\x20\x00\x00', b'dana'),
                 # Also canonical, but not returned by core.diff().
                 ([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a'),
+                ([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana'),
                 ([(0, 7, 0)], b'', dst),
                 # Control tuples not merged.
                 ([(3, 0, 0), (0, 4, 0)], b'\x20\x00\x00', b'dana'),
@@ -295,6 +298,9 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
                 ([(1, 0, 0), (2, 2, 0), (0, 2, 0)], b'\x20\x00\x00', b'dana'),
                 ([(3, 0, 0), (0, 2, 0), (0, 2, 0)], b'\x20\x00\x00', b'dana'),
                 ([(1, 0, 0), (2, 0, 0), (0, 4, 0)], b'\x20\x00\x00', b'dana'),
+                # Consecutive z values.
+                ([(0, 0, 11), (0, 0, -4), (0, 0, -7),
+                  (3, 4, 0)], b'\x20\x00\x00', b'dana'),
                 # Irrelevant z values.
                 ([(3, 4, -1234), (0, 0, 1297)], b'\x20\x00\x00', b'dana'),
                 ([(3, 0, -1234), (0, 4, 1297)], b'\x20\x00\x00', b'dana'),

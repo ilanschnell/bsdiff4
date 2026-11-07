@@ -197,16 +197,23 @@ class TestCoreDiffPatch(unittest.TestCase, Util):
         diff[35] = (ord(b'h') - ord(b'l')) & 0xff
         self.check_diff_blocks(src, dst, [(n, 0, 0)], bytes(diff), b'')
 
-    def test_merge_rule(self):
-        # A diff range followed by an extra-only control is merged into
-        # one control tuple.
-        src = 20 * b' ' + b'&xtraBlock'
-        dst = b'..' + 18 * b' ' + b'&exBlock&extraBlock'
-        # Without merging, controls would be [(21, 0, -9), (0, 18, 9)]
+    def test_merge_rules(self):
+        src = b'SRFLJLKEOXQDHIUSRFLJLKEOXQDHIUSRFLJCADRFLJLKEOXQDHIUS'
+        dst = b'IRFLJLKEOXQDHIUSRFLJTWYVGPNBMEOXQDHIUSRFLJLKEOX'
+        #        ^^^^^^^^^^^^^^^^^^^
+        # dst[1:20] occurs in src at offsets 1 and 16.  The matcher first
+        # selects the latter occurrence, then returns to the former.
+        # Without merging, controls would be:
+        #     [(1, 0, 15), (0, 0, -15), (19, 27, 0)]
+        # Branch 1 merges the first two tuples:
+        #     [(1, 0, 0), (19, 27, 0)]
+        # Branch 2 can then see that the two diff ranges access consecutive
+        # source positions and merge them:
+        #     [(20, 27, 0)]
         self.check_diff_blocks(src, dst,
-                               controls=[(21, 18, 0)],
-                               diff=b'\x0e\x0e' + 19 * b'\x00',
-                               extra=b'exBlock&extraBlock')
+                               controls=[(20, 27, 0)],
+                               diff=b'\xf6' + 19 * b'\x00',
+                               extra=b'TWYVGPNBMEOXQDHIUSRFLJLKEOX')
 
     def test_diff_insert_byte(self):
         src = 32 * b'a'

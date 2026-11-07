@@ -159,20 +159,10 @@ import unittest
 from random import randrange
 
 from bsdiff4.format import diff, patch
-from bsdiff4.tests import ROUND_TRIP_CASES
+from bsdiff4.tests import ROUND_TRIP_CASES, Util
 
 
-class TestCanonicalize(unittest.TestCase):
-
-    def check_canon_patch(self, p):
-        blocks = read_patch(BytesIO(p))
-        controls = list(unpack_control_block(blocks[0]))
-        for i, (x, y, z) in enumerate(controls):
-            self.assertTrue(x or y or z)
-            if i:
-                self.assertTrue(x or y)
-            if i == len(controls) - 1:
-                self.assertEqual(z, 0)
+class TestCanonicalize(unittest.TestCase, Util):
 
     def check_case(self, a, b):
         org_patch = diff(a, b)
@@ -181,7 +171,8 @@ class TestCanonicalize(unittest.TestCase):
         self.assertEqual(canon_patch, org_patch)
         self.assertEqual(patch(a, canon_patch), b)
         self.assertEqual(canonicalize(canon_patch), canon_patch)
-        self.check_canon_patch(canon_patch)
+        control_block, _, _ = read_patch(BytesIO(canon_patch))
+        self.assert_canonical(control_block, len(a))
 
     def test_cases(self):
         for a, b in ROUND_TRIP_CASES:
@@ -197,7 +188,7 @@ class TestCanonicalize(unittest.TestCase):
         self.assertEqual(list(unpack_control_block(blocks[0])),
                          [(0, 1, 0)])
         self.assertEqual(blocks[1:], (b'', b'\x2a'))
-        self.check_canon_patch(canon_patch)
+        self.assert_canonical(blocks[0], 0)
 
 
 class TestCombine(unittest.TestCase):
@@ -275,7 +266,7 @@ class TestCombine(unittest.TestCase):
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        #from pprint import pprint
+        from pprint import pprint
         from bsdiff4.cli import show_patch
         from bsdiff4.format import read_data
         p = read_data(sys.argv[1])

@@ -110,6 +110,7 @@ ROUND_TRIP_CASES = [
     (b'abc', b'abxy'),
     (b'abc', b'xbc'),
     (b'abc', b'xybc'),
+    (b'Banana', b'bandana'),
     (b'ccccdabcadcb', b'ccccdcdabcadcb'),
     (b'123456789 987654321', b'123456789000987654321'),  # issue #14
     # These inputs cause control tuples to be merged during diff generation.
@@ -133,7 +134,7 @@ ROUND_TRIP_CASES = [
 BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]
 
 
-class TestCoreDiffPatch(unittest.TestCase):
+class Util:
 
     def assert_canonical(self, control_block, src_len):
         controls = list(unpack_control_block(control_block))
@@ -158,6 +159,9 @@ class TestCoreDiffPatch(unittest.TestCase):
                 self.assertTrue(y or z)
             src_pos += x + z
 
+
+class TestCoreDiffPatch(unittest.TestCase, Util):
+
     def round_trip(self, src, dst):
         blocks = core.diff(src, dst)
         for block in blocks:
@@ -181,8 +185,8 @@ class TestCoreDiffPatch(unittest.TestCase):
         self.assertEqual(core.patch(src, *blocks), dst)
 
     def test_diff_simple_example(self):
-        self.check_diff_blocks(b'banana', b'bandana',
-                               [(3, 4, 0)], 3 * b'\x00', b'dana')
+        self.check_diff_blocks(b'Banana', b'bandana',
+                               [(3, 4, 0)], b'\x20\x00\x00', b'dana')
 
     def test_nonzero_diff(self):
         src = b"The quick brown fox jumps over the lazy dog."
@@ -267,7 +271,31 @@ class TestCoreDiffPatch(unittest.TestCase):
         blocks = bcontrol, len(src) * b'\x01', b''
         self.assertEqual(core.patch(src, *blocks), dst)
 
-    def test_patch(self):
+    def test_patch_non_canonical(self):
+        src = b'Banana'
+        dst = b'bandana'
+        for controls, diff, extra in [
+                # canonical patch
+                ([(3, 4, 0)], b'\x20\x00\x00', b'dana'),
+                # Also canonical, but not returned by core.diff().
+                ([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a'),
+                ([(0, 7, 0)], b'', dst),
+                # Control tuples not merged.
+                ([(3, 0, 0), (0, 4, 0)], b'\x20\x00\x00', b'dana'),
+                ([(2, 0, 0), (1, 4, 0)], b'\x20\x00\x00', b'dana'),
+                ([(1, 0, 0), (2, 2, 0), (0, 2, 0)], b'\x20\x00\x00', b'dana'),
+                ([(3, 0, 0), (0, 2, 0), (0, 2, 0)], b'\x20\x00\x00', b'dana'),
+                ([(1, 0, 0), (2, 0, 0), (0, 4, 0)], b'\x20\x00\x00', b'dana'),
+                # Irrelevant z values.
+                ([(3, 4, -1234), (0, 0, 1297)], b'\x20\x00\x00', b'dana'),
+                ([(3, 0, -1234), (0, 4, 1297)], b'\x20\x00\x00', b'dana'),
+                # Source position out of range.
+                ([(0, 0, -1234), (7, 0, 0)], dst, b''),
+        ]:
+            bcontrol = pack_control_block(*controls)
+            self.assertEqual(core.patch(src, bcontrol, diff, extra), dst)
+
+    def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
         noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
         operation = pack_control_block((3, 4, 2))

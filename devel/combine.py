@@ -190,6 +190,19 @@ class TestCanonicalize(unittest.TestCase, Util):
         self.assertEqual(blocks[1:], (b'', b'\x2a'))
         self.assert_canonical(blocks[0], 0)
 
+    def test_merge_rules(self):
+        bcontrol = pack_control_block((1, 0, 15), (0, 0, -15), (19, 27, 0))
+        bdiff = b'\xf6' + 19 * b'\x00'
+        bextra = b'TWYVGPNBMEOXQDHIUSRFLJLKEOX'
+        f = BytesIO()
+        write_patch(f, bcontrol, bdiff, bextra)
+        org_patch = f.getvalue()
+        canon_patch = canonicalize(org_patch)
+        blocks = read_patch(BytesIO(canon_patch))
+        self.assertEqual(list(unpack_control_block(blocks[0])), [(20, 27, 0)])
+        self.assertEqual(blocks[1], bdiff)
+        self.assertEqual(blocks[2], bextra)
+
 
 class TestCombine(unittest.TestCase):
 

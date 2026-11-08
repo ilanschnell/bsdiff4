@@ -91,17 +91,20 @@ class TestSuffixArray(unittest.TestCase):
 
             alpha_data = alphabetize(data)
             # check ordering of alphabetized data
-            for i in range(n - 1):
-                self.assertEqual(alpha_data[i] < alpha_data[i + 1],
-                                 data[i] < data[i + 1])
+            self.assertEqual(sorted(range(n), key=lambda i: alpha_data[i]),
+                             sorted(range(n), key=lambda i: data[i]))
 
             self.assertEqual(suffix_array(alpha_data),
                              suffix_array(data))
 
     def test_alphabetize_blocks(self):
+        self.assertEqual(alphabetize(), ())
         A = b'\x00\x07'
         B = b'\x02\x07\x05'
         self.assertEqual(alphabetize(A, B), (b'ad', b'bdc'))
+        C = b'\x06'
+        self.assertEqual(alphabetize(A, B, C), (b'ae', b'bec', b'd'))
+        self.assertEqual(alphabetize(A, B, b''), (b'ad', b'bdc', b''))
 
     def test_large_uniform(self):
         n = N_LARGE

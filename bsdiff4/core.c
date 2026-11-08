@@ -319,7 +319,7 @@ typedef struct {
     int initialized;  /* whether we received any control tuple yet */
 } PendingControl;
 
-/* retain one control tuple so it can be combined with the next */
+/* Retain one control tuple so it can be merged with the next. */
 static int
 queue_add(PyObject *control, PendingControl *pending,
           Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
@@ -333,7 +333,7 @@ queue_add(PyObject *control, PendingControl *pending,
     }
 
     /* A tuple with no diff range does not access the source; any data it
-       emits is extra data.  Fold it into the preceding tuple:
+       emits is extra data.  Merge it into the preceding tuple:
        (px, py, pz), (0, y, z) -> (px, py + y, pz + z). */
     if (x == 0) {
         assert(y <= PY_SSIZE_T_MAX - pending->y);
@@ -363,13 +363,14 @@ queue_add(PyObject *control, PendingControl *pending,
     return 0;
 }
 
+/* Append the final pending tuple, unless it produces no output. */
 static int
 queue_flush(PyObject *control, const PendingControl *pending)
 {
     if (pending->initialized == 0)
         return 0;
 
-    /* The final source offset z is irrelevant. */
+    /* The final source seek is irrelevant. */
     if (pending->x == 0 && pending->y == 0)
         return 0;
 

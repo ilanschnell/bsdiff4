@@ -3,8 +3,8 @@ Additional tests and verifications for suffix_array() which are neither
 part of the regular test suite nor part of any bsdiff4 distributions.
 """
 import os
+import random
 import unittest
-from random import randrange
 try:
     from itertools import pairwise  # available under Python 3.10 and higher
 except ImportError:
@@ -50,12 +50,33 @@ class TestSuffixArray(unittest.TestCase):
 
     def test_small_alphabets(self):
         for alphabet_size in range(1, 257):
-            data = bytes(randrange(alphabet_size) for _ in range(N_SMALL))
+            data = bytes(random.randrange(alphabet_size)
+                         for _ in range(N_SMALL))
             self.check_data(data)
 
     def test_random(self):
         for n in range(N_SMALL):
             self.check_data(os.urandom(n))
+
+    def test_alphabetize(self):
+
+        def alphabetize(data):
+            "Turn data into printable ASCII."
+            values = bytes(sorted(set(data)))
+            alphabet = b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+            assert len(values) <= len(alphabet)
+            table = bytes.maketrans(values, alphabet[:len(values)])
+            return data.translate(table)
+
+        n = 50  # data size
+        m = 32  # alphabet size
+        chars = random.sample(range(256), m)
+        self.assertTrue(len(chars) == len(set(chars)) == m)
+        data = bytes(random.choices(chars, k=n))
+        self.assertEqual(len(data), n)
+        self.assertTrue(len(set(data)) <= m)
+        sa = suffix_array(data)
+        self.assertEqual(suffix_array(alphabetize(data)), sa)
 
     def test_large_uniform(self):
         n = N_LARGE

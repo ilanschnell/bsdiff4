@@ -345,7 +345,7 @@ queue_add(PyObject *control, PendingControl *pending,
     }
 
     /* The preceding rule may cancel intervening source seeks, leaving
-       (px, 0, 0), (x, y, z).  Replace these with (px + x, y, z), as
+       (px, 0, 0), (x, y, z).  Merge these into (px + x, y, z), since
        both diff ranges access consecutive source data. */
     if (pending->y == 0 && pending->z == 0) {
         assert(x <= PY_SSIZE_T_MAX - pending->x);

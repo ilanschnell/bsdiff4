@@ -4,6 +4,7 @@ part of the regular test suite nor part of any bsdiff4 distributions.
 """
 import os
 import random
+from string import ascii_lowercase, ascii_uppercase, digits
 import unittest
 try:
     from itertools import pairwise  # available under Python 3.10 and higher
@@ -16,6 +17,25 @@ from bsdiff4.core import suffix_array
 
 N_SMALL = 500
 N_LARGE = 1_000_000
+
+
+def alphabetize(*blocks):
+    "Turn data blocks into printable ASCII."
+    values = bytes(sorted(set(b''.join(blocks))))
+    m = len(values)
+    alphabet = ascii_lowercase
+    if m > 26:
+        alphabet += ascii_uppercase
+    if m > 52:
+        alphabet += digits
+    if m > 62:
+        alphabet += '!#$%&()*+,-./:;<=>?@[]^_{|}~'
+    if m > len(alphabet):
+        raise ValueError("Cannot turn %d values into printable ASCII" % m)
+    alphabet = bytes(sorted(alphabet.encode('utf-8')))
+    table = bytes.maketrans(values, alphabet[:m])
+    blocks = [data.translate(table) for data in blocks]
+    return blocks[0] if len(blocks) == 1 else tuple(blocks)
 
 
 class TestSuffixArray(unittest.TestCase):
@@ -59,24 +79,29 @@ class TestSuffixArray(unittest.TestCase):
             self.check_data(os.urandom(n))
 
     def test_alphabetize(self):
+        n = 100  # data size
+        for m in range(1, 91):  # alphabet size
+            chars = random.sample(range(256), m)
+            self.assertEqual(len(chars), m)
+            values = chars + random.choices(chars, k=n - m)
+            random.shuffle(values)
+            data = bytes(values)
+            self.assertEqual(len(set(data)), m)
+            self.assertEqual(len(data), n)
 
-        def alphabetize(data):
-            "Turn data into printable ASCII."
-            values = bytes(sorted(set(data)))
-            alphabet = b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-            assert len(values) <= len(alphabet)
-            table = bytes.maketrans(values, alphabet[:len(values)])
-            return data.translate(table)
+            alpha_data = alphabetize(data)
+            # check ordering of alphabetized data
+            for i in range(n - 1):
+                self.assertEqual(alpha_data[i] < alpha_data[i + 1],
+                                 data[i] < data[i + 1])
 
-        n = 50  # data size
-        m = 32  # alphabet size
-        chars = random.sample(range(256), m)
-        self.assertTrue(len(chars) == len(set(chars)) == m)
-        data = bytes(random.choices(chars, k=n))
-        self.assertEqual(len(data), n)
-        self.assertTrue(len(set(data)) <= m)
-        sa = suffix_array(data)
-        self.assertEqual(suffix_array(alphabetize(data)), sa)
+            self.assertEqual(suffix_array(alpha_data),
+                             suffix_array(data))
+
+    def test_alphabetize_blocks(self):
+        A = b'\x00\x07'
+        B = b'\x02\x07\x05'
+        self.assertEqual(alphabetize(A, B), (b'ad', b'bdc'))
 
     def test_large_uniform(self):
         n = N_LARGE

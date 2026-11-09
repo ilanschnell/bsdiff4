@@ -14,7 +14,7 @@ def alphabetize(*blocks):
     if m > 52:
         alphabet += digits
     if m > 62:
-        alphabet += '!#$%&()*+,-./:;<=>?@[]^_{|}~'
+        alphabet += '!#$%&()*+,-./:;<=>?@[]^_{|}~'[:m - 62]
     if m > len(alphabet):
         raise ValueError("Cannot turn %d values into printable ASCII" % m)
     alphabet = bytes(sorted(alphabet.encode('utf-8')))

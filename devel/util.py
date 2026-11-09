@@ -46,9 +46,9 @@ class TestAlphabetize(unittest.TestCase):
     def test_range(self):
         n = 100  # data size
         for m in range(1, 91):  # alphabet size
-            chars = random.sample(range(256), m)
-            self.assertEqual(len(chars), m)
-            values = chars + random.choices(chars, k=n - m)
+            values = random.sample(range(256), m)
+            self.assertEqual(len(values), m)
+            values.extend(random.choices(values, k=n - m))
             random.shuffle(values)
             data = bytes(values)
             self.assertEqual(len(set(data)), m)
@@ -58,7 +58,7 @@ class TestAlphabetize(unittest.TestCase):
             # check ordering of alphabetized data
             self.assertEqual(sorted(range(n), key=lambda i: alpha_data[i]),
                              sorted(range(n), key=lambda i: data[i]))
-
+            # idempotency
             self.assertEqual(alphabetize(alpha_data), alpha_data)
 
     def test_blocks(self):

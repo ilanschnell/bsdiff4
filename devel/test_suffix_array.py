@@ -62,16 +62,15 @@ class TestSuffixArray(unittest.TestCase):
     def test_alphabetize(self):
         n = 200  # data size
         for m in range(1, 91):  # alphabet size
-            chars = random.sample(range(256), m)
-            self.assertEqual(len(chars), m)
-            values = chars + random.choices(chars, k=n - m)
+            values = random.sample(range(256), m)
+            self.assertEqual(len(values), m)
+            values.extend(random.choices(values, k=n - m))
             random.shuffle(values)
             data = bytes(values)
             self.assertEqual(len(set(data)), m)
             self.assertEqual(len(data), n)
 
-            alpha_data = alphabetize(data)
-            self.assertEqual(suffix_array(alpha_data),
+            self.assertEqual(suffix_array(alphabetize(data)),
                              suffix_array(data))
 
     def test_large_uniform(self):

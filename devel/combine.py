@@ -162,14 +162,32 @@ from bsdiff4.format import diff, patch
 from bsdiff4.tests import ROUND_TRIP_CASES, Util
 
 
-class TestCanonicalize(unittest.TestCase, Util):
+class PatchUtil:
+
+    @staticmethod
+    def make_patch(controls, diff_block, extra_block):
+        f = BytesIO()
+        write_patch(f, pack_control_block(*controls),
+                    diff_block, extra_block)
+        return f.getvalue()
+
+    def assert_patches_equal(self, patch_a, patch_b):
+        blocks_a = read_patch(BytesIO(patch_a))
+        blocks_b = read_patch(BytesIO(patch_b))
+        self.assertEqual(list(unpack_control_block(blocks_a[0])),
+                         list(unpack_control_block(blocks_b[0])))
+        self.assertEqual(blocks_a[1], blocks_b[1])
+        self.assertEqual(blocks_a[2], blocks_b[2])
+
+
+class TestCanonicalize(unittest.TestCase, PatchUtil, Util):
 
     def check_case(self, a, b):
         org_patch = diff(a, b)
         canon_patch = canonicalize(org_patch)
         self.assertIs(type(canon_patch), bytes)
-        self.assertEqual(canon_patch, org_patch)
         self.assertEqual(patch(a, canon_patch), b)
+        # idempotency
         self.assertEqual(canonicalize(canon_patch), canon_patch)
         control_block, _, _ = read_patch(BytesIO(canon_patch))
         self.assert_canonical(control_block, len(a))
@@ -191,20 +209,25 @@ class TestCanonicalize(unittest.TestCase, Util):
         self.assert_canonical(blocks[0], 0)
 
     def test_merge_rules(self):
-        bcontrol = pack_control_block((1, 0, 15), (0, 0, -15), (19, 27, 0))
+        controls = [(1, 0, 15), (0, 0, -15), (19, 27, 0)]
         bdiff = b'\xf6' + 19 * b'\x00'
         bextra = b'TWYVGPNBMEOXQDHIUSRFLJLKEOX'
-        f = BytesIO()
-        write_patch(f, bcontrol, bdiff, bextra)
-        org_patch = f.getvalue()
-        canon_patch = canonicalize(org_patch)
-        blocks = read_patch(BytesIO(canon_patch))
-        self.assertEqual(list(unpack_control_block(blocks[0])), [(20, 27, 0)])
-        self.assertEqual(blocks[1], bdiff)
-        self.assertEqual(blocks[2], bextra)
+        org_patch = self.make_patch(controls, bdiff, bextra)
+        self.assert_patches_equal(
+            canonicalize(org_patch),
+            self.make_patch([(20, 27, 0)], bdiff, bextra))
+
+    def test_merge_rules_diff_only(self):
+        controls = [(19, 0, 37), (0, 0, -37), (74, 0, 0)]
+        mid = b"'\x15\x12!\x1c\x1a8?\x1b\xd0\xec\xe9\xc5\xfb\xc9\xbe\xfe\xeb"
+        bdiff = 38 * b'\0' + mid + 37 * b'\0'
+        org_patch = self.make_patch(controls, bdiff, b'')
+        self.assert_patches_equal(
+            canonicalize(org_patch),
+            self.make_patch([(93, 0, 0)], bdiff, b''))
 
 
-class TestCombine(unittest.TestCase):
+class TestCombine(unittest.TestCase, PatchUtil):
 
     def check(self, a, b, c):
         patch_ab = diff(a, b)
@@ -268,13 +291,6 @@ class TestCombine(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,
                                     r"corrupt patch \(incomplete output\)"):
             combine(empty, incomplete)
-
-    @staticmethod
-    def make_patch(controls, diff_block, extra_block):
-        f = BytesIO()
-        write_patch(f, pack_control_block(*controls),
-                    diff_block, extra_block)
-        return f.getvalue()
 
 
 if __name__ == '__main__':

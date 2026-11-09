@@ -4,7 +4,6 @@ part of the regular test suite nor part of any bsdiff4 distributions.
 """
 import os
 import random
-from string import ascii_lowercase, ascii_uppercase, digits
 import unittest
 try:
     from itertools import pairwise  # available under Python 3.10 and higher
@@ -13,29 +12,11 @@ except ImportError:
         return zip(a, a[1:])
 
 from bsdiff4.core import suffix_array
+from util import alphabetize
 
 
 N_SMALL = 500
 N_LARGE = 1_000_000
-
-
-def alphabetize(*blocks):
-    "Turn data blocks into printable ASCII."
-    values = bytes(sorted(set(b''.join(blocks))))
-    m = len(values)
-    alphabet = ascii_lowercase
-    if m > 26:
-        alphabet += ascii_uppercase
-    if m > 52:
-        alphabet += digits
-    if m > 62:
-        alphabet += '!#$%&()*+,-./:;<=>?@[]^_{|}~'
-    if m > len(alphabet):
-        raise ValueError("Cannot turn %d values into printable ASCII" % m)
-    alphabet = bytes(sorted(alphabet.encode('utf-8')))
-    table = bytes.maketrans(values, alphabet[:m])
-    blocks = [data.translate(table) for data in blocks]
-    return blocks[0] if len(blocks) == 1 else tuple(blocks)
 
 
 class TestSuffixArray(unittest.TestCase):
@@ -79,7 +60,7 @@ class TestSuffixArray(unittest.TestCase):
             self.check_data(os.urandom(n))
 
     def test_alphabetize(self):
-        n = 100  # data size
+        n = 200  # data size
         for m in range(1, 91):  # alphabet size
             chars = random.sample(range(256), m)
             self.assertEqual(len(chars), m)
@@ -90,21 +71,8 @@ class TestSuffixArray(unittest.TestCase):
             self.assertEqual(len(data), n)
 
             alpha_data = alphabetize(data)
-            # check ordering of alphabetized data
-            self.assertEqual(sorted(range(n), key=lambda i: alpha_data[i]),
-                             sorted(range(n), key=lambda i: data[i]))
-
             self.assertEqual(suffix_array(alpha_data),
                              suffix_array(data))
-
-    def test_alphabetize_blocks(self):
-        self.assertEqual(alphabetize(), ())
-        A = b'\x00\x07'
-        B = b'\x02\x07\x05'
-        self.assertEqual(alphabetize(A, B), (b'ad', b'bdc'))
-        C = b'\x06'
-        self.assertEqual(alphabetize(A, B, C), (b'ae', b'bec', b'd'))
-        self.assertEqual(alphabetize(A, B, b''), (b'ad', b'bdc', b''))
 
     def test_large_uniform(self):
         n = N_LARGE

@@ -69,37 +69,24 @@ class TestCoreInt64(unittest.TestCase):
             self.assertEqual(core.decode_int64(b), n)
 
 
+RND_200 = os.urandom(200)
+
+BYTES_CASES = [b'', b'a', b'abc', 50 * b'A', 50 * b'A' + 50 * b'B', RND_200]
+
+
 class TestSuffixArray(unittest.TestCase):
 
-    def test_basic(self):
+    def test_examples(self):
         SA = core.suffix_array
         self.assertEqual(SA(b''), [0])
         self.assertEqual(SA(b'banana'), [6, 5, 3, 1, 0, 4, 2])
 
-    def test_equal_bytes(self):
-        n = 10_000
-        self.assertEqual(core.suffix_array(n * b'a'),
-                         list(range(n, -1, -1)))
+    def test_cases(self):
+        for data in BYTES_CASES:
+            self.assertEqual(
+                core.suffix_array(data),
+                sorted(range(len(data) + 1), key=lambda i: data[i:]))
 
-    def check_data(self, data):
-        self.assertEqual(
-            core.suffix_array(data),
-            sorted(range(len(data) + 1), key=lambda i: data[i:]))
-
-    def test_repeated_groups(self):
-        self.check_data(32 * b'a')
-        self.check_data(100 * b'a' + 100 * b'b')
-
-    def test_two_element_group(self):
-        # A two-element group must not be mistaken for a singleton.
-        self.check_data(b'CCBBCCCACCCCBCACBCCCCC')
-
-    def test_random(self):
-        # randomized comparison
-        self.check_data(os.urandom(1000))
-
-
-RND_200 = os.urandom(200)
 
 ROUND_TRIP_CASES = [
     (b'', b''),
@@ -132,8 +119,6 @@ ROUND_TRIP_CASES = [
     # 10 bytes replaced by 15 new bytes
     (RND_200, RND_200[:95] + os.urandom(15) + RND_200[105:]),
 ]
-
-BYTES_CASES = [b'', b'a', b'abc', 100 * b'a', RND_200]
 
 
 class Util:

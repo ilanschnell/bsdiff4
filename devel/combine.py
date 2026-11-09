@@ -212,18 +212,16 @@ class TestCanonicalize(unittest.TestCase, PatchUtil, Util):
         controls = [(1, 0, 15), (0, 0, -15), (19, 27, 0)]
         bdiff = b'\xf6' + 19 * b'\x00'
         bextra = b'TWYVGPNBMEOXQDHIUSRFLJLKEOX'
-        org_patch = self.make_patch(controls, bdiff, bextra)
         self.assert_patches_equal(
-            canonicalize(org_patch),
+            canonicalize(self.make_patch(controls, bdiff, bextra)),
             self.make_patch([(20, 27, 0)], bdiff, bextra))
 
     def test_merge_rules_diff_only(self):
         controls = [(19, 0, 37), (0, 0, -37), (74, 0, 0)]
         mid = b"'\x15\x12!\x1c\x1a8?\x1b\xd0\xec\xe9\xc5\xfb\xc9\xbe\xfe\xeb"
         bdiff = 38 * b'\0' + mid + 37 * b'\0'
-        org_patch = self.make_patch(controls, bdiff, b'')
         self.assert_patches_equal(
-            canonicalize(org_patch),
+            canonicalize(self.make_patch(controls, bdiff, b'')),
             self.make_patch([(93, 0, 0)], bdiff, b''))
 
 

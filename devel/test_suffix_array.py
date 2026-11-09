@@ -32,6 +32,10 @@ class TestSuffixArray(unittest.TestCase):
             self.assertEqual(suffix_array(word.upper()), sa)
             self.check_data(word)
 
+    def test_two_element_group(self):
+        # A two-element group must not be mistaken for a singleton.
+        self.check_data(b'CCBBCCCACCCCBCACBCCCCC')
+
     def check_data(self, data):
         n = len(data)
         sa = suffix_array(data)

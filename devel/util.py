@@ -1,6 +1,8 @@
 """
 Utility functions used by development scripts.
 """
+import ast
+from datetime import datetime
 from string import ascii_lowercase, ascii_uppercase, digits
 
 
@@ -23,10 +25,60 @@ def alphabetize(*blocks):
     return blocks[0] if len(blocks) == 1 else tuple(blocks)
 
 
+def read_cases(path='output.txt'):
+    "Return the (src, dst) pairs stored in a branch2 output file."
+    with open(path) as f:
+        tree = ast.parse(f.read(), path)
+
+    pending_src = None
+
+    for node in tree.body:
+        if (not isinstance(node, ast.Assign) or
+                len(node.targets) != 1 or
+                not isinstance(node.targets[0], ast.Name)):
+            raise ValueError("invalid branch2 output")
+
+        name = node.targets[0].id
+        value = ast.literal_eval(node.value)
+        if not isinstance(value, bytes):
+            raise ValueError("%s must be bytes" % name)
+
+        if name == 'src' and pending_src is None:
+            pending_src = value
+        elif name == 'dst' and pending_src is not None:
+            yield pending_src, value
+            pending_src = None
+        else:
+            raise ValueError("expected alternating src and dst assignments")
+
+    if pending_src is not None:
+        raise ValueError("missing dst assignment")
+
+
+def append_case(src, dst, path='output.txt'):
+    with open(path, 'a') as fo:
+        fo.write("# %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        fo.write("# %d %d (%d)\n" % (len(src), len(dst), len(set(src + dst))))
+        fo.write("src = %r\n" % src)
+        fo.write("dst = %r\n\n" % dst)
+
+
+def write_cases(cases, path='output.txt'):
+    cases = list(cases)
+    with open(path, 'w') as fo:
+        for src, dst in cases:
+            fo.write("# %d %d (%d)\n" % (len(src), len(dst),
+                                         len(set(src + dst))))
+            fo.write("src = %r\n" % src)
+            fo.write("dst = %r\n\n" % dst)
+
 # ------------------------------- tests -----------------------------------
 
 import random
+import shutil
 import unittest
+import tempfile
+from os.path import join
 
 
 class TestAlphabetize(unittest.TestCase):
@@ -72,6 +124,46 @@ class TestAlphabetize(unittest.TestCase):
 
     def test_errors(self):
         self.assertRaises(ValueError, alphabetize, bytes(range(91)))
+
+
+class TestFileCases(unittest.TestCase):
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def path(self):
+        return join(self.tmpdir, 'cases.txt')
+
+    def test_round_trip(self):
+        path = self.path()
+        cases = [(b"abcde", b"bdc"), (b"cccc", b"ddabcc")]
+        write_cases(cases, self.path())
+        # actual round trip
+        write_cases(read_cases(path), path)
+        self.assertEqual(list(read_cases(path)), cases)
+
+    def test_read_write_append(self):
+        cases = [(b"A", b"B"), (b"C", b"D")]
+        write_cases(cases, self.path())
+        self.assertEqual(list(read_cases(self.path())), cases)
+        append_case(b"E", b"F", self.path())
+        self.assertEqual(list(read_cases(self.path())),
+                         cases + [(b"E", b"F")])
+
+    def test_read_errors(self):
+        with open(self.path(), 'w') as fo:
+            fo.write("src = b'a'\n")
+        self.assertRaisesRegex(ValueError, "missing dst assignment",
+                               list, read_cases(self.path()))
+
+        with open(self.path(), 'w') as fo:
+            fo.write("dst = b'a'\n")
+        self.assertRaisesRegex(ValueError,
+                               "expected alternating src and dst assignments",
+                               list, read_cases(self.path()))
 
 
 if __name__ == '__main__':

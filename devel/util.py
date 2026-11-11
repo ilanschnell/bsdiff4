@@ -154,16 +154,19 @@ class TestFileCases(unittest.TestCase):
                          cases + [(b"E", b"F")])
 
     def test_read_errors(self):
-        with open(self.path(), 'w') as fo:
-            fo.write("src = b'a'\n")
-        self.assertRaisesRegex(ValueError, "missing dst assignment",
-                               list, read_cases(self.path()))
+        for line, msg in [
+            ("src = 'aa'", "src must be bytes"),
+            ("src = b'a'", "missing dst assignment"),
+            ("dst = b'a'", "expected alternating src and dst assignments"),
+        ]:
+            with open(self.path(), 'w') as fo:
+                fo.write(line + "\n")
+            self.assertRaisesRegex(ValueError, msg,
+                                   list, read_cases(self.path()))
 
         with open(self.path(), 'w') as fo:
-            fo.write("dst = b'a'\n")
-        self.assertRaisesRegex(ValueError,
-                               "expected alternating src and dst assignments",
-                               list, read_cases(self.path()))
+            fo.write("src = 2a\n")
+        self.assertRaises(SyntaxError, list, read_cases(self.path()))
 
 
 if __name__ == '__main__':

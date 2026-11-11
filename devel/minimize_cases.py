@@ -9,8 +9,8 @@ from devel.util import alphabetize, read_cases
 
 
 def controls_for(src, dst):
-    control, _, _ = core.diff(src, dst)
-    return list(unpack_control_block(control))
+    control_block, _, _ = core.diff(src, dst)
+    return list(unpack_control_block(control_block))
 
 
 def has_consecutive_ranges(controls):

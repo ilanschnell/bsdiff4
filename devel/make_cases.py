@@ -11,6 +11,32 @@ from bsdiff4.format import unpack_control_block
 from util import append_case
 
 
+def disabled_branch():
+    """
+    Returns:
+      0  when no branch is disabled (no edits to core.c)
+      1  when branch 1 is disabled, which effectively also disables branch 2
+      2  when only branch 2 is disabled
+    """
+    src = b'srfljlkeoxqdhiusrfljlkeoxqdhiusrfljcadrfljlkeoxqdhius'
+    dst = b'irfljlkeoxqdhiusrfljtwyvgpnbmeoxqdhiusrfljlkeox'
+    control_block, _, _ = core.diff(src, dst)
+    controls = list(unpack_control_block(control_block))
+    if controls == [(20, 27, 0)]:
+        return 0
+    if controls == [(1, 0, 15), (0, 0, -15), (19, 27, 0)]:
+        return 1
+    if controls == [(1, 0, 0), (19, 27, 0)]:
+        return 2
+    raise ValueError("unexpected controls = %r" % controls)
+
+
+def ensure_configured():
+    if disabled_branch() != 2:
+        raise RuntimeError("the second (and only the second) control-tuple "
+                           "merge rule must be disabled")
+
+
 def random_bytes(size, alphabet=256):
     return bytes(randrange(alphabet) for _ in range(size))
 
@@ -54,6 +80,7 @@ def matches_branch2(control_block):
 
 
 def search():
+    ensure_configured()
     attempt = 0
     while True:
         attempt += 1

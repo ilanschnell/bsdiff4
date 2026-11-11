@@ -2,6 +2,8 @@
 Filter and minimize raw inputs that exercise the second control-tuple
 merge rule.
 """
+from multiprocessing import Pool
+
 from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
@@ -82,21 +84,32 @@ def minimize(src, dst):
             return src, dst
 
 
+def process_case(item):
+    i, (src, dst) = item
+    blocks = core.diff(src, dst)
+    assert core.patch(src, *blocks) == dst
+    src, dst = minimize(src, dst)
+    if not preserves_case(src, dst):
+        return None
+    if len(src) > 99 or len(dst) > 99:
+        return None
+    return i, src, dst, controls_for(src, dst)
+
+
 def main():
     cases = []
-    for i, (src, dst) in enumerate(read_cases('branch2.raw')):
-        blocks = core.diff(src, dst)
-        assert core.patch(src, *blocks) == dst
-        src, dst = minimize(src, dst)
-        if not preserves_case(src, dst):
-            continue
-        if len(src) > 99 or len(dst) > 99:
-            continue
-        print("%d: %d %d (%d)   %r" % (i, len(src), len(dst),
-                                       len(set(src + dst)),
-                                       controls_for(src, dst)))
-        cases.append((src, dst))
-        write_cases(cases, 'branch2.min')
+    items = enumerate(read_cases('branch2.raw'))
+    with Pool() as pool:
+        results = pool.imap_unordered(process_case, items, chunksize=1)
+        for result in results:
+            if result is None:
+                continue
+            i, src, dst, controls = result
+            print("%d: %d %d (%d)   %r" %
+                  (i, len(src), len(dst), len(set(src + dst)), controls),
+                  flush=True)
+            cases.append((src, dst))
+    write_cases(cases, 'branch2.min')
 
 
 if __name__ == '__main__':

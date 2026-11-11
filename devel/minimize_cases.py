@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
-from devel.util import read_cases, write_cases
+from util import read_cases, write_cases
 
 
 def controls_for(src, dst):

@@ -7,6 +7,7 @@ from random import randrange, choice, shuffle
 
 from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
+from bsdiff4.tests import validate_canonical
 
 from util import append_case
 
@@ -31,10 +32,7 @@ def disabled_branch():
     raise ValueError("unexpected controls = %r" % controls)
 
 
-def ensure_configured():
-    if disabled_branch() != 2:
-        raise RuntimeError("the second (and only the second) control-tuple "
-                           "merge rule must be disabled")
+DISABLED_BRANCH = disabled_branch()
 
 
 def random_bytes(size, alphabet=256):
@@ -79,14 +77,22 @@ def matches_branch2(control_block):
     return False
 
 
-def search():
-    ensure_configured()
+def main():
+    if DISABLED_BRANCH == 0:
+        print("WARNING: Second control-tuple merge rule is enabled.")
+        print("         No output can be generated.  Validating only...")
+    if DISABLED_BRANCH == 1:
+        raise RuntimeError("first control-tuple merge rule must be enabled")
+
     attempt = 0
     while True:
         attempt += 1
         src, dst = make_case()
         blocks = core.diff(src, dst)
         assert core.patch(src, *blocks) == dst
+        if DISABLED_BRANCH == 0:
+            validate_canonical(blocks[0], len(src))
+
         if matches_branch2(blocks[0]):
             print("attempt:", attempt)
             print("lengths:", len(src), len(dst))
@@ -98,4 +104,4 @@ def search():
 
 
 if __name__ == '__main__':
-    search()
+    main()

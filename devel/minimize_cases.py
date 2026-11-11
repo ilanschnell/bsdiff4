@@ -8,7 +8,7 @@ from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
 from util import read_cases, write_cases
-from generate_cases import ensure_configured
+from generate_cases import DISABLED_BRANCH
 
 
 def controls_for(src, dst):
@@ -96,7 +96,9 @@ def process_case(item):
 
 
 def main():
-    ensure_configured()
+    if DISABLED_BRANCH != 2:
+        raise RuntimeError("the second (and only the second) control-tuple "
+                           "merge rule must be disabled")
     cases = []
     items = enumerate(read_cases('branch2.raw'))
     with Pool() as pool:

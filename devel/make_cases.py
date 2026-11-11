@@ -45,7 +45,7 @@ def make_case():
     return b''.join(src_blocks), b''.join(dst_blocks)
 
 
-def has_branch2(control_block):
+def matches_branch2(control_block):
     controls = list(unpack_control_block(control_block))
     for px, py, pz in controls[:-1]:
         if py == 0 and pz == 0:
@@ -60,7 +60,7 @@ def search():
         src, dst = make_case()
         blocks = core.diff(src, dst)
         assert core.patch(src, *blocks) == dst
-        if has_branch2(blocks[0]):
+        if matches_branch2(blocks[0]):
             print("attempt:", attempt)
             print("lengths:", len(src), len(dst))
             print("alphabet size:", len(set(src + dst)))

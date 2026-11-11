@@ -5,7 +5,7 @@ merge rule.
 from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
-from devel.util import alphabetize, read_cases
+from devel.util import read_cases, write_cases
 
 
 def controls_for(src, dst):
@@ -83,23 +83,20 @@ def minimize(src, dst):
 
 
 def main():
-    for src, dst in read_cases('branch2.raw'):
+    cases = []
+    for i, (src, dst) in enumerate(read_cases('branch2.raw')):
         blocks = core.diff(src, dst)
         assert core.patch(src, *blocks) == dst
         src, dst = minimize(src, dst)
         if not preserves_case(src, dst):
             continue
-        if len(src) > 80 or len(dst) > 80:
+        if len(src) > 99 or len(dst) > 99:
             continue
-        try:
-            src, dst = alphabetize(src, dst)
-        except ValueError:
-            continue
-        print("# " + 20 * '-')
-        print("# %d %d (%d)" % (len(src), len(dst), len(set(src + dst))))
-        print("# controls = %r" % controls_for(src, dst))
-        print("src = %r" % src)
-        print("dst = %r" % dst)
+        print("%d: %d %d (%d)   %r" % (i, len(src), len(dst),
+                                       len(set(src + dst)),
+                                       controls_for(src, dst)))
+        cases.append((src, dst))
+        write_cases(cases, 'branch2.min')
 
 
 if __name__ == '__main__':

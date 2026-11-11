@@ -8,7 +8,7 @@ from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
 from util import read_cases, write_cases
-from make_cases import ensure_configured
+from generate_cases import ensure_configured
 
 
 def controls_for(src, dst):

@@ -288,16 +288,23 @@ class TestCoreDiffPatch(unittest.TestCase):
     def test_patch_non_canonical(self):
         src = b'Banana'
         dst = b'bandana'
-        def check_patch(controls, diff=b'\x20\x00\x00', extra=b'dana'):
+        def check_patch(controls, diff=b'\x20\x00\x00', extra=b'dana',
+                        canonical=False):
             bcontrol = pack_control_block(*controls)
             self.assertEqual(core.patch(src, bcontrol, diff, extra), dst)
+            if canonical:
+                validate_canonical(bcontrol, len(src))
+            else:
+                self.assertRaises(ValueError, validate_canonical, bcontrol,
+                                  len(src))
 
         # canonical patch
-        check_patch([(3, 4, 0)])
+        check_patch([(3, 4, 0)], canonical=True)
         # Also canonical, but not returned by core.diff().
-        check_patch([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a')
-        check_patch([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana')
-        check_patch([(0, 7, 0)], b'', dst)
+        check_patch([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a',
+                    canonical=True)
+        check_patch([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana', canonical=True)
+        check_patch([(0, 7, 0)], b'', dst, canonical=True)
         # Control tuples not merged.
         check_patch([(3, 0, 0), (0, 4, 0)])
         # Consecutive diffs.
@@ -309,8 +316,10 @@ class TestCoreDiffPatch(unittest.TestCase):
         # Consecutive z values.
         check_patch([(0, 0, 11), (0, 0, -4), (0, 0, -7), (3, 4, 0)])
         # Irrelevant z values.
+        check_patch([(3, 4, 2)])
         check_patch([(3, 4, -1234), (0, 0, 1297)])
-        check_patch([(3, 0, -1234), (0, 4, 1297)])
+        # No-op control tuple.
+        check_patch([(0, 0, 0), (3, 4, 0)])
         # Source position out of range.
         check_patch([(0, 0, -1234), (7, 0, 0)], dst, b'')
 

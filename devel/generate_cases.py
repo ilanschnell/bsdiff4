@@ -92,6 +92,7 @@ def main():
         assert core.patch(src, *blocks) == dst
         if DISABLED_BRANCH == 0:
             validate_canonical(blocks[0], len(src))
+            assert not matches_branch2(blocks[0])
 
         if matches_branch2(blocks[0]):
             print("attempt:", attempt)

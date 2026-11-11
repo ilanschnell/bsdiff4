@@ -5,10 +5,12 @@ from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
 from util import alphabetize, read_cases
+from make_cases import ensure_configured
 from minimize_cases import has_consecutive_ranges
 
 
 def main():
+    ensure_configured()
     for src, dst in read_cases('branch2.min'):
         try:
             src, dst = alphabetize(src, dst)

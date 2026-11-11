@@ -4,6 +4,13 @@ While bsdiff4 itself supports Python 3.7+, some of these programs
 may require higher Python versions.
 
 
+make_cases.py
+minimize_cases.py
+select_cases.py
+    Pipeline for generating, minimizing, and selecting inputs that exercise
+    the second control-tuple merge rule.
+
+
 addition.py
     Demonstration of BSDIFF’s handling of diff addition.
 

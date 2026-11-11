@@ -8,6 +8,7 @@ from bsdiff4 import core
 from bsdiff4.format import unpack_control_block
 
 from util import read_cases, write_cases
+from make_cases import ensure_configured
 
 
 def controls_for(src, dst):
@@ -91,12 +92,11 @@ def process_case(item):
     src, dst = minimize(src, dst)
     if not preserves_case(src, dst):
         return None
-    if len(src) > 99 or len(dst) > 99:
-        return None
     return i, src, dst, controls_for(src, dst)
 
 
 def main():
+    ensure_configured()
     cases = []
     items = enumerate(read_cases('branch2.raw'))
     with Pool() as pool:

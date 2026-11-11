@@ -2,6 +2,7 @@
 Utility functions used by development scripts.
 """
 import ast
+from io import StringIO
 from datetime import datetime
 from string import ascii_lowercase, ascii_uppercase, digits
 
@@ -56,11 +57,14 @@ def read_cases(path='output.txt'):
 
 
 def append_case(src, dst, path='output.txt'):
+    f = StringIO()
+    f.write("# %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    f.write("# %d %d (%d)\n" % (len(src), len(dst), len(set(src + dst))))
+    f.write("src = %r\n" % src)
+    f.write("dst = %r\n\n" % dst)
+    record = f.getvalue()
     with open(path, 'a') as fo:
-        fo.write("# %s\n" % datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        fo.write("# %d %d (%d)\n" % (len(src), len(dst), len(set(src + dst))))
-        fo.write("src = %r\n" % src)
-        fo.write("dst = %r\n\n" % dst)
+        fo.write(record)
 
 
 def write_cases(cases, path='output.txt'):

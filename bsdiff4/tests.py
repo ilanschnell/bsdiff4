@@ -14,7 +14,8 @@ from threading import Barrier
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_header, unpack_header,
                             pack_control_block, unpack_control_block,
-                            validate_canonical, read_patch, write_patch)
+                            NonCanonicalError, validate_canonical,
+                            read_patch, write_patch)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -269,8 +270,9 @@ class TestCoreDiffPatch(unittest.TestCase):
             if msg is None:
                 validate_canonical(bcontrol, len(src))
             else:
-                self.assertRaisesRegex(ValueError, msg, validate_canonical,
-                                       bcontrol, len(src))
+                with self.assertRaisesRegex(NonCanonicalError, msg):
+                    validate_canonical(bcontrol, len(src))
+
         # canonical patch
         check_patch([(3, 4, 0)])
         # Also canonical, but not returned by core.diff().
@@ -305,11 +307,12 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
-        self.assertRaisesRegex(ValueError, "no-op", validate_canonical, noop)
+        with self.assertRaisesRegex(NonCanonicalError, "no-op"):
+            validate_canonical(noop)
 
         noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
-        self.assertRaisesRegex(ValueError, "negative zero",
-                               validate_canonical, noop2)
+        with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
+            validate_canonical(noop2)
 
         operation = pack_control_block((3, 4, 2))
         for bcontrol in [

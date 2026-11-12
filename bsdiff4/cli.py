@@ -4,10 +4,9 @@ from os.path import getsize
 
 import bsdiff4.core as core  # type: ignore
 from bsdiff4 import __version__
-from bsdiff4.format import (
-    file_diff, file_patch, read_patch,
-    unpack_header, unpack_control_block, validate_canonical,
-)
+from bsdiff4.format import (file_diff, file_patch, read_patch,
+                            NonCanonicalError, validate_canonical,
+                            unpack_header, unpack_control_block)
 
 
 def human_bytes(n):
@@ -89,7 +88,7 @@ def show_patch(fi, verbose=False):
     try:
         validate_canonical(control_block)
         print("Valid patch has canonical control structure.")
-    except ValueError as e:
+    except NonCanonicalError as e:
         print("Valid patch is non-canonical: %s" % e)
 
 

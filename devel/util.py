@@ -148,7 +148,7 @@ class TestFileCases(unittest.TestCase):
         write_cases(read_cases(path), path)
         self.assertEqual(list(read_cases(path)), cases)
 
-    def test_read_write_append(self):
+    def test_append(self):
         cases = [(b"A", b"B"), (b"C", b"D")]
         write_cases(cases, self.path())
         self.assertEqual(list(read_cases(self.path())), cases)
@@ -167,9 +167,13 @@ class TestFileCases(unittest.TestCase):
             self.assertRaisesRegex(ValueError, msg,
                                    list, read_cases(self.path()))
 
-        with open(self.path(), 'w') as fo:
-            fo.write("src = 2a\n")
-        self.assertRaises(SyntaxError, list, read_cases(self.path()))
+        for data, error in [
+            ("src = 2a\n", SyntaxError),
+            ("  src = b'\x0c'\n", IndentationError),
+        ]:
+            with open(self.path(), 'w') as fo:
+                fo.write(data)
+            self.assertRaises(error, list, read_cases(self.path()))
 
 
 if __name__ == '__main__':

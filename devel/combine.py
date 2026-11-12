@@ -154,7 +154,6 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
 # ------------------------------- tests -----------------------------------
 
 import os
-import sys
 import unittest
 from random import randrange
 
@@ -283,21 +282,12 @@ class TestCombine(unittest.TestCase, PatchUtil):
     def test_corrupt_patch(self):
         empty = diff(b'', b'')
         incomplete = self.make_patch([], b'x', b'')
-        with self.assertRaisesRegex(ValueError,
-                                    r"corrupt patch \(incomplete output\)"):
+        msg = r"corrupt patch \(incomplete output\)"
+        with self.assertRaisesRegex(ValueError, msg):
             combine(incomplete, empty)
-        with self.assertRaisesRegex(ValueError,
-                                    r"corrupt patch \(incomplete output\)"):
+        with self.assertRaisesRegex(ValueError, msg):
             combine(empty, incomplete)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        #from pprint import pprint
-        from bsdiff4.cli import show_patch
-        from bsdiff4.format import read_data
-        p = read_data(sys.argv[1])
-        #pprint(_apply_symbolically(p, None))
-        show_patch(BytesIO(canonicalize(p)), verbose=True)
-    else:
-        unittest.main()
+    unittest.main()

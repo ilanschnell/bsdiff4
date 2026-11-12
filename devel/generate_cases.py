@@ -14,9 +14,9 @@ from util import append_case
 def disabled_branch():
     """
     Returns:
-      0  when no branch is disabled (no edits to core.c)
+      0  when no branch is disabled (no edits to `queue_add` in `core.c`)
       1  when branch 1 is disabled, which effectively also disables branch 2
-      2  when only branch 2 is disabled
+      2  when only branch 2 is disabled (what we want to run this program)
     """
     src = b'srfljlkeoxqdhiusrfljlkeoxqdhiusrfljcadrfljlkeoxqdhius'
     dst = b'irfljlkeoxqdhiusrfljtwyvgpnbmeoxqdhiusrfljlkeox'

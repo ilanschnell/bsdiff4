@@ -260,6 +260,18 @@ class TestCoreDiffPatch(unittest.TestCase):
         blocks = bcontrol, len(src) * b'\x01', b''
         self.assertEqual(core.patch(src, *blocks), dst)
 
+    def test_validate_canonical_errors(self):
+        msg = "invalid control block"
+        with self.assertRaisesRegex(ValueError, msg) as cm:
+            validate_canonical(30 * b'\x00')
+        self.assertIs(type(cm.exception), ValueError)
+
+        with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
+            validate_canonical(3 * (7 * b'\x00' + b'\x80'))
+
+        with self.assertRaisesRegex(NonCanonicalError, "no-op"):
+            validate_canonical(24 * b'\x00')
+
     def test_patch_non_canonical(self):
         src = b'Banana'
         dst = b'bandana'
@@ -307,13 +319,7 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
-        with self.assertRaisesRegex(NonCanonicalError, "no-op"):
-            validate_canonical(noop)
-
         noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
-        with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
-            validate_canonical(noop2)
-
         operation = pack_control_block((3, 4, 2))
         for bcontrol in [
             operation,

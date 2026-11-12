@@ -289,15 +289,19 @@ class TestCoreDiffPatch(unittest.TestCase):
         check_patch([(3, 0, 0), (0, 2, 0), (0, 2, 0)])
         # Consecutive z values.
         check_patch([(0, 0, 11), (0, 0, -4), (0, 0, -7), (3, 4, 0)])
-        # Irrelevant z values.
+        # Final z value.
         check_patch([(3, 4, 2)])
-        check_patch([(3, 4, -1234), (0, 0, 1297)])
         # No-op control tuple.
         check_patch([(0, 0, 0), (3, 4, 0)])
-        # Source position out of range.
-        check_patch([(0, 0, -1234), (7, 0, 0)], dst, b'')
+        # Negative source position.
+        check_patch([(0, 0, -7), (7, 0, 0)], dst, b'')
         # Diff range extends one byte beyond the source.
         check_patch([(7, 0, 0)], b'\x20\x00\x00\x03\xf3\x0d\x61', b'')
+        # Source position starts beyond the end of the source.
+        controls = [(0, 0, 7), (1, 6, 0)]
+        check_patch(controls, diff=b'b', extra=b'andana')
+        # Test the source-independent mode (src_len=None).
+        validate_canonical(pack_control_block(*controls))
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple

@@ -156,21 +156,22 @@ class TestFileCases(unittest.TestCase):
         self.assertEqual(list(read_cases(self.path())),
                          cases + [(b"E", b"F")])
 
-    def test_read_variants(self):
-        for data in [
-            "src = b'X'\ndst = b'Y'\n",
-            "src = b'\\x58'\ndst = b'\\x59'",
-            "src=b'X'\ndst=b'Y'",
-        ]:
-            with open(self.path(), 'w') as fo:
-                fo.write(data)
-            self.assertEqual(list(read_cases(self.path())), [(b'X', b'Y')])
+    def test_read(self):
+        with open(self.path(), 'w') as fo:
+            fo.write('src = b"A"\ndst = b"B"\n')
+            fo.write("src = b'\\x58'\ndst = b'\\x59'\n")
+            fo.write("src=b'v'\ndst=b'w'")
+        self.assertEqual(list(read_cases(self.path())),
+                         [(b'A', b'B'), (b'X', b'Y'), (b'v', b'w')])
 
     def test_read_errors(self):
         for line, msg in [
             ("src = 'aa'", "src must be bytes"),
             ("src = b'a'", "missing dst assignment"),
             ("dst = b'a'", "expected alternating src and dst assignments"),
+            ("src, dst = b'A', b'B'", "invalid branch2 output"),
+            ("b'abcdefg'", "invalid branch2 output"),
+            ("src = dst = b'A'", "invalid branch2 output"),
         ]:
             with open(self.path(), 'w') as fo:
                 fo.write(line + "\n")

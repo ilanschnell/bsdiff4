@@ -44,7 +44,7 @@ def validate_canonical(control_block, src_len=None):
     negative_zero = 7 * b'\x00' + b'\x80'
     for j in range(0, len(control_block), 8):
         if control_block[j:j + 8] == negative_zero:
-            raise ValueError("noncanonical negative zero found")
+            raise ValueError("negative zero found")
 
     src_pos = 0
     for i, (x, y, z) in enumerate(controls):

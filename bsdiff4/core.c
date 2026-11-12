@@ -709,12 +709,14 @@ mod_patch(PyObject *module, PyObject *args)
         if (update_src_pos(&src_pos, x) < 0 ||
             update_src_pos(&src_pos, z) < 0)
             goto error;
+        assert(dst_pos + diff_remaining + extra_remaining == dst_len);
     }
 
     if (dst_pos != dst_len) {
         CORRUPT("incomplete output");
         goto error;
     }
+    /* Complete output implies that both input blocks were fully consumed. */
     assert(diff_remaining == 0 && extra_remaining == 0);
 
     return result;

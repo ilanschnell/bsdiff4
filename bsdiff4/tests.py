@@ -14,7 +14,7 @@ from threading import Barrier
 import bsdiff4.core as core  # type: ignore
 from bsdiff4.format import (pack_header, unpack_header,
                             pack_control_block, unpack_control_block,
-                            write_patch, read_patch)
+                            validate_canonical, read_patch, write_patch)
 from bsdiff4 import diff, patch, file_diff, file_patch, file_patch_inplace
 
 
@@ -119,32 +119,6 @@ ROUND_TRIP_CASES = [
     # 10 bytes replaced by 15 new bytes
     (RND_200, RND_200[:95] + os.urandom(15) + RND_200[105:]),
 ]
-
-
-def validate_canonical(control_block, src_len):
-    "Raise ValueError unless the control block is canonical."
-    controls = list(unpack_control_block(control_block))
-    src_pos = 0
-    for i, (x, y, z) in enumerate(controls):
-        if not 0 <= src_pos <= src_len:
-            raise ValueError("source position not in source range")
-        # Generated patches never reference negative or overlong
-        # source ranges.
-        if not 0 <= x <= src_len - src_pos:
-            raise ValueError("x not in source range")
-        if y < 0:
-            raise ValueError("y cannot be negative")
-        if x == y == z == 0:
-            raise ValueError("no-op tuples found")
-        if i and x == 0:
-            raise ValueError("nonempty diff range")
-        if i == len(controls) - 1:
-            if z:
-                raise ValueError("final z not zero")
-        else:
-            if y == z == 0:
-                raise ValueError("adjacent diff ranges not merged")
-        src_pos += x + z
 
 
 class TestCoreDiffPatch(unittest.TestCase):
@@ -322,6 +296,8 @@ class TestCoreDiffPatch(unittest.TestCase):
         check_patch([(0, 0, 0), (3, 4, 0)])
         # Source position out of range.
         check_patch([(0, 0, -1234), (7, 0, 0)], dst, b'')
+        # Diff range extends one byte beyond the source.
+        check_patch([(7, 0, 0)], b'\x20\x00\x00\x03\xf3\x0d\x61', b'')
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple

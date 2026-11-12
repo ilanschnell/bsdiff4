@@ -6,8 +6,7 @@ minimized, and alphabetized without repeating the expensive search.
 from random import randrange, choice, shuffle
 
 from bsdiff4 import core
-from bsdiff4.format import unpack_control_block
-from bsdiff4.tests import validate_canonical
+from bsdiff4.format import unpack_control_block, validate_canonical
 
 from util import append_case
 

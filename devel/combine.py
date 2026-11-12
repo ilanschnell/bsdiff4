@@ -158,8 +158,8 @@ import sys
 import unittest
 from random import randrange
 
-from bsdiff4.format import diff, patch
-from bsdiff4.tests import ROUND_TRIP_CASES, validate_canonical
+from bsdiff4.format import diff, patch, validate_canonical
+from bsdiff4.tests import ROUND_TRIP_CASES
 
 
 class PatchUtil:

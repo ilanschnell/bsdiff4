@@ -2,8 +2,7 @@
 Select small, alphabetized examples from minimized branch-two cases.
 """
 from bsdiff4 import core
-from bsdiff4.format import unpack_control_block
-from bsdiff4.tests import validate_canonical
+from bsdiff4.format import unpack_control_block, validate_canonical
 
 from util import alphabetize, read_cases
 from generate_cases import DISABLED_BRANCH

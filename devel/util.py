@@ -156,6 +156,16 @@ class TestFileCases(unittest.TestCase):
         self.assertEqual(list(read_cases(self.path())),
                          cases + [(b"E", b"F")])
 
+    def test_read_variants(self):
+        for data in [
+            "src = b'X'\ndst = b'Y'\n",
+            "src = b'\\x58'\ndst = b'\\x59'",
+            "src=b'X'\ndst=b'Y'",
+        ]:
+            with open(self.path(), 'w') as fo:
+                fo.write(data)
+            self.assertEqual(list(read_cases(self.path())), [(b'X', b'Y')])
+
     def test_read_errors(self):
         for line, msg in [
             ("src = 'aa'", "src must be bytes"),
@@ -169,7 +179,9 @@ class TestFileCases(unittest.TestCase):
 
         for data, error in [
             ("src = 2a\n", SyntaxError),
-            ("  src = b'\x0c'\n", IndentationError),
+            ("  src = b'c'\n", IndentationError),
+            ("src = bytes(b'a')\n", ValueError),
+            ("xxx = b'a'\n", ValueError),
         ]:
             with open(self.path(), 'w') as fo:
                 fo.write(data)

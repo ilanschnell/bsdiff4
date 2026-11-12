@@ -305,7 +305,12 @@ class TestCoreDiffPatch(unittest.TestCase):
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
+        self.assertRaises(ValueError, validate_canonical, noop)
+
         noop2 = 3 * (7 * b'\x00' + b'\x80')   # negative zero no-op
+        self.assertRaisesRegex(
+            ValueError, "negative zero", validate_canonical, noop2)
+
         operation = pack_control_block((3, 4, 2))
         for bcontrol in [
             operation,

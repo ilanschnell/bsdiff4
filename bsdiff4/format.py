@@ -40,6 +40,12 @@ def unpack_control_block(control_block):
 def validate_canonical(control_block, src_len=None):
     "Raise ValueError unless a valid control block is canonical."
     controls = list(unpack_control_block(control_block))
+
+    negative_zero = 7 * b'\x00' + b'\x80'
+    for j in range(0, len(control_block), 8):
+        if control_block[j:j + 8] == negative_zero:
+            raise ValueError("noncanonical negative zero found")
+
     src_pos = 0
     for i, (x, y, z) in enumerate(controls):
         if src_pos < 0:

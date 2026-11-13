@@ -10,28 +10,20 @@ created directly from A and C.
 """
 from io import BytesIO
 
+from bsdiff4 import core
 from bsdiff4.format import (pack_control_block, read_patch,
                             unpack_control_block, write_patch)
 
 
-INT64_MAX = (1 << 63) - 1
-INT64_MIN = -(1 << 63)
-
-
-def _update_position(position, increment):
-    result = position + increment
-    if not INT64_MIN <= result <= INT64_MAX:
-        raise ValueError("corrupt patch (offset overflow)")
-    return result
-
-
-def _apply_symbolically(patch_bytes, source):
+def apply_symbolically(patch_bytes, source):
     """Apply a patch to symbolic source bytes.
 
     A reference is represented by ``(position, delta)`` and a literal by an
     integer.  When source is None, its bytes are the unknown original data.
     """
     control_block, diff_block, extra_block = read_patch(BytesIO(patch_bytes))
+    # validate patch by applying it to empty source
+    core.patch(b'', control_block, diff_block, extra_block)
     dst_len = len(diff_block) + len(extra_block)
     result = []
     src_pos = dst_pos = diff_pos = extra_pos = 0
@@ -57,7 +49,7 @@ def _apply_symbolically(patch_bytes, source):
 
         diff_pos += x
         dst_pos += x
-        src_pos = _update_position(src_pos, x)
+        src_pos += x
 
         if y < 0 or y > dst_len - dst_pos or y > len(extra_block) - extra_pos:
             raise ValueError("corrupt patch (y out of range)")
@@ -65,7 +57,7 @@ def _apply_symbolically(patch_bytes, source):
         result.extend(extra_block[extra_pos:extra_pos + y])
         extra_pos += y
         dst_pos += y
-        src_pos = _update_position(src_pos, z)
+        src_pos += z
 
     if dst_pos != dst_len:
         raise ValueError("corrupt patch (incomplete output)")
@@ -74,24 +66,20 @@ def _apply_symbolically(patch_bytes, source):
     return result
 
 
-def _seek(controls, position, target):
-    """Move the source position to target."""
-    merge = bool(controls)
-    while position != target:
-        increment = target - position
-        increment = max(-INT64_MAX, min(INT64_MAX, increment))
-        if merge:
-            x, y, z = controls[-1]
-            assert z == 0
-            controls[-1] = x, y, increment
-            merge = False
-        else:
-            controls.append((0, 0, increment))
-        position = _update_position(position, increment)
-    return position
+def move_src(controls, src_pos, target):
+    "Move the source position to target."
+    if src_pos == target:
+        return
+    increment = target - src_pos
+    if controls:
+        x, y, z = controls[-1]
+        assert z == 0
+        controls[-1] = x, y, increment
+    else:
+        controls.append((0, 0, increment))
 
 
-def _make_patch(symbols):
+def make_patch(symbols):
     controls = []
     diff_block = bytearray()
     extra_block = bytearray()
@@ -102,14 +90,15 @@ def _make_patch(symbols):
         value = symbols[i]
         x = 0
         if isinstance(value, tuple):
-            src_pos = _seek(controls, src_pos, value[0])
+            move_src(controls, src_pos, value[0])
+            src_pos = value[0]
 
             while (i < len(symbols) and isinstance(symbols[i], tuple) and
                    symbols[i][0] == src_pos + x):
                 diff_block.append(symbols[i][1])
                 x += 1
                 i += 1
-            src_pos = _update_position(src_pos, x)
+            src_pos += x
 
         y = 0
         while i < len(symbols) and isinstance(symbols[i], int):
@@ -137,7 +126,7 @@ def canonicalize(patch_bytes: bytes) -> bytes:
     * noncanonical integer encodings such as negative zero
     * compressed blocks by decoding and recompressing them
     """
-    return _make_patch(_apply_symbolically(patch_bytes, None))
+    return make_patch(apply_symbolically(patch_bytes, None))
 
 
 def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
@@ -146,9 +135,9 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
     Combine patches from A to B and B to C into a patch from A to C,
     without requiring A or B.  The result is not necessarily optimal.
     """
-    b = _apply_symbolically(patch_ab, None)
-    c = _apply_symbolically(patch_bc, b)
-    return _make_patch(c)
+    b = apply_symbolically(patch_ab, None)
+    c = apply_symbolically(patch_bc, b)
+    return make_patch(c)
 
 
 # ------------------------------- tests -----------------------------------

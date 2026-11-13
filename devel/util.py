@@ -160,7 +160,7 @@ class TestFileCases(unittest.TestCase):
         with open(self.path(), 'w') as fo:
             fo.write('src = b"A"\ndst = b"B"\n')
             fo.write("src = b'\\x58'\ndst = b'\\x59'\n")
-            fo.write("src=b'v'\ndst=b'w'")
+            fo.write("src\t=b'v'\ndst=b'w'")
         self.assertEqual(list(read_cases(self.path())),
                          [(b'A', b'B'), (b'X', b'Y'), (b'v', b'w')])
 

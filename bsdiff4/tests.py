@@ -105,6 +105,8 @@ ROUND_TRIP_CASES = [
     (b'ababababcdababababc', b'&ababababcdabababab'),
     (b'aaaaaaaaaaaaaaaaaaaabxtrabytes',
      b'ccaaaaaaaaaaaaaaaaaabexbytesbextrabytes'),
+    (b'gaiififkegaiififkegaiififkejcdldhialkegaiifif',
+     b'kaiififkegaiififkedmcfajfbbkegaiififkegaiifif'),
     (b'srfljlkeoxqdhiusrfljlkeoxqdhiusrfljcadrfljlkeoxqdhius',
      b'irfljlkeoxqdhiusrfljtwyvgpnbmeoxqdhiusrfljlkeox'),
     # swap repeated blocks

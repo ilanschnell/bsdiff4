@@ -165,48 +165,53 @@ class PatchUtil:
         self.assertEqual(blocks_a[1], blocks_b[1])
         self.assertEqual(blocks_a[2], blocks_b[2])
 
+    @staticmethod
+    def get_control_block(bpatch):
+        return read_patch(BytesIO(bpatch))[0]
+
+    def check_patch(self, src, dst, bpatch, canonical):
+        self.assertEqual(patch(src, bpatch), dst)
+        bcontrol = self.get_control_block(bpatch)
+        if canonical:
+            validate_canonical(bcontrol, len(src))
+        else:
+            with self.assertRaises(NonCanonicalError):
+                validate_canonical(bcontrol, len(src))
+
 
 class TestCanonicalize(unittest.TestCase, PatchUtil):
 
     def test_non_canonical(self):
         src = b'Banana'
         dst = b'bandana'
-        for controls, msg in NON_CANONICAL_CONTROLS:
-            with self.assertRaisesRegex(NonCanonicalError, msg):
-                validate_canonical(pack_control_block(*controls), len(src))
+        for controls, _ in NON_CANONICAL_CONTROLS:
             bpatch = self.make_patch(controls, b'\x20\x00\x00', b'dana')
-            self.assertEqual(patch(src, bpatch), dst)
+            self.check_patch(src, dst, bpatch, False)
+            self.check_patch(src, dst, canonicalize(bpatch), True)
 
-            cpatch = canonicalize(bpatch)
-            control_block, _, _ = read_patch(BytesIO(cpatch))
-            validate_canonical(control_block, len(src))
-            self.assertEqual(patch(src, cpatch), dst)
+    def test_negative_source_position(self):
+        src = b'Banana'
+        dst = b'bandana'
+        bpatch = self.make_patch([(0, 0, -7), (7, 0, 0)], dst, b'')
+        self.check_patch(src, dst, bpatch, False)
 
-    def check_case(self, a, b):
-        org_patch = diff(a, b)
+        cpatch = canonicalize(bpatch)
+        self.check_patch(src, dst, cpatch, True)
+        self.assert_patches_equal(cpatch,
+                                  self.make_patch([(0, 7, 0)], b'', dst))
+
+    def check_case(self, src, dst):
+        org_patch = diff(src, dst)
         canon_patch = canonicalize(org_patch)
         self.assertIs(type(canon_patch), bytes)
-        self.assertEqual(patch(a, canon_patch), b)
+        self.check_patch(src, dst, canon_patch, True)
         # idempotency
         self.assertEqual(canonicalize(canon_patch), canon_patch)
-        control_block, _, _ = read_patch(BytesIO(canon_patch))
-        validate_canonical(control_block, len(a))
 
     def test_cases(self):
         for a, b in ROUND_TRIP_CASES:
             self.check_case(a, b)
             self.check_case(b, a)
-
-    def test_negative_source_position(self):
-        f = BytesIO()
-        bcontrol = pack_control_block((0, 0, -1), (1, 0, 0))
-        write_patch(f, bcontrol, b'\x2a', b'')
-        canon_patch = canonicalize(f.getvalue())
-        blocks = read_patch(BytesIO(canon_patch))
-        self.assertEqual(list(unpack_control_block(blocks[0])),
-                         [(0, 1, 0)])
-        self.assertEqual(blocks[1:], (b'', b'\x2a'))
-        validate_canonical(blocks[0], 0)
 
     def test_merge_rules(self):
         controls = [(1, 0, 15), (0, 0, -15), (19, 27, 0)]

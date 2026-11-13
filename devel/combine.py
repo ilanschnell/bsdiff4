@@ -17,7 +17,7 @@ from bsdiff4.format import (pack_control_block, read_patch,
 
 def apply_symbolically(patch_bytes, source=None):
     """Apply a patch to symbolic source bytes.
-    A reference is represented by ``(position, delta)`` and a literal by an
+    A reference is represented by (position, delta) and a literal by an
     integer.  When source is None, its bytes are the unknown original data.
     """
     control_block, diff_block, extra_block = read_patch(BytesIO(patch_bytes))
@@ -30,11 +30,12 @@ def apply_symbolically(patch_bytes, source=None):
     src_pos = dst_pos = diff_pos = extra_pos = 0
 
     for x, y, z in unpack_control_block(control_block):
+        assert 0 <= x <= min(dst_len - dst_pos, diff_len - diff_pos)
         for j in range(x):
             delta = diff_block[diff_pos + j]
             position = src_pos + j
             if source is None:
-                value = ((position, delta) if position >= 0 else delta)
+                value = (position, delta) if position >= 0 else delta
             elif 0 <= position < len(source):
                 value = source[position]
                 if isinstance(value, tuple):
@@ -49,6 +50,7 @@ def apply_symbolically(patch_bytes, source=None):
         dst_pos += x
         src_pos += x
 
+        assert 0 <= y <= min(dst_len - dst_pos, extra_len - extra_pos)
         result.extend(extra_block[extra_pos:extra_pos + y])
         extra_pos += y
         dst_pos += y

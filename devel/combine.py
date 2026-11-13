@@ -30,9 +30,6 @@ def apply_symbolically(patch_bytes, source=None):
     src_pos = dst_pos = diff_pos = extra_pos = 0
 
     for x, y, z in unpack_control_block(control_block):
-        if x < 0 or x > dst_len - dst_pos or x > diff_len - diff_pos:
-            raise ValueError("corrupt patch (x out of range)")
-
         for j in range(x):
             delta = diff_block[diff_pos + j]
             position = src_pos + j
@@ -51,9 +48,6 @@ def apply_symbolically(patch_bytes, source=None):
         diff_pos += x
         dst_pos += x
         src_pos += x
-
-        if y < 0 or y > dst_len - dst_pos or y > extra_len - extra_pos:
-            raise ValueError("corrupt patch (y out of range)")
 
         result.extend(extra_block[extra_pos:extra_pos + y])
         extra_pos += y

@@ -226,11 +226,11 @@ class TestCanonicalize(unittest.TestCase, PatchUtil):
     def test_branch2_data(self):
         branches_enabled = DISABLED_BRANCH == 0
 
-        count = 0
+        have_cases = False
         for src, dst in read_cases(BRANCH2_PATH):
-            count += 1
             sys.stdout.write('.')
             sys.stdout.flush()
+            have_cases = True
 
             bpatch = diff(src, dst)
             self.check_patch(src, dst, bpatch, branches_enabled)
@@ -241,7 +241,7 @@ class TestCanonicalize(unittest.TestCase, PatchUtil):
             else:
                 self.check_patch(src, dst, cpatch, True)
 
-        self.assertGreater(count, 0, "%r has no cases" % BRANCH2_PATH)
+        self.assertTrue(have_cases, "%r has no cases" % BRANCH2_PATH)
 
     def test_merge_rules(self):
         controls = [(1, 0, 15), (0, 0, -15), (19, 27, 0)]

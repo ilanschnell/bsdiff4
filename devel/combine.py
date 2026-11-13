@@ -15,21 +15,22 @@ from bsdiff4.format import (pack_control_block, read_patch,
                             unpack_control_block, write_patch)
 
 
-def apply_symbolically(patch_bytes, source):
+def apply_symbolically(patch_bytes, source=None):
     """Apply a patch to symbolic source bytes.
-
     A reference is represented by ``(position, delta)`` and a literal by an
     integer.  When source is None, its bytes are the unknown original data.
     """
     control_block, diff_block, extra_block = read_patch(BytesIO(patch_bytes))
     # validate patch by applying it to empty source
     core.patch(b'', control_block, diff_block, extra_block)
-    dst_len = len(diff_block) + len(extra_block)
+    diff_len = len(diff_block)
+    extra_len = len(extra_block)
+    dst_len = diff_len + extra_len
     result = []
     src_pos = dst_pos = diff_pos = extra_pos = 0
 
     for x, y, z in unpack_control_block(control_block):
-        if x < 0 or x > dst_len - dst_pos or x > len(diff_block) - diff_pos:
+        if x < 0 or x > dst_len - dst_pos or x > diff_len - diff_pos:
             raise ValueError("corrupt patch (x out of range)")
 
         for j in range(x):
@@ -51,7 +52,7 @@ def apply_symbolically(patch_bytes, source):
         dst_pos += x
         src_pos += x
 
-        if y < 0 or y > dst_len - dst_pos or y > len(extra_block) - extra_pos:
+        if y < 0 or y > dst_len - dst_pos or y > extra_len - extra_pos:
             raise ValueError("corrupt patch (y out of range)")
 
         result.extend(extra_block[extra_pos:extra_pos + y])
@@ -59,27 +60,27 @@ def apply_symbolically(patch_bytes, source):
         dst_pos += y
         src_pos += z
 
-    if dst_pos != dst_len:
-        raise ValueError("corrupt patch (incomplete output)")
+        assert (diff_len - diff_pos + extra_len - extra_pos ==
+                dst_len - dst_pos)
 
-    assert diff_pos == len(diff_block) and extra_pos == len(extra_block)
+    assert dst_pos == dst_len
+    assert diff_pos == diff_len and extra_pos == extra_len
     return result
 
 
-def move_src(controls, src_pos, target):
-    "Move the source position to target."
-    if src_pos == target:
+def move_src(controls, src_pos, new_pos):
+    "Move the source position to new position."
+    if src_pos == new_pos:
         return
-    increment = target - src_pos
-    if controls:
-        x, y, z = controls[-1]
-        assert z == 0
-        controls[-1] = x, y, increment
-    else:
-        controls.append((0, 0, increment))
+    if not controls:
+        controls.append((0, 0, 0))
+    x, y, z = controls[-1]
+    assert z == 0
+    controls[-1] = (x, y, new_pos - src_pos)
 
 
 def make_patch(symbols):
+    "Create patch from symbolic source bytes."
     controls = []
     diff_block = bytearray()
     extra_block = bytearray()
@@ -106,6 +107,7 @@ def make_patch(symbols):
             y += 1
             i += 1
 
+        assert x or y
         controls.append((x, y, 0))
 
     f = BytesIO()
@@ -126,7 +128,7 @@ def canonicalize(patch_bytes: bytes) -> bytes:
     * noncanonical integer encodings such as negative zero
     * compressed blocks by decoding and recompressing them
     """
-    return make_patch(apply_symbolically(patch_bytes, None))
+    return make_patch(apply_symbolically(patch_bytes))
 
 
 def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
@@ -135,7 +137,7 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
     Combine patches from A to B and B to C into a patch from A to C,
     without requiring A or B.  The result is not necessarily optimal.
     """
-    b = apply_symbolically(patch_ab, None)
+    b = apply_symbolically(patch_ab)
     c = apply_symbolically(patch_bc, b)
     return make_patch(c)
 

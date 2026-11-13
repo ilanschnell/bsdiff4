@@ -145,7 +145,7 @@ import unittest
 from random import randrange
 
 from bsdiff4.format import diff, patch, validate_canonical, NonCanonicalError
-from bsdiff4.tests import ROUND_TRIP_CASES
+from bsdiff4.tests import ROUND_TRIP_CASES, NON_CANONICAL_CONTROLS
 
 
 class PatchUtil:
@@ -166,29 +166,12 @@ class PatchUtil:
         self.assertEqual(blocks_a[2], blocks_b[2])
 
 
-NON_CANONICAL_CASES = [
-    # Control tuples not merged.
-    ([(3, 0, 0), (0, 4, 0)], "adjacent"),
-    # Consecutive diffs.
-    ([(2, 0, 0), (1, 4, 0)], "adjacent"),
-    ([(1, 0, 0), (2, 0, 0), (0, 4, 0)], "adjacent"),
-    # Consecutive extras.
-    ([(3, 2, 0), (0, 2, 0)], "empty diff range"),
-    ([(3, 0, 0), (0, 2, 0), (0, 2, 0)], "adjacent"),
-    # Consecutive z values.
-    ([(0, 0, 11), (0, 0, -4), (0, 0, -7), (3, 4, 0)], "^source position"),
-    # Final z value.
-    ([(3, 4, 2)], "final z not zero"),
-    # No-op control tuple.
-    ([(0, 0, 0), (3, 4, 0)], "no-op"),
-]
-
 class TestCanonicalize(unittest.TestCase, PatchUtil):
 
     def test_non_canonical(self):
         src = b'Banana'
         dst = b'bandana'
-        for controls, msg in NON_CANONICAL_CASES:
+        for controls, msg in NON_CANONICAL_CONTROLS:
             with self.assertRaisesRegex(NonCanonicalError, msg):
                 validate_canonical(pack_control_block(*controls), len(src))
             bpatch = self.make_patch(controls, b'\x20\x00\x00', b'dana')

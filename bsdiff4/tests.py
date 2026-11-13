@@ -89,6 +89,24 @@ class TestSuffixArray(unittest.TestCase):
                 sorted(range(len(data) + 1), key=lambda i: data[i:]))
 
 
+NON_CANONICAL_CONTROLS = [
+    # Control tuples not merged.
+    ([(3, 0, 0), (0, 4, 0)], "adjacent"),
+    # Consecutive diffs.
+    ([(2, 0, 0), (1, 4, 0)], "adjacent"),
+    ([(1, 0, 0), (2, 0, 0), (0, 4, 0)], "adjacent"),
+    # Consecutive extras.
+    ([(3, 2, 0), (0, 2, 0)], "empty diff range"),
+    ([(3, 0, 0), (0, 2, 0), (0, 2, 0)], "adjacent"),
+    # Consecutive z values.
+    ([(0, 0, 11), (0, 0, -4), (0, 0, -7), (3, 4, 0)], "^source position"),
+    # Final z value.
+    ([(3, 4, 2)], "final z not zero"),
+    # No-op control tuple.
+    ([(0, 0, 0), (3, 4, 0)], "no-op"),
+]
+
+
 ROUND_TRIP_CASES = [
     (b'', b''),
     (b'', b'x'),
@@ -293,21 +311,10 @@ class TestCoreDiffPatch(unittest.TestCase):
         check_patch([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a')
         check_patch([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana')
         check_patch([(0, 7, 0)], b'', dst)
-        # Control tuples not merged.
-        check_patch([(3, 0, 0), (0, 4, 0)], msg="adjacent")
-        # Consecutive diffs.
-        check_patch([(2, 0, 0), (1, 4, 0)], msg="adjacent")
-        check_patch([(1, 0, 0), (2, 0, 0), (0, 4, 0)], msg="adjacent")
-        # Consecutive extras.
-        check_patch([(3, 2, 0), (0, 2, 0)], msg="empty diff range")
-        check_patch([(3, 0, 0), (0, 2, 0), (0, 2, 0)], msg="adjacent")
-        # Consecutive z values.
-        check_patch([(0, 0, 11), (0, 0, -4), (0, 0, -7), (3, 4, 0)],
-                    msg="^source position")
-        # Final z value.
-        check_patch([(3, 4, 2)], msg="final z not zero")
-        # No-op control tuple.
-        check_patch([(0, 0, 0), (3, 4, 0)], msg="no-op")
+
+        for controls, msg in NON_CANONICAL_CONTROLS:
+            check_patch(controls, msg=msg)
+
         # Negative source position.
         check_patch([(0, 0, -7), (7, 0, 0)], dst, b'', msg="negative source")
         # Diff range extends one byte beyond the source.

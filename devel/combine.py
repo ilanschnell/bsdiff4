@@ -154,7 +154,7 @@ from generate_cases import DISABLED_BRANCH
 
 
 BRANCH2_PATH = 'branch2.raw'
-HAVE_BRANCH2 = exists(BRANCH2_PATH)
+BRANCH2_FILE_EXISTS = exists(BRANCH2_PATH)
 
 
 class PatchUtil:
@@ -222,7 +222,8 @@ class TestCanonicalize(unittest.TestCase, PatchUtil):
             self.check_case(a, b)
             self.check_case(b, a)
 
-    @unittest.skipUnless(HAVE_BRANCH2, "no branch2 data: %r" % BRANCH2_PATH)
+    @unittest.skipUnless(BRANCH2_FILE_EXISTS,
+                         "no branch2 data: %r" % BRANCH2_PATH)
     def test_branch2_data(self):
         branches_enabled = DISABLED_BRANCH == 0
 
@@ -327,5 +328,5 @@ class TestCombine(unittest.TestCase, PatchUtil):
 
 if __name__ == '__main__':
     print("DISABLED_BRANCH = %d" % DISABLED_BRANCH)
-    print("HAVE_BRANCH2 = %s" % HAVE_BRANCH2)
+    print("BRANCH2_FILE_EXISTS = %s" % BRANCH2_FILE_EXISTS)
     unittest.main()

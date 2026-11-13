@@ -141,11 +141,20 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
 # ------------------------------- tests -----------------------------------
 
 import os
+import sys
 import unittest
+from os.path import exists
 from random import randrange
 
 from bsdiff4.format import diff, patch, validate_canonical, NonCanonicalError
 from bsdiff4.tests import ROUND_TRIP_CASES, NON_CANONICAL_CONTROLS
+
+from util import read_cases
+from generate_cases import DISABLED_BRANCH
+
+
+BRANCH2_PATH = 'branch2.raw'
+HAVE_BRANCH2 = exists(BRANCH2_PATH)
 
 
 class PatchUtil:
@@ -212,6 +221,27 @@ class TestCanonicalize(unittest.TestCase, PatchUtil):
         for a, b in ROUND_TRIP_CASES:
             self.check_case(a, b)
             self.check_case(b, a)
+
+    @unittest.skipUnless(HAVE_BRANCH2, "no branch2 data: %r" % BRANCH2_PATH)
+    def test_branch2_data(self):
+        branches_enabled = DISABLED_BRANCH == 0
+
+        count = 0
+        for src, dst in read_cases(BRANCH2_PATH):
+            count += 1
+            sys.stdout.write('.')
+            sys.stdout.flush()
+
+            bpatch = diff(src, dst)
+            self.check_patch(src, dst, bpatch, branches_enabled)
+
+            cpatch = canonicalize(bpatch)
+            if branches_enabled:
+                self.assertEqual(cpatch, bpatch)
+            else:
+                self.check_patch(src, dst, cpatch, True)
+
+        self.assertGreater(count, 0, "%r has no cases" % BRANCH2_PATH)
 
     def test_merge_rules(self):
         controls = [(1, 0, 15), (0, 0, -15), (19, 27, 0)]
@@ -296,4 +326,6 @@ class TestCombine(unittest.TestCase, PatchUtil):
 
 
 if __name__ == '__main__':
+    print("DISABLED_BRANCH = %d" % DISABLED_BRANCH)
+    print("HAVE_BRANCH2 = %s" % HAVE_BRANCH2)
     unittest.main()

@@ -48,13 +48,12 @@ def apply_symbolically(patch_bytes, source=None):
 
         diff_pos += x
         dst_pos += x
-        src_pos += x
 
         assert 0 <= y <= min(dst_len - dst_pos, extra_len - extra_pos)
         result.extend(extra_block[extra_pos:extra_pos + y])
         extra_pos += y
         dst_pos += y
-        src_pos += z
+        src_pos += x + z
 
         assert (diff_len - diff_pos + extra_len - extra_pos ==
                 dst_len - dst_pos)
@@ -143,7 +142,7 @@ def combine(patch_ab: bytes, patch_bc: bytes) -> bytes:
 import os
 import sys
 import unittest
-from os.path import exists
+from os.path import dirname, exists, join
 from random import randrange
 
 from bsdiff4.format import diff, patch, validate_canonical, NonCanonicalError
@@ -153,7 +152,7 @@ from util import read_cases
 from generate_cases import DISABLED_BRANCH
 
 
-BRANCH2_PATH = 'branch2.raw'
+BRANCH2_PATH = join(dirname(__file__), 'branch2.txt')
 BRANCH2_FILE_EXISTS = exists(BRANCH2_PATH)
 
 
@@ -329,5 +328,6 @@ class TestCombine(unittest.TestCase, PatchUtil):
 
 if __name__ == '__main__':
     print("DISABLED_BRANCH = %d" % DISABLED_BRANCH)
+    print("BRANCH2_PATH = %r" % BRANCH2_PATH)
     print("BRANCH2_FILE_EXISTS = %s" % BRANCH2_FILE_EXISTS)
     unittest.main()

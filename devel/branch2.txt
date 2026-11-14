@@ -1,0 +1,77 @@
+# DISABLED_BRANCH: 2
+# 49 45 (21)   [(1, 0, 0), (17, 27, 0)]
+src = b'pnsqmefkjdrbclnsqmefkjdrbclnsqmhogailnsqmefkjdrbc'
+dst = b'pnsqmefkjdrbclnsqmuethogailmefkjdrbclnsqmefkj'
+
+# 50 43 (13)   [(1, 0, 0), (15, 27, 0)]
+src = b'aacbdcbbddaaadbcaacbdcbbddaaadbcaaaaccbdbehfkimgjl'
+dst = b'bacbdcbbddaaadbcccbbdbcacehfkimgjlaaccbdbeh'
+
+# 54 47 (5)   [(1, 0, 0), (15, 31, 0)]
+src = b'dcaaddcdcbdbabbcdcaaddcdcbdbabbcdaadbcbcdcaaddcdcbdbab'
+dst = b'bcaaddcdcbdbebbcbdccabcdcbdbddcdcbdbabbcdcaaddc'
+
+# 57 47 (4)   [(1, 0, 0), (15, 31, 0)]
+src = b'bbcdaaadaaaddabcdbacbcdaaadaaaddabcdbdcdaaadaaaddabcdbacb'
+dst = b'bbcdaaadaaaddabccabcacddbbbbadabcdbacbcdaaadaaa'
+
+# 59 50 (4)   [(1, 0, 0), (14, 35, 0)]
+src = b'dbcbbbaabcaabcbdddcbcbbbaabcaabcbdcbcbbadddbdcbcbbbaabcaabb'
+dst = b'dbcbbbaabcaabcbcadbcababbcbbbcbbbaabcaabbddbdcbcbb'
+
+# 60 55 (7)   [(1, 0, 0), (15, 39, 0)]
+src = b'addcdabbacdadaaddcdabbacdadaadddcddbcbaaaaddbadabbacdadaaddc'
+dst = b'cddcdabbacdadaadacabacaegfdabbacdabbacdadaaddcdabbacdad'
+
+# 53 47 (9)   [(1, 0, 0), (19, 27, 0)]
+src = b'eaddbcbddcddddacaddbcbddcddddacaddbifadddacaddbcbddcd'
+dst = b'eaddbcbddcddddacaddbeghifacicddbcbddcddddacaddb'
+
+# 68 53 (8)   [(1, 0, 0), (15, 37, 0)]
+src = b'abbdcbbabdcdbdcdabdddaccabbdcbbabdcdbdcdfgbeabdcdbdcdabdccbcaddaccab'
+dst = b'hbbdcbbabdcdbdcddaddcbcabbcdacbcdcbcaddaccababdcdbdcd'
+
+# 66 52 (9)   [(1, 0, 0), (13, 38, 0)]
+src = b'caccddcbdcadcdcbdddaccccaccddcbdcadcdcgehfbddcbdcadcdcbdcddaccccac'
+dst = b'iaccddcbdcadcdbdcaadbcabaccbdccddcddaccccacddcbdcadc'
+
+# 60 49 (4)   [(1, 0, 0), (15, 33, 0)]
+src = b'adcbddccadbbaabddbabadcbddccadbbaabdbbaabdadabbaaadddbabadcb'
+dst = b'ddcbddccadbbaabdccaaccdbdbdbcdbddbabadcbbdadabbaa'
+
+# 47 47 (26)   [(1, 0, 0), (19, 27, 0)]
+src = b'jqktbdavomqktbdavomqktbdavomqxzcjsnlujqktbdavom'
+dst = b'jqktbdavomqktbdavomqeyhfwprigqktbdavomqktbdavom'
+
+# 45 45 (13)   [(1, 0, 0), (17, 27, 0)]
+src = b'gaiififkegaiififkegaiififkejcdldhialkegaiifif'
+dst = b'kaiififkegaiififkedmcfajfbbkegaiififkegaiifif'
+
+# 68 52 (5)   [(1, 0, 0), (14, 37, 0)]
+src = b'abddbcbbbbbabccccdbbbbbdbaabddbcbbbbbabccdaabddbcbbbbbabccdccbdccdbb'
+dst = b'ebddbcbbbbbabccbbbcacbbdbdbadabddccbdccdbbaabddbcbbd'
+
+# 65 49 (5)   [(1, 0, 0), (14, 34, 0)]
+src = b'dbcbdcdaacdccbbaabcaaaaaddbcbdcdaacdccbbcbdcdaacdccbbaabbcaaaaadd'
+dst = b'ebcbdcdaacdccbbddbbaabadbbaabbbbcaaaaaddcbdcdaacd'
+
+# 46 45 (21)   [(1, 0, 0), (17, 27, 0)]
+src = b'adccbaaaddadccbaaaddadccbaaahjlrksgnadccbaaadd'
+dst = b'fdccbaaaddadccbaaaqiompeuatdccbaaaddadccbaaad'
+
+# 47 46 (22)   [(1, 0, 0), (17, 28, 0)]
+src = b'cgecfjbbahiagecfjbbahiagecfjblmnqspcbahiagecfjb'
+dst = b'cgecfjbbahiagecfjbvartukdoihiagecfjbbahiagecfj'
+
+# 67 53 (7)   [(1, 0, 0), (16, 36, 0)]
+src = b'aaddcdaadcbdaabdadbddbaaaddcdaadcbdaabdagcceadbddbaaaddcdaadcbdaabd'
+dst = b'faddcdaadcbdaabdaaadababdadddccabcaadcbdaabdadbddbaaa'
+
+# 49 45 (18)   [(1, 0, 0), (17, 27, 0)]
+src = b'phokqgbmjlirnphokqgbmjlirnphokqmjlirphokqgbmjlirn'
+dst = b'ahokqgbmjlirnphokqcbdccbdfeqgbmjlirnphokqgbmj'
+
+# 61 51 (8)   [(1, 0, 0), (18, 32, 0)]
+src = b'bbcadacddadcdabbbacbcadacddadcdabbbachgfebbbacbdadcacbbcadaca'
+dst = b'bbcadacddadcdabbbacccdccaadabbcbaacbbcadacbbacbdadc'
+

@@ -435,8 +435,8 @@ class TestValidateCanonical(unittest.TestCase):
         zero = 8 * b'\x00'
         negzero = 7 * b'\x00' + b'\x80'
 
-        for i in range(3):
-            values = [zero, zero, zero]
+        for i in range(6):
+            values = 6 * [zero]
             values[i] = negzero
             with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
                 validate_canonical(b''.join(values))

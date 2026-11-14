@@ -11,6 +11,11 @@ select_cases.py
     the second control-tuple merge rule.
 
 
+branch2.txt
+    The file was obtained with the second merge rule disabled by running:
+    $ python select_cases.py >branch2.txt
+
+
 addition.py
     Demonstration of BSDIFF’s handling of diff addition.
 

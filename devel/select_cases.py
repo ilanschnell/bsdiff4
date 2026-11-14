@@ -29,7 +29,9 @@ def main():
         assert DISABLED_BRANCH == 2
         controls = list(unpack_control_block(blocks[0]))
         assert has_consecutive_ranges(controls)
-        if len(src) + len(dst) < 120:
+        if len(src) > 70 or len(dst) > 70:
+            continue
+        if len(src) + len(dst) < 95 or len(set(src + dst)) < 10:
             print("# %d %d (%d)   %r" % (len(src), len(dst),
                                          len(set(src + dst)), controls))
             print("src = %r" % src)

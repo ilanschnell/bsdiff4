@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#define BSDIFF4_VERSION  "1.4.3"
+#define BSDIFF4_VERSION  "1.4.4"
 
 /* swap two values */
 static inline void

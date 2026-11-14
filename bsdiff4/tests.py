@@ -282,18 +282,6 @@ class TestCoreDiffPatch(unittest.TestCase):
         blocks = bcontrol, len(src) * b'\x01', b''
         self.assertEqual(core.patch(src, *blocks), dst)
 
-    def test_validate_canonical_errors(self):
-        msg = "invalid control block"
-        with self.assertRaisesRegex(ValueError, msg) as cm:
-            validate_canonical(30 * b'\x00')
-        self.assertIs(type(cm.exception), ValueError)
-
-        with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
-            validate_canonical(3 * (7 * b'\x00' + b'\x80'))
-
-        with self.assertRaisesRegex(NonCanonicalError, "no-op"):
-            validate_canonical(24 * b'\x00')
-
     def check_banana_patch(self, controls,
                            diff=b'\x20\x00\x00', extra=b'dana', msg=None):
         src = b'Banana'
@@ -326,10 +314,8 @@ class TestCoreDiffPatch(unittest.TestCase):
         check([(7, 0, 0)], b'\x20\x00\x00\x03\xf3\x0da', b'',
               msg="diff range not in source range")
         # Source position starts beyond the end of the source.
-        controls = [(0, 0, 7), (1, 6, 0)]
-        check(controls, diff=b'b', extra=b'andana', msg="^source")
-        # Test the source-independent mode (src_len=None).
-        validate_canonical(pack_control_block(*controls))
+        check([(0, 0, 7), (1, 6, 0)], diff=b'b', extra=b'andana',
+              msg="source position not in source range")
 
     def test_patch_noop(self):
         noop = pack_control_block((0, 0, 0))  # no-op control tuple
@@ -429,6 +415,47 @@ class TestHelpers(unittest.TestCase):
             bcontrol = unpack_control_block(n * b'\x00')
             self.assertRaisesRegex(ValueError, "invalid control block",
                                    list, bcontrol)  # force iteration
+
+
+class TestValidateCanonical(unittest.TestCase):
+
+    # Additional tests for validate_canonical() beyond those in
+    # test_patch_non_canonical.
+
+    def test_error_type(self):
+        msg = "invalid control block"
+        with self.assertRaisesRegex(ValueError, msg) as cm:
+            validate_canonical(30 * b'\x00')
+        self.assertIs(type(cm.exception), ValueError)
+
+        with self.assertRaisesRegex(NonCanonicalError, "no-op"):
+            validate_canonical(24 * b'\x00')
+
+    def test_negative_zero(self):
+        zero = 8 * b'\x00'
+        negzero = 7 * b'\x00' + b'\x80'
+
+        for i in range(3):
+            values = [zero, zero, zero]
+            values[i] = negzero
+            with self.assertRaisesRegex(NonCanonicalError, "negative zero"):
+                validate_canonical(b''.join(values))
+
+    def test_source_independent(self):
+        bcontrol = pack_control_block((0, 0, 7), (1, 6, 0))
+        # Without a source length, the control structure is canonical.
+        validate_canonical(bcontrol)
+
+        # With a source length of 6, the source position starts beyond
+        # the end of the source.
+        self.assertRaisesRegex(NonCanonicalError,
+                               "source position not in source range",
+                               validate_canonical, bcontrol, 6)
+
+    def test_empty(self):
+        # An empty control block is always canonical.
+        for src_len in None, 0, 1, 123:
+            validate_canonical(b'', src_len)
 
 
 class Example:

@@ -75,3 +75,11 @@ dst = b'ahokqgbmjlirnphokqcbdccbdfeqgbmjlirnphokqgbmj'
 src = b'bbcadacddadcdabbbacbcadacddadcdabbbachgfebbbacbdadcacbbcadaca'
 dst = b'bbcadacddadcdabbbacccdccaadabbcbaacbbcadacbbacbdadc'
 
+# 54 46 (4)   [(1, 0, 0), (14, 31, 0)]
+src = b'ccacbbccbccdddcacaacacbbccbccdddcdbabacbcacacbbccbccdd'
+dst = b'ccacbbccbccdddcccdccdcabadcbbccbccddaacbcacacb'
+
+# 64 51 (4)   [(1, 0, 0), (14, 36, 0)]
+src = b'ccbccbddbabddabbcaabcdcccbccbddbabddabcbddbabddabbcaabcdbbcbaacc'
+dst = b'bcbccbddbabddabdacaacdabcbcddaccdbbcbaaccbbabddabbc'
+

@@ -47,7 +47,7 @@ class TestCoreInt64(unittest.TestCase):
             self.assertEqual(core.encode_int64(n), b)
             self.assertEqual(core.decode_int64(b), n)
 
-        self.assertEqual(  # noncanonical "negative zero"
+        self.assertEqual(  # non-canonical "negative zero"
             core.decode_int64(bytes.fromhex('00 00 00 00 00 00 00 80')), 0)
 
     def test_errors(self):
@@ -89,6 +89,8 @@ class TestSuffixArray(unittest.TestCase):
                 sorted(range(len(data) + 1), key=lambda i: data[i:]))
 
 
+# Although non-canonical, each control sequence is valid and transforms
+# b'Banana' into b'bandana' with diff b'\x20\x00\x00' and extra b'dana'.
 NON_CANONICAL_CONTROLS = [
     # Control tuples not merged.
     ([(3, 0, 0), (0, 4, 0)], "adjacent"),
@@ -292,37 +294,40 @@ class TestCoreDiffPatch(unittest.TestCase):
         with self.assertRaisesRegex(NonCanonicalError, "no-op"):
             validate_canonical(24 * b'\x00')
 
-    def test_patch_non_canonical(self):
+    def check_banana_patch(self, controls,
+                           diff=b'\x20\x00\x00', extra=b'dana', msg=None):
         src = b'Banana'
         dst = b'bandana'
-        def check_patch(controls, diff=b'\x20\x00\x00', extra=b'dana',
-                        msg=None):
-            bcontrol = pack_control_block(*controls)
-            self.assertEqual(core.patch(src, bcontrol, diff, extra), dst)
-            if msg is None:
+        bcontrol = pack_control_block(*controls)
+        self.assertEqual(core.patch(src, bcontrol, diff, extra), dst)
+        if msg is None:
+            validate_canonical(bcontrol, len(src))
+        else:
+            with self.assertRaisesRegex(NonCanonicalError, msg):
                 validate_canonical(bcontrol, len(src))
-            else:
-                with self.assertRaisesRegex(NonCanonicalError, msg):
-                    validate_canonical(bcontrol, len(src))
+
+    def test_patch_non_canonical(self):
+        dst = b'bandana'
+        check = self.check_banana_patch
 
         # canonical patch
-        check_patch([(3, 4, 0)])
+        check([(3, 4, 0)])
         # Also canonical, but not returned by core.diff().
-        check_patch([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a')
-        check_patch([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana')
-        check_patch([(0, 7, 0)], b'', dst)
+        check([(6, 1, 0)], b'\x20\x00\x00\x03\xf3\x0d', b'a')
+        check([(4, 3, 0)], b'\x20\x00\x00\x03', b'ana')
+        check([(0, 7, 0)], b'', dst)
 
         for controls, msg in NON_CANONICAL_CONTROLS:
-            check_patch(controls, msg=msg)
+            check(controls, msg=msg)
 
         # Negative source position.
-        check_patch([(0, 0, -7), (7, 0, 0)], dst, b'', msg="negative source")
+        check([(0, 0, -7), (7, 0, 0)], dst, b'', msg="negative source")
         # Diff range extends one byte beyond the source.
-        check_patch([(7, 0, 0)], b'\x20\x00\x00\x03\xf3\x0da', b'',
-                    msg="diff range not in source range")
+        check([(7, 0, 0)], b'\x20\x00\x00\x03\xf3\x0da', b'',
+              msg="diff range not in source range")
         # Source position starts beyond the end of the source.
         controls = [(0, 0, 7), (1, 6, 0)]
-        check_patch(controls, diff=b'b', extra=b'andana', msg="^source")
+        check(controls, diff=b'b', extra=b'andana', msg="^source")
         # Test the source-independent mode (src_len=None).
         validate_canonical(pack_control_block(*controls))
 

@@ -121,7 +121,7 @@ def canonicalize(patch_bytes: bytes) -> bytes:
     * source seeks into the preceding tuple where possible
     * empty/no-op and trailing control tuples
     * the final z to zero
-    * noncanonical integer encodings such as negative zero
+    * non-canonical integer encodings such as negative zero
     * compressed blocks by decoding and recompressing them
     """
     return make_patch(apply_symbolically(patch_bytes))
@@ -176,7 +176,8 @@ class PatchUtil:
 
     @staticmethod
     def get_control_block(bpatch):
-        return read_patch(BytesIO(bpatch))[0]
+        control_block, _, _ = read_patch(BytesIO(bpatch))
+        return control_block
 
     def check_patch(self, src, dst, bpatch, canonical):
         self.assertEqual(patch(src, bpatch), dst)

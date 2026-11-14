@@ -1,4 +1,4 @@
-2026-11-XX   1.4.3:
+2026-11-14   1.4.3:
 -------------------
   * Canonicalize control tuples while computing diffs.  Applying
     non-canonical BSDIFF40 patches is unaffected, and compatibility with

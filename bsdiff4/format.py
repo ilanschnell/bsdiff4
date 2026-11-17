@@ -103,6 +103,8 @@ def read_patch(fi):
     if len(control_block) % 24:
         raise ValueError("invalid control block")
     diff_block = bz2.decompress(read_exact(fi, diff_len))
+    if dst_len < len(diff_block):
+        raise ValueError("invalid destination length")
     extra_block = bz2.decompress(fi.read())
     if dst_len != len(diff_block) + len(extra_block):
         raise ValueError("invalid destination length")

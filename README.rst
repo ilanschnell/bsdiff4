@@ -9,6 +9,8 @@ found at http://www.daemonology.net/bsdiff.
 
 Key features of this package include:
 
+* produces and applies patches compatible with the standard ``bsdiff`` and
+  ``bspatch`` tools
 * high-level ``diff`` and ``patch`` functions
 * an interface to the BSDIFF4 format
 * stricter validation and improved error handling of malformed patches than

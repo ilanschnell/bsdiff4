@@ -1,3 +1,8 @@
+# This could let read_patch() bound decompression of the diff and extra blocks
+# by the declared destination size.  It does not fully prevent decompression
+# bombs, however, because BSDIFF40 does not declare the uncompressed size of
+# the control block and valid control blocks have no useful size bound.
+
 import bz2
 import sys
 

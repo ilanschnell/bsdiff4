@@ -1,4 +1,5 @@
 import bz2
+import sys
 
 
 def decompress(data, limit=None):
@@ -13,7 +14,7 @@ def decompress(data, limit=None):
     while data:
         decompressor = bz2.BZ2Decompressor()
         try:
-            chunk = decompressor.decompress(data, limit - size + 1)
+            chunk = decompressor.decompress(data, limit - size)
         except OSError:
             # Like bz2.decompress(), ignore trailing non-bzip2 data after
             # at least one complete stream.
@@ -22,9 +23,9 @@ def decompress(data, limit=None):
             raise OSError("invalid bzip2 data") from None
         chunks.append(chunk)
         size += len(chunk)
-        if size > limit:
-            raise ValueError("decompressed data exceeds limit")
         if not decompressor.eof:
+            if not decompressor.needs_input:
+                raise ValueError("decompressed data exceeds limit")
             raise ValueError("Compressed data ended before end-of-stream "
                              "marker was reached")
         data = decompressor.unused_data
@@ -45,6 +46,7 @@ class TestDecompress(unittest.TestCase):
         self.assertEqual(decompress(streams), b'abcdefg')
         self.assertEqual(decompress(streams, 7), b'abcdefg')
         self.assertEqual(decompress(streams, 8), b'abcdefg')
+        self.assertEqual(decompress(streams, sys.maxsize), b'abcdefg')
         self.assertRaisesRegex(ValueError, "exceeds limit",
                                decompress, streams, 6)
 

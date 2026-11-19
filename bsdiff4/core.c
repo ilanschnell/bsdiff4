@@ -513,9 +513,6 @@ compute_diff(const char *src, Py_ssize_t src_len,
     if (sa == NULL)
         return -1;
 
-    if (diff_result_init(result, dst_len) < 0)
-        goto error;
-
     /* perform diff */
     len = scan = lastscan = lastpos = lastoffset = pos = 0;
     while (scan < dst_len) {
@@ -602,18 +599,21 @@ mod_diff(PyObject *module, PyObject *args)
     DiffResult diff = {NULL, NULL, NULL, 0, 0};
     Py_ssize_t src_len, dst_len;
     char *src, *dst;
-    PyObject *result;
+    PyObject *result = NULL;
 
     if (!PyArg_ParseTuple(args, "s#s#",
                           &src, &src_len,
                           &dst, &dst_len))
         return NULL;
 
-    if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
-        result = NULL;
-    else
-        result = diff_result_build(&diff);
+    if (diff_result_init(&diff, dst_len) < 0)
+        goto finish;
 
+    if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
+        goto finish;
+
+    result = diff_result_build(&diff);
+ finish:
     diff_result_clear(&diff);
     return result;
 }

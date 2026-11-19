@@ -652,10 +652,9 @@ static PyObject *
 mod_patch(PyObject *module, PyObject *args)
 {
     char *src, *dst, *control_block, *diff_block, *extra_block;
-    Py_ssize_t src_len, dst_len, control_len;
-    Py_ssize_t diff_remaining, extra_remaining;
+    Py_ssize_t src_len, control_len;
+    Py_ssize_t diff_remaining, extra_remaining, dst_remaining, i;
     PyObject *result;
-    Py_ssize_t dst_pos = 0, i;
     int64_t src_pos = 0;
 
     if (!PyArg_ParseTuple(args, "s#s#s#s#",
@@ -669,14 +668,14 @@ mod_patch(PyObject *module, PyObject *args)
         PyErr_NoMemory();
         return NULL;
     }
-    dst_len = diff_remaining + extra_remaining;
+    dst_remaining = diff_remaining + extra_remaining;
 
     if (control_len % 24) {
         CORRUPT("invalid control block");
         return NULL;
     }
 
-    result = PyBytes_FromStringAndSize(NULL, dst_len);
+    result = PyBytes_FromStringAndSize(NULL, dst_remaining);
     if (result == NULL)
         return NULL;
     dst = PyBytes_AS_STRING(result);
@@ -689,30 +688,32 @@ mod_patch(PyObject *module, PyObject *args)
             CORRUPT("x out of range");
             goto error;
         }
-        memcpy(dst + dst_pos, diff_block, x);
+        memcpy(dst, diff_block, x);
         diff_block += x;
         diff_remaining -= x;
         for (j = 0; j < x; j++) {
             /* Check bounds without overflowing src_pos + j. */
             if (src_pos >= -j && src_pos < src_len - j)
-                dst[dst_pos + j] += src[src_pos + j];
+                dst[j] += src[src_pos + j];
         }
-        dst_pos += x;
+        dst += x;
+        dst_remaining -= x;
         if (y < 0 || y > extra_remaining) {
             CORRUPT("y out of range");
             goto error;
         }
-        memcpy(dst + dst_pos, extra_block, y);
+        memcpy(dst, extra_block, y);
         extra_block += y;
         extra_remaining -= y;
-        dst_pos += y;
+        dst += y;
+        dst_remaining -= y;
         if (update_src_pos(&src_pos, x) < 0 ||
             update_src_pos(&src_pos, z) < 0)
             goto error;
-        assert(dst_pos + diff_remaining + extra_remaining == dst_len);
+        assert(diff_remaining + extra_remaining == dst_remaining);
     }
 
-    if (dst_pos != dst_len) {
+    if (dst_remaining != 0) {
         CORRUPT("incomplete output");
         goto error;
     }

@@ -257,6 +257,30 @@ typedef struct {
     Py_ssize_t extra_len;   /* length of extra block */
 } DiffResult;
 
+/* initialize diff result structure */
+static int
+init_diff_result(DiffResult *result, Py_ssize_t dst_len)
+{
+    result->control = PyByteArray_FromStringAndSize(NULL, 0);
+    if (result->control == NULL)
+        return -1;
+
+    /* allocate memory for the diff and extra blocks */
+    result->diff = PyMem_Malloc(dst_len + 1);
+    if (result->diff == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    result->extra = PyMem_Malloc(dst_len + 1);
+    if (result->extra == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    result->diff_len = 0;
+    result->extra_len = 0;
+    return 0;
+}
+
 /* release resources owned by a diff result */
 static void
 clear_diff_result(DiffResult *result)
@@ -454,28 +478,13 @@ compute_diff(const char *src, Py_ssize_t src_len,
     Py_ssize_t *sa;
     PendingControl pending = {0, 0, 0, 0};
 
-    result->control = PyByteArray_FromStringAndSize(NULL, 0);
-    if (result->control == NULL)
-        return -1;
-
     /* perform suffix sort on source data */
     sa = build_suffix_array(src, src_len);
     if (sa == NULL)
         return -1;
 
-    /* allocate memory for the diff and extra blocks */
-    result->diff = PyMem_Malloc(dst_len + 1);
-    if (result->diff == NULL) {
-        PyErr_NoMemory();
+    if (init_diff_result(result, dst_len) < 0)
         goto error;
-    }
-    result->extra = PyMem_Malloc(dst_len + 1);
-    if (result->extra == NULL) {
-        PyErr_NoMemory();
-        goto error;
-    }
-    result->diff_len = 0;
-    result->extra_len = 0;
 
     /* perform diff */
     len = scan = lastscan = lastpos = lastoffset = pos = 0;

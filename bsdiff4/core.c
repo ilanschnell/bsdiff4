@@ -207,48 +207,6 @@ build_suffix_array(const char *str, Py_ssize_t size)
     return sa;
 }
 
-/* return the length of the common prefix */
-static Py_ssize_t
-matchlen(const char *a, Py_ssize_t a_len,
-         const char *b, Py_ssize_t b_len)
-{
-    Py_ssize_t i = 0;
-
-    while (i < a_len && i < b_len && a[i] == b[i])
-        i++;
-    return i;
-}
-
-/* find a prefix match using the suffix array */
-static Py_ssize_t
-search(const Py_ssize_t *sa,
-       const char *a, Py_ssize_t a_len,
-       const char *b, Py_ssize_t b_len,
-       Py_ssize_t lo, Py_ssize_t hi, Py_ssize_t *pos)
-{
-    Py_ssize_t x, y;
-
-    if (hi - lo < 2) {
-        x = matchlen(a + sa[lo], a_len - sa[lo], b, b_len);
-        y = matchlen(a + sa[hi], a_len - sa[hi], b, b_len);
-
-        if (x > y) {
-            *pos = sa[lo];
-            return x;
-        }
-        else {
-            *pos = sa[hi];
-            return y;
-        }
-    }
-
-    x = lo + (hi - lo) / 2;
-    if (memcmp(a + sa[x], b, Py_MIN(a_len - sa[x], b_len)) < 0)
-        return search(sa, a, a_len, b, b_len, x, hi, pos);
-    else
-        return search(sa, a, a_len, b, b_len, lo, x, pos);
-}
-
 typedef struct {
     PyObject *control;      /* control block as bytearray */
     unsigned char *diff;    /* difference block */
@@ -259,19 +217,19 @@ typedef struct {
 
 /* initialize diff result structure */
 static int
-init_diff_result(DiffResult *result, Py_ssize_t dst_len)
+diff_result_init(DiffResult *result, Py_ssize_t dst_len)
 {
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
         return -1;
 
     /* allocate memory for the diff and extra blocks */
-    result->diff = PyMem_Malloc(dst_len + 1);
+    result->diff = PyMem_Malloc(dst_len);
     if (result->diff == NULL) {
         PyErr_NoMemory();
         return -1;
     }
-    result->extra = PyMem_Malloc(dst_len + 1);
+    result->extra = PyMem_Malloc(dst_len);
     if (result->extra == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -283,11 +241,41 @@ init_diff_result(DiffResult *result, Py_ssize_t dst_len)
 
 /* release resources owned by a diff result */
 static void
-clear_diff_result(DiffResult *result)
+diff_result_clear(DiffResult *result)
 {
     Py_XDECREF(result->control);
     PyMem_Free(result->diff);
     PyMem_Free(result->extra);
+}
+
+/* convert a diff result into Python objects */
+static PyObject *
+diff_result_build(DiffResult *result)
+{
+    PyObject *control, *diff, *extra, *res;
+
+    control = PyBytes_FromObject(result->control);
+    if (control == NULL)
+        return NULL;
+
+    diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
+    if (diff == NULL) {
+        Py_DECREF(control);
+        return NULL;
+    }
+
+    extra = PyBytes_FromStringAndSize(result->extra, result->extra_len);
+    if (extra == NULL) {
+        Py_DECREF(control);
+        Py_DECREF(diff);
+        return NULL;
+    }
+
+    res = PyTuple_Pack(3, control, diff, extra);
+    Py_DECREF(control);
+    Py_DECREF(diff);
+    Py_DECREF(extra);
+    return res;
 }
 
 /* encode int64 as 8 bytes */
@@ -401,6 +389,48 @@ queue_flush(PyObject *control, const PendingControl *pending)
     return append_control(control, pending->x, pending->y, 0);
 }
 
+/* return the length of the common prefix */
+static Py_ssize_t
+matchlen(const char *a, Py_ssize_t a_len,
+         const char *b, Py_ssize_t b_len)
+{
+    Py_ssize_t i = 0;
+
+    while (i < a_len && i < b_len && a[i] == b[i])
+        i++;
+    return i;
+}
+
+/* find a prefix match using the suffix array */
+static Py_ssize_t
+search(const Py_ssize_t *sa,
+       const char *a, Py_ssize_t a_len,
+       const char *b, Py_ssize_t b_len,
+       Py_ssize_t lo, Py_ssize_t hi, Py_ssize_t *pos)
+{
+    Py_ssize_t x, y;
+
+    if (hi - lo < 2) {
+        x = matchlen(a + sa[lo], a_len - sa[lo], b, b_len);
+        y = matchlen(a + sa[hi], a_len - sa[hi], b, b_len);
+
+        if (x > y) {
+            *pos = sa[lo];
+            return x;
+        }
+        else {
+            *pos = sa[hi];
+            return y;
+        }
+    }
+
+    x = lo + (hi - lo) / 2;
+    if (memcmp(a + sa[x], b, Py_MIN(a_len - sa[x], b_len)) < 0)
+        return search(sa, a, a_len, b, b_len, x, hi, pos);
+    else
+        return search(sa, a, a_len, b, b_len, lo, x, pos);
+}
+
 /* find the best forward match length */
 static Py_ssize_t
 forward_match_length(const char *src, Py_ssize_t src_len,
@@ -483,7 +513,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
     if (sa == NULL)
         return -1;
 
-    if (init_diff_result(result, dst_len) < 0)
+    if (diff_result_init(result, dst_len) < 0)
         goto error;
 
     /* perform diff */
@@ -564,35 +594,6 @@ error:
     return -1;
 }
 
-/* convert a diff result into Python objects */
-static PyObject *
-build_diff_result(DiffResult *result)
-{
-    PyObject *control, *diff, *extra, *res;
-
-    control = PyBytes_FromObject(result->control);
-    if (control == NULL)
-        return NULL;
-
-    diff = PyBytes_FromStringAndSize((char *) result->diff, result->diff_len);
-    if (diff == NULL) {
-        Py_DECREF(control);
-        return NULL;
-    }
-
-    extra = PyBytes_FromStringAndSize(result->extra, result->extra_len);
-    if (extra == NULL) {
-        Py_DECREF(control);
-        Py_DECREF(diff);
-        return NULL;
-    }
-
-    res = PyTuple_Pack(3, control, diff, extra);
-    Py_DECREF(control);
-    Py_DECREF(diff);
-    Py_DECREF(extra);
-    return res;
-}
 
 /* return the control, diff and extra blocks for two byte strings */
 static PyObject *
@@ -611,9 +612,9 @@ mod_diff(PyObject *module, PyObject *args)
     if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
         result = NULL;
     else
-        result = build_diff_result(&diff);
+        result = diff_result_build(&diff);
 
-    clear_diff_result(&diff);
+    diff_result_clear(&diff);
     return result;
 }
 

@@ -498,6 +498,28 @@ adjust_overlap(const char *src, const char *dst,
     *lenb -= best_length;
 }
 
+/* emit diff and extra data and queue the corresponding control tuple */
+static int
+emit_data(const char *src, const char *dst, DiffResult *result,
+          PendingControl *pending,
+          Py_ssize_t diff_len, Py_ssize_t extra_len, Py_ssize_t z,
+          Py_ssize_t dst_pos, Py_ssize_t src_pos)
+{
+    Py_ssize_t i;
+
+    for (i = 0; i < diff_len; i++)
+        result->diff[result->diff_len + i] = (dst[dst_pos + i] -
+                                              src[src_pos + i]);
+
+    memcpy(result->extra + result->extra_len,
+           dst + dst_pos + diff_len, extra_len);
+
+    result->diff_len += diff_len;
+    result->extra_len += extra_len;
+
+    return queue_add(result->control, pending, diff_len, extra_len, z);
+}
+
 /* construct the control, diff and extra blocks */
 static int
 compute_diff(const char *src, Py_ssize_t src_len,
@@ -542,7 +564,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
         /* emit data preceding the new match, or all remaining data at EOF */
         if (len != oldscore || scan == dst_len) {
-            Py_ssize_t lenb = 0, lenf, extra_len, z, i;
+            Py_ssize_t lenb = 0, lenf, extra_len, z;
 
             lenf = forward_match_length(src, src_len, dst,
                                         lastscan, lastpos, scan);
@@ -556,19 +578,10 @@ compute_diff(const char *src, Py_ssize_t src_len,
             assert(lastscan >= 0 && lenf <= dst_len - lastscan);
             assert(lastscan + lenf <= scan - lenb);
 
-            for (i = 0; i < lenf; i++)
-                result->diff[result->diff_len + i] =
-                    dst[lastscan + i] - src[lastpos + i];
-
             extra_len = (scan - lenb) - (lastscan + lenf);
-            memcpy(result->extra + result->extra_len,
-                   dst + lastscan + lenf, extra_len);
-
-            result->diff_len += lenf;
-            result->extra_len += extra_len;
-
             z = (pos - lenb) - (lastpos + lenf);
-            if (queue_add(result->control, &pending, lenf, extra_len, z) < 0)
+            if (emit_data(src, dst, result, &pending,
+                          lenf, extra_len, z, lastscan, lastpos) < 0)
                 goto error;
 
             lastscan = scan - lenb;

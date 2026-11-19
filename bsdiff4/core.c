@@ -389,6 +389,30 @@ queue_flush(PyObject *control, const PendingControl *pending)
     return append_control(control, pending->x, pending->y, 0);
 }
 
+/* emit diff and extra data and queue the corresponding control tuple */
+static int
+emit_data(const char *src, const char *dst, DiffResult *result,
+          PendingControl *pending,
+          Py_ssize_t diff_len, Py_ssize_t extra_len, Py_ssize_t z,
+          Py_ssize_t dst_pos, Py_ssize_t src_pos)
+{
+    Py_ssize_t i;
+
+    assert(diff_len >= 0 && extra_len >= 0 && dst_pos >= 0 && src_pos >= 0);
+
+    for (i = 0; i < diff_len; i++)
+        result->diff[result->diff_len + i] = (dst[dst_pos + i] -
+                                              src[src_pos + i]);
+
+    memcpy(result->extra + result->extra_len,
+           dst + dst_pos + diff_len, extra_len);
+
+    result->diff_len += diff_len;
+    result->extra_len += extra_len;
+
+    return queue_add(result->control, pending, diff_len, extra_len, z);
+}
+
 /* return the length of the common prefix */
 static Py_ssize_t
 matchlen(const char *a, Py_ssize_t a_len,
@@ -498,28 +522,6 @@ adjust_overlap(const char *src, const char *dst,
     *lenb -= best_length;
 }
 
-/* emit diff and extra data and queue the corresponding control tuple */
-static int
-emit_data(const char *src, const char *dst, DiffResult *result,
-          PendingControl *pending,
-          Py_ssize_t diff_len, Py_ssize_t extra_len, Py_ssize_t z,
-          Py_ssize_t dst_pos, Py_ssize_t src_pos)
-{
-    Py_ssize_t i;
-
-    for (i = 0; i < diff_len; i++)
-        result->diff[result->diff_len + i] = (dst[dst_pos + i] -
-                                              src[src_pos + i]);
-
-    memcpy(result->extra + result->extra_len,
-           dst + dst_pos + diff_len, extra_len);
-
-    result->diff_len += diff_len;
-    result->extra_len += extra_len;
-
-    return queue_add(result->control, pending, diff_len, extra_len, z);
-}
-
 /* construct the control, diff and extra blocks */
 static int
 compute_diff(const char *src, Py_ssize_t src_len,
@@ -594,8 +596,8 @@ compute_diff(const char *src, Py_ssize_t src_len,
         goto error;
 
     PyMem_Free(sa);
-    assert(result->diff_len <= dst_len);
-    assert(result->extra_len == dst_len - result->diff_len);
+    assert(result->diff_len <= dst_len && result->extra_len <= dst_len);
+    assert(result->diff_len + result->extra_len == dst_len);
     assert(PyByteArray_GET_SIZE(result->control) % 24 == 0);
     return 0;
 

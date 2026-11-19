@@ -685,7 +685,7 @@ mod_patch(PyObject *module, PyObject *args)
         int64_t x, y, z, j;
 
         decode_tuple(control_block + i, &x, &y, &z);
-        if (x < 0 || x > dst_len - dst_pos || x > diff_remaining) {
+        if (x < 0 || x > diff_remaining) {
             CORRUPT("x out of range");
             goto error;
         }
@@ -698,7 +698,7 @@ mod_patch(PyObject *module, PyObject *args)
                 dst[dst_pos + j] += src[src_pos + j];
         }
         dst_pos += x;
-        if (y < 0 || y > dst_len - dst_pos || y > extra_remaining) {
+        if (y < 0 || y > extra_remaining) {
             CORRUPT("y out of range");
             goto error;
         }

@@ -12,6 +12,8 @@
 
 #define BSDIFF4_VERSION  "1.4.4"
 
+/* ----------------------  suffix-array construction  -------------------- */
+
 /* swap two values */
 static inline void
 swap(Py_ssize_t *a, Py_ssize_t *b)
@@ -206,6 +208,8 @@ build_suffix_array(const char *str, Py_ssize_t size)
     PyMem_Free(rank);
     return sa;
 }
+
+/* -----------------------  diff output construction  -------------------- */
 
 typedef struct {
     PyObject *control;      /* control block as bytearray */
@@ -412,6 +416,8 @@ emit_data(const char *src, const char *dst, DiffResult *result,
 
     return queue_add(result->control, pending, diff_len, extra_len, z);
 }
+
+/* -------------------------  diff calculation  -------------------------- */
 
 /* return the length of the common prefix */
 static Py_ssize_t
@@ -633,6 +639,8 @@ mod_diff(PyObject *module, PyObject *args)
     return result;
 }
 
+/* -------------------------  patch application  ------------------------- */
+
 /* decode 8 bytes to int64 */
 static int64_t
 decode_int64(const char *str)
@@ -753,6 +761,8 @@ error:
 }
 
 #undef CORRUPT
+
+/* ----------------------  auxiliary Python bindings  -------------------- */
 
 /* encode an integer as 8 bytes */
 static PyObject *

@@ -129,12 +129,13 @@ split(Py_ssize_t *sa, Py_ssize_t *rank, Py_ssize_t start,
 }
 
 /* construct suffix array for a byte string */
-static void
+static int
 qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
          const unsigned char *str, Py_ssize_t size)
 {
     Py_ssize_t buckets[256], i, h;
 
+    Py_BEGIN_ALLOW_THREADS  /* release GIL */
     for (i = 0; i < 256; i++)
         buckets[i] = 0;
     for (i = 0; i < size; i++)
@@ -155,10 +156,15 @@ qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
         if (buckets[i] == buckets[i - 1] + 1)
             sa[buckets[i]] = -1;
     sa[0] = -1;
+    Py_END_ALLOW_THREADS
 
     for (h = 1; sa[0] != -(size + 1); h += h) {
         Py_ssize_t len = 0;
 
+        if (PyErr_CheckSignals() < 0)
+            return -1;
+
+        Py_BEGIN_ALLOW_THREADS  /* release GIL */
         for (i = 0; i <= size;) {
             if (sa[i] < 0) {
                 len -= sa[i];
@@ -175,10 +181,18 @@ qsufsort(Py_ssize_t *sa, Py_ssize_t *rank,
         }
         if (len)
             sa[i - len] = -len;
+        Py_END_ALLOW_THREADS
     }
 
+    if (PyErr_CheckSignals() < 0)
+        return -1;
+
+    Py_BEGIN_ALLOW_THREADS  /* release GIL */
     for (i = 0; i <= size; i++)
         sa[rank[i]] = i;
+    Py_END_ALLOW_THREADS
+
+    return PyErr_CheckSignals();
 }
 
 /* construct suffix array */
@@ -201,10 +215,10 @@ build_suffix_array(const char *str, Py_ssize_t size)
         return NULL;
     }
 
-    Py_BEGIN_ALLOW_THREADS  /* release GIL */
-    qsufsort(sa, rank, (const unsigned char *) str, size);
-    Py_END_ALLOW_THREADS
-
+    if (qsufsort(sa, rank, (const unsigned char *) str, size) < 0) {
+        PyMem_Free(sa);
+        sa = NULL;
+    }
     PyMem_Free(rank);
     return sa;
 }

@@ -257,13 +257,17 @@ diff_init(DiffResult *result, Py_ssize_t dst_len)
     result->diff = PyMem_Malloc(dst_len);
     if (result->diff == NULL) {
         PyErr_NoMemory();
+        Py_DECREF(result->control);
         return -1;
     }
     result->extra = PyMem_Malloc(dst_len);
     if (result->extra == NULL) {
         PyErr_NoMemory();
+        Py_DECREF(result->control);
+        PyMem_Free(result->diff);
         return -1;
     }
+
     result->diff_len = 0;
     result->extra_len = 0;
     result->px = result->py = result->pz = 0;
@@ -284,18 +288,19 @@ diff_clear(DiffResult *result)
 static int
 diff_append_pending(DiffResult *result)
 {
-    char *str;
+    PyObject *control = result->control;
     Py_ssize_t size;
+    char *str;
 
-    size = PyByteArray_GET_SIZE(result->control);
+    size = PyByteArray_GET_SIZE(control);
     if (size > PY_SSIZE_T_MAX - 24) {
         PyErr_NoMemory();
         return -1;
     }
-    if (PyByteArray_Resize(result->control, size + 24) < 0)
+    if (PyByteArray_Resize(control, size + 24) < 0)
         return -1;
 
-    str = (char *) PyByteArray_AS_STRING(result->control) + size;
+    str = (char *) PyByteArray_AS_STRING(control) + size;
     if (encode_int64(str, result->px) < 0 ||
         encode_int64(str + 8, result->py) < 0 ||
         encode_int64(str + 16, result->pz) < 0)
@@ -636,7 +641,7 @@ error:
 static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
-    DiffResult diff = {0};
+    DiffResult diff;
     Py_ssize_t src_len, dst_len;
     char *src, *dst;
     PyObject *result = NULL;
@@ -647,7 +652,7 @@ mod_diff(PyObject *module, PyObject *args)
         return NULL;
 
     if (diff_init(&diff, dst_len) < 0)
-        goto finish;
+        return NULL;
 
     if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
         goto finish;

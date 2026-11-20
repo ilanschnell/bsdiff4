@@ -533,10 +533,14 @@ static int
 compute_diff(const char *src, Py_ssize_t src_len,
              const char *dst, Py_ssize_t dst_len, DiffResult *result)
 {
-    Py_ssize_t lastscan, lastpos, lastoffset;
-    Py_ssize_t scan, pos, len;
-    Py_ssize_t *sa;
     PendingControl pending = {0, 0, 0, 0};
+    Py_ssize_t *sa;
+    Py_ssize_t lastscan = 0;    /* destination position of previous match */
+    Py_ssize_t lastpos = 0;     /* source position of previous match */
+    Py_ssize_t lastoffset = 0;  /* source minus destination position */
+    Py_ssize_t scan = 0;        /* current destination search position */
+    Py_ssize_t pos = 0;         /* source position of best match */
+    Py_ssize_t len = 0;         /* length of best match */
 
     /* perform suffix sort on source data */
     sa = build_suffix_array(src, src_len);
@@ -544,7 +548,6 @@ compute_diff(const char *src, Py_ssize_t src_len,
         return -1;
 
     /* perform diff */
-    len = scan = lastscan = lastpos = lastoffset = pos = 0;
     while (scan < dst_len) {
         Py_ssize_t oldscore = 0, scsc;
 

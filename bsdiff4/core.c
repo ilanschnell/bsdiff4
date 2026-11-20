@@ -528,6 +528,39 @@ adjust_overlap(const char *src, const char *dst,
     *lenb -= best_length;
 }
 
+/* find the next match worth switching to */
+static Py_ssize_t
+find_next_match(const Py_ssize_t *sa,
+                const char *src, Py_ssize_t src_len,
+                const char *dst, Py_ssize_t dst_len,
+                Py_ssize_t lastoffset,
+                Py_ssize_t *scan, Py_ssize_t *pos, Py_ssize_t *len)
+{
+    Py_ssize_t cont_score = 0;  /* matches at previous source offset */
+    Py_ssize_t dst_pos;         /* current destination search position */
+    Py_ssize_t score_end;       /* end of destination range scored so far */
+
+    Py_BEGIN_ALLOW_THREADS  /* release GIL */
+    dst_pos = *scan + *len;
+    for (score_end = dst_pos; dst_pos < dst_len; dst_pos++) {
+        *len = search(sa, src, src_len, dst + dst_pos, dst_len - dst_pos,
+                      0, src_len, pos);
+        for (; score_end < dst_pos + *len; score_end++)
+            if (score_end + lastoffset < src_len &&
+                      src[score_end + lastoffset] == dst[score_end])
+                cont_score++;
+        if ((*len == cont_score && *len != 0) || *len > cont_score + 8)
+            break;
+        if (dst_pos + lastoffset < src_len &&
+                  src[dst_pos + lastoffset] == dst[dst_pos])
+            cont_score--;
+    }
+    Py_END_ALLOW_THREADS
+
+    *scan = dst_pos;
+    return cont_score;
+}
+
 /* construct the control, diff and extra blocks */
 static int
 compute_diff(const char *src, Py_ssize_t src_len,
@@ -549,33 +582,16 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
     /* perform diff */
     while (scan < dst_len) {
-        Py_ssize_t oldscore = 0;  /* matches at previous source offset */
-        Py_ssize_t scsc;          /* end of destination range scored so far */
+        Py_ssize_t cont_score;
 
         if (PyErr_CheckSignals() < 0)
             goto error;
 
-        /* find a match worth switching to from the previous source offset */
-        Py_BEGIN_ALLOW_THREADS  /* release GIL */
-        scan += len;
-        for (scsc = scan; scan < dst_len; scan++) {
-            len = search(sa, src, src_len,
-                         dst + scan, dst_len - scan,
-                         0, src_len, &pos);
-            for (; scsc < scan + len; scsc++)
-                if (scsc + lastoffset < src_len &&
-                          src[scsc + lastoffset] == dst[scsc])
-                    oldscore++;
-            if ((len == oldscore && len != 0) || len > oldscore + 8)
-                break;
-            if (scan + lastoffset < src_len &&
-                      src[scan + lastoffset] == dst[scan])
-                oldscore--;
-        }
-        Py_END_ALLOW_THREADS
+        cont_score = find_next_match(sa, src, src_len, dst, dst_len,
+                                     lastoffset, &scan, &pos, &len);
 
         /* emit data preceding the new match, or all remaining data at EOF */
-        if (len != oldscore || scan == dst_len) {
+        if (len != cont_score || scan == dst_len) {
             Py_ssize_t lenb = 0;  /* length of backward match */
             Py_ssize_t lenf;      /* length of forward match */
             Py_ssize_t extra_len, z;

@@ -1,7 +1,8 @@
-2026-11-XX   1.4.4:
+2026-11-20   1.4.4:
 -------------------
-  * allow long-running diff operations to be interrupted during suffix-array
-    construction
+  * allow long-running diff operations to be interrupted during
+    suffix-array construction; the subsequent diff calculation
+    was already interruptible (#21)
 
 
 2026-11-14   1.4.3:

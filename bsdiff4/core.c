@@ -202,6 +202,11 @@ build_suffix_array(const char *str, Py_ssize_t size)
     Py_ssize_t *sa;    /* suffix array */
     Py_ssize_t *rank;  /* temporary rank storage */
 
+    if (size > PY_SSIZE_T_MAX / (Py_ssize_t) sizeof(Py_ssize_t) - 1) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
     sa = PyMem_Malloc((size + 1) * sizeof(Py_ssize_t));
     if (sa == NULL) {
         PyErr_NoMemory();
@@ -646,7 +651,7 @@ static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
     DiffResult diff;
-    Py_ssize_t src_len, dst_len, *sa = NULL;
+    Py_ssize_t src_len, dst_len, *sa;
     char *src, *dst;
     PyObject *result = NULL;
 

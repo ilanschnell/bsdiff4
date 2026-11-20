@@ -371,9 +371,9 @@ diff_build(DiffResult *result)
     return res;
 }
 
-/* Retain one control tuple so it can be merged with the next. */
+/* Retain one control tuple as pending so it can be merged with the next. */
 static int
-diff_add_control(DiffResult *result, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
+diff_add_tuple(DiffResult *result, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
 {
     if (result->has_pending == 0) {
         result->px = x;
@@ -434,7 +434,7 @@ emit_data(const char *src, const char *dst, DiffResult *result,
     result->diff_len += diff_len;
     result->extra_len += extra_len;
 
-    return diff_add_control(result, diff_len, extra_len, z);
+    return diff_add_tuple(result, diff_len, extra_len, z);
 }
 
 /* -------------------------  diff calculation  -------------------------- */

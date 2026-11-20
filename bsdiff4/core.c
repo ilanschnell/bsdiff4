@@ -570,9 +570,9 @@ find_next_match(const Py_ssize_t *sa,
 /* construct the control, diff and extra blocks */
 static int
 compute_diff(const char *src, Py_ssize_t src_len,
-             const char *dst, Py_ssize_t dst_len, DiffResult *result)
+             const char *dst, Py_ssize_t dst_len,
+             const Py_ssize_t *sa, DiffResult *result)
 {
-    Py_ssize_t *sa;
     Py_ssize_t lastscan = 0;    /* destination position of previous match */
     Py_ssize_t lastpos = 0;     /* source position of previous match */
     Py_ssize_t lastoffset = 0;  /* source minus destination position */
@@ -580,17 +580,12 @@ compute_diff(const char *src, Py_ssize_t src_len,
     Py_ssize_t pos = 0;         /* source position of best match */
     Py_ssize_t len = 0;         /* length of best match */
 
-    /* perform suffix sort on source data */
-    sa = build_suffix_array(src, src_len);
-    if (sa == NULL)
-        return -1;
-
     /* perform diff */
     while (scan < dst_len) {
         Py_ssize_t cont_score;  /* matches at previous source offset */
 
         if (PyErr_CheckSignals() < 0)
-            goto error;
+            return -1;
 
         cont_score = find_next_match(sa, src, src_len, dst, dst_len,
                                      lastoffset, &scan, &pos, &len);
@@ -617,7 +612,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
             z = (pos - lenb) - (lastpos + lenf);
             if (emit_data(src, dst, result,
                           lenf, extra_len, z, lastscan, lastpos) < 0)
-                goto error;
+                return -1;
 
             lastscan = scan - lenb;
             lastpos = pos - lenb;
@@ -625,15 +620,10 @@ compute_diff(const char *src, Py_ssize_t src_len,
         }
     }
 
-    PyMem_Free(sa);
     assert(result->diff_len <= dst_len && result->extra_len <= dst_len);
     assert(result->diff_len + result->extra_len == dst_len);
     assert(PyByteArray_GET_SIZE(result->control) % 24 == 0);
     return 0;
-
-error:
-    PyMem_Free(sa);
-    return -1;
 }
 
 
@@ -642,7 +632,7 @@ static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
     DiffResult diff;
-    Py_ssize_t src_len, dst_len;
+    Py_ssize_t src_len, dst_len, *sa = NULL;
     char *src, *dst;
     PyObject *result = NULL;
 
@@ -654,11 +644,17 @@ mod_diff(PyObject *module, PyObject *args)
     if (diff_init(&diff, dst_len) < 0)
         return NULL;
 
-    if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
+    /* perform suffix sort on source data */
+    sa = build_suffix_array(src, src_len);
+    if (sa == NULL)
+        goto finish;
+
+    if (compute_diff(src, src_len, dst, dst_len, sa, &diff) < 0)
         goto finish;
 
     result = diff_build(&diff);
  finish:
+    PyMem_Free(sa);
     diff_clear(&diff);
     return result;
 }

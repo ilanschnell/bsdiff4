@@ -549,7 +549,8 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
     /* perform diff */
     while (scan < dst_len) {
-        Py_ssize_t oldscore = 0, scsc;
+        Py_ssize_t oldscore = 0;  /* matches at previous source offset */
+        Py_ssize_t scsc;          /* end of destination range scored so far */
 
         if (PyErr_CheckSignals() < 0)
             goto error;
@@ -575,7 +576,9 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
         /* emit data preceding the new match, or all remaining data at EOF */
         if (len != oldscore || scan == dst_len) {
-            Py_ssize_t lenb = 0, lenf, extra_len, z;
+            Py_ssize_t lenb = 0;  /* length of backward match */
+            Py_ssize_t lenf;      /* length of forward match */
+            Py_ssize_t extra_len, z;
 
             lenf = forward_match_length(src, src_len, dst,
                                         lastscan, lastpos, scan);

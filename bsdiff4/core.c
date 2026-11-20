@@ -211,17 +211,43 @@ build_suffix_array(const char *str, Py_ssize_t size)
 
 /* -----------------------  diff output construction  -------------------- */
 
+/* encode int64 as 8 bytes */
+static int
+encode_int64(char *str, int64_t x)
+{
+    char sign = 0x00;
+    int i;
+
+    if (x == INT64_MIN) {
+        PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
+        return -1;
+    }
+
+    if (x < 0) {
+        x = -x;
+        sign = 0x80;
+    }
+    for (i = 0; i < 8; i++) {
+        str[i] = x & 0xff;
+        x >>= 8;
+    }
+    str[7] |= sign;
+    return 0;
+}
+
 typedef struct {
     PyObject *control;      /* control block as bytearray */
     unsigned char *diff;    /* difference block */
     char *extra;            /* extra block */
     Py_ssize_t diff_len;    /* length of difference block */
     Py_ssize_t extra_len;   /* length of extra block */
+    Py_ssize_t px, py, pz;  /* pending control values */
+    int has_pending;        /* whether we received any control tuple yet */
 } DiffResult;
 
 /* initialize diff result structure */
 static int
-diff_result_init(DiffResult *result, Py_ssize_t dst_len)
+diff_init(DiffResult *result, Py_ssize_t dst_len)
 {
     result->control = PyByteArray_FromStringAndSize(NULL, 0);
     if (result->control == NULL)
@@ -240,23 +266,67 @@ diff_result_init(DiffResult *result, Py_ssize_t dst_len)
     }
     result->diff_len = 0;
     result->extra_len = 0;
+    result->px = result->py = result->pz = 0;
+    result->has_pending = 0;
     return 0;
 }
 
 /* release resources owned by a diff result */
 static void
-diff_result_clear(DiffResult *result)
+diff_clear(DiffResult *result)
 {
     Py_XDECREF(result->control);
     PyMem_Free(result->diff);
     PyMem_Free(result->extra);
 }
 
+/* append pending tuple to control block */
+static int
+diff_append_pending(DiffResult *result)
+{
+    char *str;
+    Py_ssize_t size;
+
+    size = PyByteArray_GET_SIZE(result->control);
+    if (size > PY_SSIZE_T_MAX - 24) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    if (PyByteArray_Resize(result->control, size + 24) < 0)
+        return -1;
+
+    str = (char *) PyByteArray_AS_STRING(result->control) + size;
+    if (encode_int64(str, result->px) < 0 ||
+        encode_int64(str + 8, result->py) < 0 ||
+        encode_int64(str + 16, result->pz) < 0)
+        return -1;
+
+    return 0;
+}
+
+/* Append the final pending tuple, unless it produces no output. */
+static int
+diff_flush_pending(DiffResult *result)
+{
+    if (result->has_pending == 0)
+        return 0;
+
+    /* The final source seek is irrelevant. */
+    if (result->px == 0 && result->py == 0)
+        return 0;
+
+    result->pz = 0;
+    return diff_append_pending(result);
+}
+
 /* convert a diff result into Python objects */
 static PyObject *
-diff_result_build(DiffResult *result)
+diff_build(DiffResult *result)
 {
     PyObject *control, *diff, *extra, *res;
+
+    if (diff_flush_pending(result) < 0)
+        return NULL;
 
     control = PyBytes_FromObject(result->control);
     if (control == NULL)
@@ -282,69 +352,15 @@ diff_result_build(DiffResult *result)
     return res;
 }
 
-/* encode int64 as 8 bytes */
-static int
-encode_int64(char *str, int64_t x)
-{
-    char sign = 0x00;
-    int i;
-
-    if (x == INT64_MIN) {
-        PyErr_SetString(PyExc_OverflowError, "cannot encode -2**63");
-        return -1;
-    }
-
-    if (x < 0) {
-        x = -x;
-        sign = 0x80;
-    }
-    for (i = 0; i < 8; i++) {
-        str[i] = x & 0xff;
-        x >>= 8;
-    }
-    str[7] |= sign;
-    return 0;
-}
-
-/* append tuple to control block */
-static int
-append_control(PyObject *control, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
-{
-    char *str;
-    Py_ssize_t size;
-
-    size = PyByteArray_GET_SIZE(control);
-    if (size > PY_SSIZE_T_MAX - 24) {
-        PyErr_NoMemory();
-        return -1;
-    }
-    if (PyByteArray_Resize(control, size + 24) < 0)
-        return -1;
-
-    str = (char *) PyByteArray_AS_STRING(control) + size;
-    if (encode_int64(str, x) < 0 ||
-        encode_int64(str + 8, y) < 0 ||
-        encode_int64(str + 16, z) < 0)
-        return -1;
-
-    return 0;
-}
-
-typedef struct {
-    Py_ssize_t x, y, z;
-    int initialized;  /* whether we received any control tuple yet */
-} PendingControl;
-
 /* Retain one control tuple so it can be merged with the next. */
 static int
-queue_add(PyObject *control, PendingControl *pending,
-          Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
+diff_add_control(DiffResult *result, Py_ssize_t x, Py_ssize_t y, Py_ssize_t z)
 {
-    if (pending->initialized == 0) {
-        pending->x = x;
-        pending->y = y;
-        pending->z = z;
-        pending->initialized = 1;
+    if (result->has_pending == 0) {
+        result->px = x;
+        result->py = y;
+        result->pz = z;
+        result->has_pending = 1;
         return 0;
     }
 
@@ -352,51 +368,36 @@ queue_add(PyObject *control, PendingControl *pending,
        emits is extra data.  Merge it into the preceding tuple:
        (px, py, pz), (0, y, z) -> (px, py + y, pz + z). */
     if (x == 0) {
-        assert(y <= PY_SSIZE_T_MAX - pending->y);
-        assert((z >= 0 && pending->z <= PY_SSIZE_T_MAX - z) ||
-               (z < 0 && pending->z >= -PY_SSIZE_T_MAX - 1 - z));
-        pending->y += y;
-        pending->z += z;
+        assert(y <= PY_SSIZE_T_MAX - result->py);
+        assert((z >= 0 && result->pz <= PY_SSIZE_T_MAX - z) ||
+               (z < 0 && result->pz >= -PY_SSIZE_T_MAX - 1 - z));
+        result->py += y;
+        result->pz += z;
         return 0;
     }
 
     /* The preceding rule may cancel intervening source seeks, leaving
        (px, 0, 0), (x, y, z).  Merge these into (px + x, y, z), since
        both diff ranges access consecutive source data. */
-    if (pending->y == 0 && pending->z == 0) {
-        assert(x <= PY_SSIZE_T_MAX - pending->x);
-        pending->x += x;
-        pending->y = y;
-        pending->z = z;
+    if (result->py == 0 && result->pz == 0) {
+        assert(x <= PY_SSIZE_T_MAX - result->px);
+        result->px += x;
+        result->py = y;
+        result->pz = z;
         return 0;
     }
 
-    if (append_control(control, pending->x, pending->y, pending->z) < 0)
+    if (diff_append_pending(result) < 0)
         return -1;
-    pending->x = x;
-    pending->y = y;
-    pending->z = z;
+    result->px = x;
+    result->py = y;
+    result->pz = z;
     return 0;
-}
-
-/* Append the final pending tuple, unless it produces no output. */
-static int
-queue_flush(PyObject *control, const PendingControl *pending)
-{
-    if (pending->initialized == 0)
-        return 0;
-
-    /* The final source seek is irrelevant. */
-    if (pending->x == 0 && pending->y == 0)
-        return 0;
-
-    return append_control(control, pending->x, pending->y, 0);
 }
 
 /* emit diff and extra data and queue the corresponding control tuple */
 static int
 emit_data(const char *src, const char *dst, DiffResult *result,
-          PendingControl *pending,
           Py_ssize_t diff_len, Py_ssize_t extra_len, Py_ssize_t z,
           Py_ssize_t dst_pos, Py_ssize_t src_pos)
 {
@@ -414,7 +415,7 @@ emit_data(const char *src, const char *dst, DiffResult *result,
     result->diff_len += diff_len;
     result->extra_len += extra_len;
 
-    return queue_add(result->control, pending, diff_len, extra_len, z);
+    return diff_add_control(result, diff_len, extra_len, z);
 }
 
 /* -------------------------  diff calculation  -------------------------- */
@@ -566,7 +567,6 @@ static int
 compute_diff(const char *src, Py_ssize_t src_len,
              const char *dst, Py_ssize_t dst_len, DiffResult *result)
 {
-    PendingControl pending = {0, 0, 0, 0};
     Py_ssize_t *sa;
     Py_ssize_t lastscan = 0;    /* destination position of previous match */
     Py_ssize_t lastpos = 0;     /* source position of previous match */
@@ -582,7 +582,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
     /* perform diff */
     while (scan < dst_len) {
-        Py_ssize_t cont_score;
+        Py_ssize_t cont_score;  /* matches at previous source offset */
 
         if (PyErr_CheckSignals() < 0)
             goto error;
@@ -610,7 +610,7 @@ compute_diff(const char *src, Py_ssize_t src_len,
 
             extra_len = (scan - lenb) - (lastscan + lenf);
             z = (pos - lenb) - (lastpos + lenf);
-            if (emit_data(src, dst, result, &pending,
+            if (emit_data(src, dst, result,
                           lenf, extra_len, z, lastscan, lastpos) < 0)
                 goto error;
 
@@ -619,9 +619,6 @@ compute_diff(const char *src, Py_ssize_t src_len,
             lastoffset = pos - scan;
         }
     }
-
-    if (queue_flush(result->control, &pending) < 0)
-        goto error;
 
     PyMem_Free(sa);
     assert(result->diff_len <= dst_len && result->extra_len <= dst_len);
@@ -639,7 +636,7 @@ error:
 static PyObject *
 mod_diff(PyObject *module, PyObject *args)
 {
-    DiffResult diff = {NULL, NULL, NULL, 0, 0};
+    DiffResult diff = {0};
     Py_ssize_t src_len, dst_len;
     char *src, *dst;
     PyObject *result = NULL;
@@ -649,15 +646,15 @@ mod_diff(PyObject *module, PyObject *args)
                           &dst, &dst_len))
         return NULL;
 
-    if (diff_result_init(&diff, dst_len) < 0)
+    if (diff_init(&diff, dst_len) < 0)
         goto finish;
 
     if (compute_diff(src, src_len, dst, dst_len, &diff) < 0)
         goto finish;
 
-    result = diff_result_build(&diff);
+    result = diff_build(&diff);
  finish:
-    diff_result_clear(&diff);
+    diff_clear(&diff);
     return result;
 }
 

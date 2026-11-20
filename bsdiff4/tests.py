@@ -261,16 +261,7 @@ class TestCoreDiffPatch(unittest.TestCase):
         for src in BYTES_CASES:
             control, diff, extra = core.diff(src, src)
             controls = list(unpack_control_block(control))
-
-            if src:
-                self.assertEqual(len(controls), 1)
-                x, y, z = controls[0]
-                self.assertEqual(x, len(src))
-                self.assertEqual(y, 0)
-                # final source-position adjustment z does not affect output
-            else:
-                self.assertEqual(controls, [])
-
+            self.assertEqual(controls, [(len(src), 0, 0)] if src else [])
             self.assertEqual(diff, len(src) * b'\x00')
             self.assertEqual(extra, b'')
             self.assertEqual(core.patch(src, control, diff, extra), src)

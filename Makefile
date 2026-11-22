@@ -1,11 +1,11 @@
-.PHONY: all clean mypy test
+.PHONY: all build clean mypy test
 
 
-bsdiff4/core.so: bsdiff4/core.c
+build:
 	python setup.py build_ext --inplace
 
 
-test: bsdiff4/core.so
+test: build
 	python -c "import bsdiff4; bsdiff4.test()"
 
 

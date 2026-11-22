@@ -20,6 +20,8 @@ if get_config_var("Py_GIL_DISABLED") in (1, "1"):
 
 setup(
     name = "bsdiff4",
+    description = "binary diff and patch using the BSDIFF4-format",
+    long_description_content_type = "text/x-rst",
     author = "Ilan Schnell",
     author_email = "ilanschnell@gmail.com",
     url = "https://github.com/ilanschnell/bsdiff4",
@@ -43,7 +45,6 @@ setup(
         "Programming Language :: Python :: Free Threading :: 3 - Stable",
         "Topic :: Utilities",
     ],
-    description = "binary diff and patch using the BSDIFF4-format",
     packages = ["bsdiff4"],
     package_data = {"bsdiff4": ["py.typed"]},  # see PEP 561
     ext_modules = [Extension(name = "bsdiff4.core",

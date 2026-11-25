@@ -887,27 +887,28 @@ static PyModuleDef moduledef = {
 PyMODINIT_FUNC
 PyInit_core(void)
 {
-    PyObject *m;
+    PyObject *module;
 
-    m = PyModule_Create(&moduledef);
-    if (m == NULL)
+    module = PyModule_Create(&moduledef);
+    if (module == NULL)
         return NULL;
 
-    if (PyModule_AddStringMacro(m, BSDIFF4_VERSION) < 0)
+    if (PyModule_AddStringMacro(module, BSDIFF4_VERSION) < 0)
         goto error;
 
 #ifdef Py_GIL_DISABLED
-    if (PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED) < 0)
+    if (PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED) < 0)
         goto error;
 #endif
 
 #ifndef NDEBUG
-    if (PyModule_AddIntConstant(m, "DEBUG", 1) < 0)
+    if (PyModule_AddIntConstant(module, "DEBUG", 1) < 0)
         goto error;
 #endif
 
-    return m;
+    return module;
+
  error:
-    Py_DECREF(m);
+    Py_DECREF(module);
     return NULL;
 }

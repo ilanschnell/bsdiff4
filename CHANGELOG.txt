@@ -1,5 +1,6 @@
 20XX-XX-XX   1.4.5:
 -------------------
+  * reject text arguments in diff() and patch(); inputs must be bytes
 
 
 2026-11-20   1.4.4:

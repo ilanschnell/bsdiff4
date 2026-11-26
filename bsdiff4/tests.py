@@ -57,6 +57,7 @@ class TestCoreInt64(unittest.TestCase):
             self.assertRaises(OverflowError, core.encode_int64, n)
 
         self.assertRaises(TypeError, core.decode_int64, 0)
+        self.assertRaises(TypeError, core.decode_int64, 8 * "\x00")
         for n in 0, 1, 7, 9, 16:
             self.assertRaisesRegex(ValueError, "8 bytes expected",
                                    core.decode_int64, n * b'\x00')
@@ -159,6 +160,13 @@ class TestCoreDiffPatch(unittest.TestCase):
         for a, b in ROUND_TRIP_CASES:
             self.round_trip(a, b)
             self.round_trip(b, a)
+
+    def test_type_errors(self):
+        for src, dst in [("ABC", b"ABC"), (b"ABC", "ABC")]:
+            with self.assertRaises(TypeError):
+                core.diff(src, dst)
+        with self.assertRaises(TypeError):
+            core.patch("A", b"", b"", b"")
 
     def check_diff_blocks(self, src, dst, controls, diff, extra):
         # Check construction of control, diff and extra blocks.
@@ -495,6 +503,13 @@ class TestFormat(unittest.TestCase):
         b[100:106] = b' diff '
         p = diff(a, bytes(b))
         self.assertEqual(patch(a, p), b)
+
+    def test_type_errors(self):
+        for src, dst in [("ABC", b"ABC"), (b"ABC", "ABC")]:
+            with self.assertRaises(TypeError):
+                diff(src, dst)
+        with self.assertRaises(TypeError):
+            patch("abc", Example.patch)
 
     def round_trip(self, src, dst):
         p = diff(src, dst)

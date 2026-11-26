@@ -655,7 +655,7 @@ mod_diff(PyObject *module, PyObject *args)
     char *src, *dst;
     PyObject *result = NULL;
 
-    if (!PyArg_ParseTuple(args, "s#s#",
+    if (!PyArg_ParseTuple(args, "y#y#",
                           &src, &src_len,
                           &dst, &dst_len))
         return NULL;
@@ -729,7 +729,7 @@ mod_patch(PyObject *module, PyObject *args)
     PyObject *result;
     int64_t src_pos = 0;
 
-    if (!PyArg_ParseTuple(args, "s#s#s#s#",
+    if (!PyArg_ParseTuple(args, "y#y#y#y#",
                           &src, &src_len,
                           &control_block, &control_len,
                           &diff_block, &diff_remaining,

@@ -145,6 +145,9 @@ def patch(src_bytes: bytes, patch_bytes: bytes) -> bytes:
 
     Apply the BSDIFF4-format patch_bytes to src_bytes and return the bytes.
     """
+    if not isinstance(patch_bytes, bytes):
+        raise TypeError("bytes object required, got '%s'" %
+                        type(patch_bytes).__name__)
     return core.patch(src_bytes, *read_patch(BytesIO(patch_bytes)))
 
 

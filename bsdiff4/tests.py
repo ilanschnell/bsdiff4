@@ -145,6 +145,9 @@ ROUND_TRIP_CASES = [
 ]
 
 
+INVALID_BYTES = ["abc", bytearray(b"abc")]
+
+
 class TestCoreDiffPatch(unittest.TestCase):
 
     def round_trip(self, src, dst):
@@ -162,11 +165,13 @@ class TestCoreDiffPatch(unittest.TestCase):
             self.round_trip(b, a)
 
     def test_type_errors(self):
-        for src, dst in [("ABC", b"ABC"), (b"ABC", "ABC")]:
+        for invalid_bytes in INVALID_BYTES:
             with self.assertRaises(TypeError):
-                core.diff(src, dst)
-        with self.assertRaises(TypeError):
-            core.patch("A", b"", b"", b"")
+                core.diff(invalid_bytes, b"abc")
+            with self.assertRaises(TypeError):
+                core.diff(b"abc", invalid_bytes)
+            with self.assertRaises(TypeError):
+                core.patch(invalid_bytes, b"", b"", b"")
 
     def check_diff_blocks(self, src, dst, controls, diff, extra):
         # Check construction of control, diff and extra blocks.
@@ -505,11 +510,15 @@ class TestFormat(unittest.TestCase):
         self.assertEqual(patch(a, p), b)
 
     def test_type_errors(self):
-        for src, dst in [("ABC", b"ABC"), (b"ABC", "ABC")]:
+        for invalid_bytes in INVALID_BYTES:
             with self.assertRaises(TypeError):
-                diff(src, dst)
-        with self.assertRaises(TypeError):
-            patch("abc", Example.patch)
+                diff(invalid_bytes, b"abc")
+            with self.assertRaises(TypeError):
+                diff(b"abc", invalid_bytes)
+            with self.assertRaises(TypeError):
+                patch(invalid_bytes, Example.patch)
+            with self.assertRaises(TypeError):
+                patch(Example.src, invalid_bytes)
 
     def round_trip(self, src, dst):
         p = diff(src, dst)

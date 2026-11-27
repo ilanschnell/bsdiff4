@@ -12,6 +12,7 @@ except ImportError:
         return zip(a, a[1:])
 
 from bsdiff4.core import suffix_array
+from bsdiff4.tests import INVALID_BYTES
 from util import alphabetize
 
 
@@ -33,7 +34,7 @@ class TestSuffixArray(unittest.TestCase):
             self.check_data(word)
 
     def test_type_errors(self):
-        for data in "ABC", 123:
+        for data in INVALID_BYTES:
             with self.assertRaises(TypeError):
                 suffix_array(data)
 
